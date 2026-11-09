@@ -1,4 +1,4 @@
-name: Publish wholesale catalogue and payment terms
+name: Publish wholesale customer accounts
 
 'on':
   push:
@@ -16,7 +16,7 @@ jobs:
   publish:
     if: github.repository_owner == 'georgefarrowgreen1'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
