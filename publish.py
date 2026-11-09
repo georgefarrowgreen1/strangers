@@ -13,8 +13,8 @@ import urllib.request
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "feature/wholesale-polish"
-EXPECTED = "0190360a451d84f880eb353d0dcdc46c56963474"
+BRANCH = "feature/wholesale-desktop"
+EXPECTED = "6b7be8e8842c80b931e1afb3f396b6318d9fcb53"
 PRIOR = None
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
@@ -161,12 +161,12 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Wholesale: saved locations and clearer ordering controls",
+             "--title", "Wholesale: VAT invoices and desktop workspace",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
     print(f"Pull request: {url}", flush=True)
-    deadline = time.monotonic() + 900
+    deadline = time.monotonic() + 1080
     merge_busy_since = None
 
     def read_pr():

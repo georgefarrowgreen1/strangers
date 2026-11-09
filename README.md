@@ -2,10 +2,10 @@
 
 Temporary publisher in georgefarrowgreen1/strangers for the tested change to strangerscoffee/StrangersRepo. Uses the existing isolated Actions branch and GitHub CLI device sign-in on a temporary hosted runner. Only georgefarrowgreen1 (292799750) is accepted. Credentials stay on that runner and are removed when it finishes.
 
-Source: `0190360a451d84f880eb353d0dcdc46c56963474` on `feature/wholesale-polish`, based on deployed main `d217eb463aa0e061c546f690d3fd450c1b735fe0`. The frozen source and verified bundle match the tested commit.
+Source: `6b7be8e8842c80b931e1afb3f396b6318d9fcb53` on `feature/wholesale-desktop`, based on deployed main `d6564c8d4374002b8242691dac88809c5ebffd26`. The Git bundle contains the exact frozen source and has been verified locally. The exact source passed full validation before publication.
 
-This release adds saved business locations/default selection and immutable order location snapshots, fixes approved business names in ordering, and polishes customer naming, header, footer, baskets and built-in dialogs. All visible feature names are Wholesale; the existing preview.staffstrangerscoffee.com address and internal compatibility fields remain.
+This release adds configurable supplier/VAT settings, reviewed invoice issuance and protected PDF downloads, separate manual payment records and customer-owned invoice/due views. Invoice numbers/snapshots are immutable and backed up; migration13 adds the native D1 tables. Desktop workspaces/editors use more width, native choice sheets preserve drafts, review notifications sit beside Customers, and long baskets keep totals/Review reachable.
 
 The new target branch has no allowed prior head (PRIOR=None). Unknown remote work is refused. The job pushes the exact verified commit without force, opens a normal PR, waits for Tests and squash-merges with an expected-head guard. Existing auto-merge races are rechecked safely. Cloudflare deploys main using its existing configuration. No direct main push or branch-rule bypass.
 
-Validation passed: 131 API/security/data tests and 53 browser tests, Worker dry build, diff checks and phone/iPad light/dark visual review. Focused location ownership/snapshot/retry checks and the single-mouse-click regression also passed. No migrations, new services, DNS, billing or secrets.
+Validation: `npm test` passed all 144 API/PDF tests, including TypeScript; `npm run test:e2e` passed all 61 browser tests (205 total). The Worker dry build passed. Phone/iPad and 1280/1440/1920 px desktop views were checked in light/dark mode, including 32 additional desktop/iPad visual states. Native invoice PDF logo, VAT fields, pagination, geometry and byte stability were verified. No new service, DNS, billing, external payment or secret changes.
