@@ -13,8 +13,8 @@ import urllib.request
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "feature/wholesale-catalogue-payments"
-EXPECTED = "03c51f8191aeae4d434b429901244da32e63753c"
+BRANCH = "feature/wholesale-beta"
+EXPECTED = "74d4fb5e17cbeff5221fb55c62be7275df067362"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -144,21 +144,32 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Wholesale: editable catalogue, photos, stock and payment terms",
+             "--title", "Wholesale beta: native UI and reliable customer ordering",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
     print(f"Pull request: {url}", flush=True)
     deadline = time.monotonic() + 900
-    while time.monotonic() < deadline:
-        pr = json.loads(command(
+    merge_busy_since = None
+
+    def read_pr():
+        return json.loads(command(
             ["gh", "pr", "view", url, "--repo", TARGET, "--json", "state,headRefOid,mergeCommit"], env=env,
         ))
+
+    def finished(pr):
+        if pr["headRefOid"] != EXPECTED:
+            raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
             progress.update("Wholesale change squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            return True
+        if pr["state"] != "OPEN":
+            raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")
+        return False
+
+    while time.monotonic() < deadline:
+        if finished(read_pr()):
             return
-        if pr["state"] != "OPEN" or pr["headRefOid"] != EXPECTED:
-            raise RuntimeError("The PR changed or closed; no merge was requested by this publisher.")
         runs = json.loads(command(
             ["gh", "api", f"repos/{TARGET}/actions/runs?head_sha={EXPECTED}&event=pull_request&per_page=100"], env=env,
         ))["workflow_runs"]
@@ -166,10 +177,24 @@ def publish(env, progress, work):
         if tests and tests[0]["status"] == "completed":
             if tests[0]["conclusion"] != "success":
                 raise RuntimeError(f"Tests concluded {tests[0]['conclusion']}; the PR has been left for review: {url}")
-            command(
-                ["gh", "pr", "merge", url, "--repo", TARGET, "--squash", "--delete-branch",
-                 "--match-head-commit", EXPECTED], env=env,
-            )
+            try:
+                command(
+                    ["gh", "pr", "merge", url, "--repo", TARGET, "--squash", "--delete-branch",
+                     "--match-head-commit", EXPECTED], env=env,
+                )
+                merge_busy_since = None
+            except RuntimeError as error:
+                # The repository's own auto-merge may finish between our state read and merge call.
+                # Re-read before reporting a failure; a brief mergeability delay never bypasses rules.
+                if finished(read_pr()):
+                    return
+                detail = str(error).lower()
+                if not any(message in detail for message in ["not mergeable", "already been merged"]):
+                    raise
+                if merge_busy_since is None:
+                    merge_busy_since = time.monotonic()
+                if time.monotonic() - merge_busy_since >= 60:
+                    raise
         time.sleep(10)
     progress.update("PR ready; checks still running", f"[{url}]({url})\n\nThe PR remains open. The target repository's existing auto-merge workflow can squash it after its required checks pass.", conclusion="neutral", url=url)
 
