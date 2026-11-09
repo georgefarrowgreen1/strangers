@@ -1,4 +1,4 @@
-name: Publish Strangers wholesale preview
+name: Publish wholesale customer accounts
 
 'on':
   push:
