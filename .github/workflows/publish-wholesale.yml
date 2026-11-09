@@ -1,0 +1,27 @@
+name: Publish Strangers wholesale preview
+
+'on':
+  push:
+    branches: [codex/strangers-wholesale-publisher]
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: strangers-wholesale-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository_owner == 'georgefarrowgreen1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Authorise, publish, and squash after Tests
+        env:
+          PUBLISH_CHECK_TOKEN: ${{ github.token }}
+        run: python3 publish.py

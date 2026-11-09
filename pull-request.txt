@@ -1,0 +1,5 @@
+Add Wholesale to the existing admin sidebar and mobile More menu, with orders, customers and catalogue management in the native admin theme. Serve the ordering page at preview.staffstrangerscoffee.com using the existing Staff Login and shared session cookies. The preview hostname exposes only the ordering app and its authorised APIs.
+
+Preview orders, customer records and price/visibility overrides are shared through a new versioned D1 table and included in backups. Checkout fixes caller identity, validates current server prices and uses idempotent request IDs. Staff can read their own orders; management routes remain admin-only. The catalogue uses the ten sourced Strangers coffees and labelled retail reference prices. No payment, email or fulfilment action is triggered.
+
+Validation: npm test passed all 104 API/model tests; CHROMIUM_PATH=/usr/bin/chromium npm run test:e2e passed all 25 browser tests, including phone/iPad light/dark wholesale journeys, native admin navigation and sign-out/role checks. Wrangler deploy --dry-run succeeded. Migration and admin-host tests cover the new table, asset access and script order.
