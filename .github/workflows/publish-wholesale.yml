@@ -1,4 +1,4 @@
-name: Publish wholesale beta
+name: Publish wholesale ordering UX
 
 'on':
   push:
