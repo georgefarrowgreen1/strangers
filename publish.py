@@ -14,7 +14,8 @@ import urllib.request
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "feature/wholesale-ux"
-EXPECTED = "6cd16a313731fc9ec4a185146119f062521bd0ec"
+EXPECTED = "fcc3d0255cc10493086bdc4d59819fe287301d6b"
+PRIOR = "6cd16a313731fc9ec4a185146119f062521bd0ec"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -25,6 +26,23 @@ def command(args, *, env, cwd=None):
         detail = (result.stderr + result.stdout)[-1600:]
         raise RuntimeError(f"{args[0]} {args[1]} failed: {detail}")
     return result.stdout.strip()
+
+
+def verify_destination(existing, *, env, cwd):
+    if not existing:
+        return
+    parts = existing.split()
+    if len(parts) != 2 or parts[1] != f"refs/heads/{BRANCH}":
+        raise RuntimeError("The destination branch response was unexpected; refusing to publish.")
+    head = parts[0]
+    if head == EXPECTED:
+        return
+    if head != PRIOR:
+        raise RuntimeError("The destination branch has other work; refusing to overwrite it.")
+    try:
+        command(["git", "merge-base", "--is-ancestor", PRIOR, EXPECTED], env=env, cwd=cwd)
+    except RuntimeError:
+        raise RuntimeError("The expected previous branch commit is not an ancestor of the tested commit; refusing to publish.") from None
 
 
 class Progress:
@@ -128,8 +146,7 @@ def publish(env, progress, work):
     if actual != EXPECTED:
         raise RuntimeError("Source commit verification failed; no branch was pushed.")
     existing = command(["git", "ls-remote", "--heads", "origin", BRANCH], env=env, cwd=source)
-    if existing and existing.split()[0] != EXPECTED:
-        raise RuntimeError("The destination branch has other work; refusing to overwrite it.")
+    verify_destination(existing, env=env, cwd=source)
     command(
         ["git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
          "push", "origin", f"refs/heads/{BRANCH}:refs/heads/{BRANCH}"],
