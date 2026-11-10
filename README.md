@@ -1,13 +1,11 @@
-# Strangers Wholesale desktop publisher
+# Strangers Wholesale catalogue publisher
 
-Temporary publisher in georgefarrowgreen1/strangers for the requested Wholesale Admin sidebar and order-workspace refinement in strangerscoffee/StrangersRepo. Normal GitHub CLI device sign-in accepts only georgefarrowgreen1 (292799750), verifies target push access, and removes credentials from the temporary runner when finished.
+Temporary publisher in georgefarrowgreen1/strangers for the requested customer sorting and editable grind options in strangerscoffee/StrangersRepo. GitHub CLI device sign-in verifies georgefarrowgreen1 (292799750) and target push access. Credentials stay on the temporary runner and are cleared at completion.
 
-Source: `265eda447325ee547000f92361cae5af30730c09` on `feature/wholesale-admin-desktop-refinement`, based on deployed main `c5ea889f2f4fab4b90f325349b7bb94761aea205`. The exact frozen source bundle is verified locally.
+Frozen source: `a2dfeda4099a66720513ec6282994fca0afe2411`, branch `feature/wholesale-grind-options`, based on deployed main `ca6ae4d734b27325a8dc630ea8e84fb7dcd6b883`. The exact source bundle is verified locally.
 
-Desktop sections move into the expandable Wholesale sidebar group, keeping Orders as the parent-label default and pending reviews beside Customers. The main Orders workspace shows only its two preparation metrics and work queue. List headings, counts, search, filters and rows form one panel. Narrow desktop search/filters stack; wider desktop controls share a row. Empty states explain the next step and offer Clear filters. Totals retain aligned columns without a next action; initial invoice setup sits beside the issued list. Mobile section navigation stays available; breakpoint changes retain open drafts and do not reload wholesale data.
+Customer catalogue refresh is replaced by an icon-only filter and animated price-sorting dropdown. Order/invoice refresh icons spin during loading and respect reduced motion. Admin coffee editors manage per-coffee grind names, enabled choices, removal and custom options. Checkout validates against the selected coffee and preserves immutable historical labels/idempotent retries. Renaming retires option IDs to prevent silently changing a reviewed basket. Existing versioned JSON/backups store settings without a migration.
 
-Scope is five front-end files plus design documentation, with no backend or data-model changes.
+PRIOR=None refuses unknown destination branch work. Normal non-forced branch push, ready pull request, required Tests, expected-head squash, then Cloudflare main deployment. No direct main push or branch-rule bypass.
 
-The new branch has no allowed prior head (PRIOR=None). Unknown remote work is refused. Push is non-forced; a normal ready PR waits for required Tests before an expected-head squash merge. No direct main push or branch-rule bypass.
-
-Validation: npm test passes TypeScript and all 167 API/PDF tests; npm run test:e2e passes all 75 browser tests (242 total). Manual local QA passes 80 empty/populated layouts across desktop 1180/1440/1680, phone 393 and iPad 820 in both themes, plus 30 filter-reset flows, two sidebar/navigation/draft-resize flows and two short-laptop checks at 1024 x 640. Reviewed long names, aligned totals, images and representative editors. Worker dry build, script syntax and diff checks pass.
+Validation: npm test passes TypeScript and all 169 API/PDF tests; npm run test:e2e passes all 87 browser tests (256 total). The suite includes per-coffee grind permission/validation, version conflicts, custom labels, retired variants and immutable retries, plus customer sorting, retained selections, refresh busy/failure/reduced-motion behavior and admin/customer grind workflows on phone, iPad and desktop in both themes. Focused screenshots were reviewed. Worker dry build, JavaScript syntax, clean-tree and diff checks pass.
