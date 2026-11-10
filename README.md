@@ -1,5 +1,7 @@
-# Strangers wholesale domain publisher
+# Strangers QuickBooks app settings publisher
 
-This temporary runner publishes the tested `feature/wholesale-trade-domain` commit `419deadf5766c0801e1e8256c5a6c102b6eda215` to `strangerscoffee/StrangersRepo` using the collaborator’s GitHub CLI device login. It creates a normal pull request, waits for Tests, verifies the exact head, then squash merges. Cloudflare Workers Builds deploys main through the existing production setup.
+Publishes the tested `feature/quickbooks-admin-credentials` commit `996c5b86dbca71f205a0ff90fdb30f6a6f4cbe7b` to `strangerscoffee/StrangersRepo` through a normal Tests-gated pull request and squash merge. Cloudflare Workers Builds deploys main.
 
-The change uses strangerscoffee.trade for customer ordering while keeping the old hostname operational for origin-local baskets and pending checkout recovery. Staff/Admin domains, records, employee privacy, invoice snapshots and QuickBooks URLs stay separate. No target workflow is changed or bypassed. Login credentials remain only on the temporary runner and are removed when it finishes. The device sign-in is a fresh authentication because the previous run has already cleared its credentials.
+Admins manage separate Sandbox/Live client IDs, write-only client secrets and webhook verifier tokens, with encrypted D1 storage, safe metadata, copyable Intuit URLs, version checks and a disconnect requirement for auth credential replacement. The existing independent hosting encryption key remains outside the database. This does not configure real Intuit credentials, grant consent or activate Live.
+
+Device authentication uses the collaborator’s GitHub CLI login; credentials remain on the temporary runner and are removed when it finishes. The source head is verified before push and merge. No target workflow is changed or bypassed.
