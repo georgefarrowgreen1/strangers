@@ -1,15 +1,15 @@
-"""Publish a verified change with the user's normal GitHub CLI device sign-in."""
+"""Publish a verified change using an encrypted repository deployment secret."""
 
 import json
 import os
 from pathlib import Path
 import re
-import selectors
 import shutil
 import subprocess
 import tempfile
 import time
 import urllib.request
+import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
@@ -20,10 +20,18 @@ EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
 
+def redact(value, env=None):
+    secrets = {mapping.get(name, "") for mapping in [os.environ, env or {}]
+               for name in ["GH_TOKEN", "GITHUB_TOKEN", "PUBLISH_CHECK_TOKEN", "STRANGERS_DEPLOY_TOKEN"]}
+    for secret in sorted((secret for secret in secrets if secret), key=len, reverse=True):
+        value = value.replace(secret, "[REDACTED]")
+    return value
+
+
 def command(args, *, env, cwd=None):
     result = subprocess.run(args, env=env, cwd=cwd, text=True, capture_output=True)
     if result.returncode:
-        detail = (result.stderr + result.stdout)[-1600:]
+        detail = redact(result.stderr + result.stdout, env)[-1600:]
         raise RuntimeError(f"{args[0]} {args[1]} failed: {detail}")
     return result.stdout.strip()
 
@@ -69,70 +77,56 @@ class Progress:
     def update(self, title, summary, *, conclusion=None, url=None):
         body = {
             "status": "completed" if conclusion else "in_progress",
-            "output": {"title": title, "summary": summary},
+            "output": {"title": redact(title), "summary": redact(summary)},
         }
         if conclusion:
             body["conclusion"] = conclusion
         if url:
             body["details_url"] = url
         if self.check_id is None:
-            body.update(name="Strangers QuickBooks app settings publication", head_sha=os.environ["GITHUB_SHA"])
+            body.update(name="Strangers deployment publisher", head_sha=os.environ["GITHUB_SHA"])
             self.check_id = self.request("POST", "check-runs", body)["id"]
         else:
-            self.request("PATCH", f"check-runs/{self.check_id}", body)
+            for attempt in range(3):
+                try:
+                    self.request("PATCH", f"check-runs/{self.check_id}", body)
+                    break
+                except urllib.error.HTTPError as error:
+                    if error.code != 404 or attempt == 2:
+                        raise
+                    time.sleep(attempt + 1)  # A newly created check can briefly be absent on another API replica.
         print(title, flush=True)
 
 
 def authenticate(env, progress):
-    progress.update("Starting GitHub sign-in", "Preparing GitHub CLI device authentication.")
-    process = subprocess.Popen(
-        ["gh", "auth", "login", "--hostname", "github.com", "--git-protocol", "https", "--web"],
-        env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-    )
-    process.stdin.write(b"\n")
-    process.stdin.close()
-    selector = selectors.DefaultSelector()
-    selector.register(process.stdout, selectors.EVENT_READ)
-    output = ""
-    displayed = False
-    deadline = time.monotonic() + 540
-    try:
-        while process.poll() is None:
-            if time.monotonic() >= deadline:
-                raise TimeoutError("GitHub device authorisation expired; no change was published.")
-            for key, _ in selector.select(timeout=1):
-                chunk = os.read(key.fileobj.fileno(), 4096)
-                if not chunk:
-                    selector.unregister(key.fileobj)
-                    continue
-                output = (output + chunk.decode(errors="replace"))[-8192:]
-                match = re.search(r"\b[A-Z0-9]{4}-[A-Z0-9]{4}\b", output)
-                if match and not displayed:
-                    code = match.group()
-                    summary = (
-                        f"Open https://github.com/login/device and enter **{code}**.\n\n"
-                        "Sign in as **georgefarrowgreen1** to authorise GitHub CLI on this temporary "
-                        f"runner. It will publish the tested secure QuickBooks Admin credential settings `{EXPECTED}` to "
-                        f"**{TARGET}** through a normal pull request and wait for Tests before squash merge. "
-                        "Credentials stay on the runner and are removed when it finishes."
-                    )
-                    progress.update("GitHub authorisation required", summary)
-                    print(f"Device code: {code} at https://github.com/login/device", flush=True)
-                    displayed = True
-        if process.returncode:
-            raise RuntimeError("GitHub CLI device sign-in did not complete; no change was published.")
-    finally:
-        selector.close()
-        if process.poll() is None:
-            process.terminate()
-            process.wait(timeout=10)
-
+    if not env.get("GH_TOKEN"):
+        raise RuntimeError("STRANGERS_DEPLOY_TOKEN is missing. Add it as an encrypted Actions repository secret in georgefarrowgreen1/strangers, then rerun this workflow. No device sign-in was started.")
+    progress.update("Verifying saved deployment access", "Using STRANGERS_DEPLOY_TOKEN from GitHub Actions secrets. Its value is never displayed or written to the checkout.")
     account = json.loads(command(["gh", "api", "user"], env=env))
-    if account["id"] != EXPECTED_USER_ID:
-        raise RuntimeError("The authorised account is not georgefarrowgreen1; no change was published.")
+    if account.get("id") != EXPECTED_USER_ID:
+        raise RuntimeError("The deployment token does not belong to georgefarrowgreen1; no change was published.")
     repository = json.loads(command(["gh", "api", f"repos/{TARGET}"], env=env))
     if not repository.get("permissions", {}).get("push"):
-        raise RuntimeError("GitHub did not grant this account write access to StrangersRepo.")
+        raise RuntimeError("The deployment token has no write access to StrangersRepo; no change was published.")
+    progress.update("Saved deployment access verified", "The expected collaborator account has repository write access. No device sign-in is needed.")
+
+
+def runner_environment(auth_dir, source):
+    env = {key: value for key, value in source.items()
+           if key not in {"GH_TOKEN", "GITHUB_TOKEN", "PUBLISH_CHECK_TOKEN", "STRANGERS_DEPLOY_TOKEN"}}
+    token = source.get("STRANGERS_DEPLOY_TOKEN", "").strip()
+    if token:
+        env["GH_TOKEN"] = token
+    env.update(GH_CONFIG_DIR=str(auth_dir), GH_BROWSER="/bin/true", GH_PROMPT_DISABLED="1", GIT_TERMINAL_PROMPT="0")
+    return env
+
+
+def transient_database_lock(log):
+    # Rerun only the observed local migration fixture's single SQLite lock failure.
+    return ("database is locked: SQLITE_BUSY" in log
+            and bool(re.search(r"not ok \d+ - Migration 16 preserves legacy Sandbox tokens/mappings", log))
+            and bool(re.search(r"# fail 1(?:\s|$)", log))
+            and not bool(re.search(r"# fail (?:[2-9]|[1-9]\d+)(?:\s|$)", log)))
 
 
 def publish(env, progress, work):
@@ -168,6 +162,8 @@ def publish(env, progress, work):
     print(f"Pull request: {url}", flush=True)
     deadline = time.monotonic() + 1080
     merge_busy_since = None
+    retried_test = None
+    retried_at = 0
 
     def read_pr():
         return json.loads(command(
@@ -193,7 +189,20 @@ def publish(env, progress, work):
         tests = sorted((r for r in runs if r["name"] == "Tests"), key=lambda r: r["id"], reverse=True)
         if tests and tests[0]["status"] == "completed":
             if tests[0]["conclusion"] != "success":
-                raise RuntimeError(f"Tests concluded {tests[0]['conclusion']}; the PR has been left for review: {url}")
+                run = tests[0]
+                identity = (run["id"], run.get("run_attempt", 1))
+                if retried_test == identity and time.monotonic() - retried_at < 60:
+                    time.sleep(5)
+                    continue
+                if retried_test is None and run["conclusion"] == "failure":
+                    log = command(["gh", "run", "view", str(run["id"]), "--repo", TARGET, "--log-failed"], env=env)
+                    if transient_database_lock(log):
+                        command(["gh", "run", "rerun", str(run["id"]), "--repo", TARGET, "--failed"], env=env)
+                        retried_test, retried_at = identity, time.monotonic()
+                        progress.update("Retrying a temporary test database lock", f"[{url}]({url})\n\nThe migration test hit SQLITE_BUSY. Rerunning its normal Tests job once; a successful test run is still required before merge.", url=url)
+                        time.sleep(5)
+                        continue
+                raise RuntimeError(f"Tests concluded {run['conclusion']}; the PR has been left for review: {url}")
             try:
                 command(
                     ["gh", "pr", "merge", url, "--repo", TARGET, "--squash", "--delete-branch",
@@ -222,9 +231,7 @@ def main():
         work = Path(directory)
         auth_dir = work / "github-auth"
         auth_dir.mkdir(mode=0o700)
-        env = {key: value for key, value in os.environ.items()
-               if key not in {"GH_TOKEN", "GITHUB_TOKEN", "PUBLISH_CHECK_TOKEN"}}
-        env.update(GH_CONFIG_DIR=str(auth_dir), GH_BROWSER="/bin/true", GH_PROMPT_DISABLED="1", GIT_TERMINAL_PROMPT="0")
+        env = runner_environment(auth_dir, os.environ)
         try:
             authenticate(env, progress)
             publish(env, progress, work)

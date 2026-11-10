@@ -1,4 +1,4 @@
-name: Publish QuickBooks sandbox integration
+name: Publish Strangers updates
 
 'on':
   push:
@@ -21,7 +21,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Authorise, publish, and squash after Tests
+      - name: Verify publisher safeguards
+        run: python3 -m unittest -v test_publish.py
+      - name: Publish with saved access and squash after Tests
         env:
           PUBLISH_CHECK_TOKEN: ${{ github.token }}
+          STRANGERS_DEPLOY_TOKEN: ${{ secrets.STRANGERS_DEPLOY_TOKEN }}
         run: python3 publish.py
