@@ -14,7 +14,7 @@ import urllib.request
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "feature/wholesale-admin-desktop-refinement"
-EXPECTED = "9789142969fefc2ed9ff312988c5281b8a69636a"
+EXPECTED = "265eda447325ee547000f92361cae5af30730c09"
 PRIOR = None
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
@@ -161,7 +161,7 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Refine Wholesale admin desktop layout",
+             "--title", "Organise Wholesale sidebar and simplify the orders workspace",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
