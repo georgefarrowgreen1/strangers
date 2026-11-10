@@ -14,7 +14,7 @@ import urllib.request
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "feature/quickbooks-sandbox"
-EXPECTED = "985f4b2c20df1004f2f74f8d2985d6a1ef765dc0"
+EXPECTED = "f449154b28d3433d23d52842fb7bf5502dae3701"
 PRIOR = None
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
