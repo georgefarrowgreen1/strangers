@@ -1,13 +1,13 @@
-# Strangers employee privacy publisher
+# Strangers Wholesale desktop publisher
 
-Temporary publisher in georgefarrowgreen1/strangers for the requested employee privacy safeguards in strangerscoffee/StrangersRepo. Normal GitHub CLI device sign-in accepts only georgefarrowgreen1 (292799750), checks repository push access, and removes runner credentials when finished.
+Temporary publisher in georgefarrowgreen1/strangers for the requested Wholesale Admin desktop refinement in strangerscoffee/StrangersRepo. Normal GitHub CLI device sign-in accepts only georgefarrowgreen1 (292799750), verifies target push access, and removes credentials from the temporary runner when finished.
 
-Source: `c3e8d527ac9f62b843bc02ef809649a0a1a2fc14` on `feature/employee-privacy`, based on deployed main `344dd692b22e723aa4eb1e66c092e78c088531a0`. The bundle contains the exact frozen source and was verified locally.
+Source: `9789142969fefc2ed9ff312988c5281b8a69636a` on `feature/wholesale-admin-desktop-refinement`, based on deployed main `c5ea889f2f4fab4b90f325349b7bb94761aea205`. The exact frozen source bundle is verified locally.
 
-Private hours, contracts, availability, leave, training, employee contacts and onboarding are restricted to admins and the linked employee. Managers retain business site settings. Ownership uses stable account IDs and trusted server-side version metadata; legacy records require explicit admin review. Emails, PDFs, stale conflicts, polls and shared-device caches follow the same policy. New private saves require online confirmation.
+Desktop summary metrics become one compact group and section navigation fits its labels. List headings, counts, search, filters and rows form a single panel. Narrow desktop search/filters stack; wider desktop controls share a row. Empty states explain the next step and offer Clear filters for unmatched results. Totals retain aligned columns when an order has no next action. Initial invoice setup sits beside the issued-invoice list on desktop. Phone layouts and existing sheets remain native to Admin.
 
-Migration 14 invalidates existing staff sessions and trusted PIN devices once; everyone must sign in with a password again. Records and credentials are retained. The audit report documents historical shared-note review and the limits of legacy unencrypted local queues and previously downloaded copies.
+Changes are limited to four front-end files and design documentation. There is no migration or new service. The source contains no production records or credentials.
 
 The new branch has no allowed prior head (PRIOR=None). Unknown remote work is refused. Push is non-forced; a normal ready PR waits for required Tests before an expected-head squash merge. No direct main push or branch-rule bypass.
 
-Validation: TypeScript and all 167 API/PDF tests pass; the complete browser suite passes 75 cases (242 total). Nine identity cases, actual employee PDF downloads, full staff and wholesale journeys, 24 phone/iPad/desktop light/dark visual states, and the final Worker dry build pass.
+Validation: TypeScript and all 167 API/PDF tests pass; all 75 browser tests pass (242 total). Manual local QA passes 80 empty/populated layouts across desktop 1180/1440/1680, phone 393 and iPad 820 in light/dark mode, plus 30 filter-reset flows. Representative editors and long record names were reviewed. Worker dry build, syntax and diff checks pass.
