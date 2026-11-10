@@ -112,7 +112,7 @@ def authenticate(env, progress):
                     summary = (
                         f"Open https://github.com/login/device and enter **{code}**.\n\n"
                         "Sign in as **georgefarrowgreen1** to authorise GitHub CLI on this temporary "
-                        f"runner. It will publish the tested QuickBooks sandbox connection and invoice-preview stage `{EXPECTED}` to "
+                        f"runner. It will publish the tested QuickBooks invoice exports, payment sync and Sandbox/Live controls `{EXPECTED}` to "
                         f"**{TARGET}** through a normal pull request and wait for Tests before squash merge. "
                         "Credentials stay on the runner and are removed when it finishes."
                     )
