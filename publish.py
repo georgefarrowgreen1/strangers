@@ -13,8 +13,8 @@ import urllib.request
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "feature/wholesale-grind-options"
-EXPECTED = "a2dfeda4099a66720513ec6282994fca0afe2411"
+BRANCH = "feature/quickbooks-sandbox"
+EXPECTED = "985f4b2c20df1004f2f74f8d2985d6a1ef765dc0"
 PRIOR = None
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
@@ -76,7 +76,7 @@ class Progress:
         if url:
             body["details_url"] = url
         if self.check_id is None:
-            body.update(name="Strangers catalogue publication", head_sha=os.environ["GITHUB_SHA"])
+            body.update(name="Strangers QuickBooks publication", head_sha=os.environ["GITHUB_SHA"])
             self.check_id = self.request("POST", "check-runs", body)["id"]
         else:
             self.request("PATCH", f"check-runs/{self.check_id}", body)
@@ -112,7 +112,7 @@ def authenticate(env, progress):
                     summary = (
                         f"Open https://github.com/login/device and enter **{code}**.\n\n"
                         "Sign in as **georgefarrowgreen1** to authorise GitHub CLI on this temporary "
-                        f"runner. It will publish the tested Wholesale catalogue improvements `{EXPECTED}` to "
+                        f"runner. It will publish the tested QuickBooks sandbox connection and invoice-preview stage `{EXPECTED}` to "
                         f"**{TARGET}** through a normal pull request and wait for Tests before squash merge. "
                         "Credentials stay on the runner and are removed when it finishes."
                     )
@@ -161,7 +161,7 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Wholesale: customer sorting and editable grind options",
+             "--title", "Wholesale: QuickBooks Online sandbox connection and invoice mappings",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
@@ -178,7 +178,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("Wholesale catalogue improvements squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("QuickBooks sandbox stage squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")
