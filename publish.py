@@ -13,8 +13,8 @@ import urllib.request
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "feature/quickbooks-sandbox"
-EXPECTED = "f449154b28d3433d23d52842fb7bf5502dae3701"
+BRANCH = "feature/quickbooks-live"
+EXPECTED = "5cc0c2f297b250e2f3990affe1c4918664a972b2"
 PRIOR = None
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
@@ -161,7 +161,7 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Wholesale: QuickBooks Online sandbox connection and invoice mappings",
+             "--title", "Wholesale: QuickBooks invoice export, payment sync and Sandbox/Live controls",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
@@ -178,7 +178,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("QuickBooks sandbox stage squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("QuickBooks integration squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")
