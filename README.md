@@ -1,8 +1,8 @@
-# Strangers QuickBooks app settings publisher
+# Strangers page loader publisher
 
-Publishes the tested `feature/quickbooks-admin-credentials` commit `996c5b86dbca71f205a0ff90fdb30f6a6f4cbe7b` to `strangerscoffee/StrangersRepo` through a normal Tests-gated pull request and squash merge. Cloudflare Workers Builds deploys main.
+Publishes the tested `feature/faster-branded-loader` commit `2655958f6629385be1a8521316a0898966457cf2` to `strangerscoffee/StrangersRepo` through a normal Tests-gated pull request and squash merge. Cloudflare Workers Builds deploys main.
 
-Admins manage separate Sandbox/Live client IDs, write-only client secrets and webhook verifier tokens, with encrypted D1 storage, safe metadata, copyable Intuit URLs, version checks and a disconnect requirement for auth credential replacement. The existing independent hosting encryption key remains outside the database. This does not configure real Intuit credentials, grant consent or activate Live.
+The shared loader shows the existing Strangers logo, uses smaller identity proofs and fewer startup requests, and recovers from interrupted checks. Every new activation still requires fresh verification before private content or owner-bound queues can be accessed.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 
