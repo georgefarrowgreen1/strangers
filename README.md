@@ -1,8 +1,8 @@
-# Strangers wholesale grind styling and logo recovery publisher
+# Strangers staff order dashboard publisher
 
-Publishes the tested `feature/wholesale-grind-colours` commit `4658139447c2289dd61a0a66ff4775e49923734e` to `strangerscoffee/StrangersRepo` through a normal Tests-gated pull request and squash merge. Cloudflare Workers Builds deploys main.
+Publishes the tested `feature/staff-wholesale-orders` release to `strangerscoffee/StrangersRepo` through its normal Tests-gated pull request and squash merge. Cloudflare Workers Builds deploys main. The frozen source commit is `5fe54a18c261cb0b830ee711e4a6211d4c0585ca`; all 249 API/PDF and 132 browser checks pass, plus type/syntax and Worker dry build.
 
-Wholesale packing lines use labelled coloured badges and stripes from the existing rota design, larger coffee/quantity text, separate Decaf labels and draft-safe grind filters. New optional preparation snapshots preserve catalogue history. Branding image failures retry once; persistent failures remain reported without covering sign-in.
+The existing staff portal gains a read-only wholesale dashboard, per-person Admin access controls and minimal overdue/payment-review warnings. Shared packing colours match Admin. HTML cache validation is corrected so returning users receive current script fingerprints and branding recovery.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 
