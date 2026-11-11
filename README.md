@@ -1,8 +1,8 @@
-# Strangers page loader publisher
+# Strangers wholesale grind styling and logo recovery publisher
 
-Publishes the tested `feature/faster-branded-loader` commit `2655958f6629385be1a8521316a0898966457cf2` to `strangerscoffee/StrangersRepo` through a normal Tests-gated pull request and squash merge. Cloudflare Workers Builds deploys main.
+Publishes the tested `feature/wholesale-grind-colours` commit `4658139447c2289dd61a0a66ff4775e49923734e` to `strangerscoffee/StrangersRepo` through a normal Tests-gated pull request and squash merge. Cloudflare Workers Builds deploys main.
 
-The shared loader shows the existing Strangers logo, uses smaller identity proofs and fewer startup requests, and recovers from interrupted checks. Every new activation still requires fresh verification before private content or owner-bound queues can be accessed.
+Wholesale packing lines use labelled coloured badges and stripes from the existing rota design, larger coffee/quantity text, separate Decaf labels and draft-safe grind filters. New optional preparation snapshots preserve catalogue history. Branding image failures retry once; persistent failures remain reported without covering sign-in.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 
