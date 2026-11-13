@@ -142,6 +142,14 @@ def transient_invoice_fixture_port(log):
             and "ERR_ASSERTION" not in log)
 
 
+def use_saved_merge_identity(pr, url, env):
+    """Keep the merge under the verified saved identity so production deploy events run."""
+    if pr["headRefOid"] != EXPECTED:
+        raise RuntimeError("The PR head changed; no merge setting was changed.")
+    if pr["state"] == "OPEN" and pr.get("autoMergeRequest"):
+        command(["gh", "pr", "merge", url, "--repo", TARGET, "--disable-auto"], env=env)
+
+
 def publish(env, progress, work):
     progress.update("Verifying source", f"Authorised. Verifying the tested commit `{EXPECTED}`.")
     merged = json.loads(command(
@@ -212,7 +220,7 @@ def publish(env, progress, work):
 
     def read_pr():
         return json.loads(command(
-            ["gh", "pr", "view", url, "--repo", TARGET, "--json", "state,headRefOid,mergeCommit"], env=env,
+            ["gh", "pr", "view", url, "--repo", TARGET, "--json", "state,headRefOid,mergeCommit,autoMergeRequest"], env=env,
         ))
 
     def finished(pr):
@@ -226,8 +234,10 @@ def publish(env, progress, work):
         return False
 
     while time.monotonic() < deadline:
-        if finished(read_pr()):
+        pr = read_pr()
+        if finished(pr):
             return
+        use_saved_merge_identity(pr, url, env)
         runs = json.loads(command(
             ["gh", "api", f"repos/{TARGET}/actions/runs?head_sha={EXPECTED}&event=pull_request&per_page=100"], env=env,
         ))["workflow_runs"]

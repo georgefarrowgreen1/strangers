@@ -95,5 +95,21 @@ class RetryTests(unittest.TestCase):
         self.assertFalse(publish.transient_database_lock(log.replace("Migration 16 preserves legacy Sandbox tokens/mappings", "another test")))
 
 
+class MergeIdentityTests(unittest.TestCase):
+    def test_only_the_verified_open_head_has_native_auto_merge_disabled(self):
+        with patch.object(publish, "command") as command:
+            publish.use_saved_merge_identity({"state": "OPEN", "headRefOid": publish.EXPECTED, "autoMergeRequest": {"enabledAt": "now"}}, "https://github.com/example/pull/129", {})
+            self.assertEqual(command.call_args.args[0], ["gh", "pr", "merge", "https://github.com/example/pull/129", "--repo", publish.TARGET, "--disable-auto"])
+        with patch.object(publish, "command") as command:
+            publish.use_saved_merge_identity({"state": "OPEN", "headRefOid": publish.EXPECTED, "autoMergeRequest": None}, "url", {})
+            command.assert_not_called()
+
+    def test_a_changed_head_is_refused_before_changing_merge_settings(self):
+        with patch.object(publish, "command") as command:
+            with self.assertRaisesRegex(RuntimeError, "PR head changed"):
+                publish.use_saved_merge_identity({"state": "OPEN", "headRefOid": "other", "autoMergeRequest": {}}, "url", {})
+            command.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
