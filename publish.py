@@ -152,10 +152,17 @@ def publish(env, progress, work):
     ))
     if prs:
         url = prs[0]["url"]
+        number = url.removeprefix(f"https://github.com/{TARGET}/pull/")
+        if not number.isdigit():
+            raise RuntimeError("The existing PR URL did not match the verified repository.")
+        metadata = work / "pr-metadata.json"
+        metadata.write_text(json.dumps({
+            "title": "Harden privacy, fix browser recovery and space email actions",
+            "body": (ROOT / "pull-request.txt").read_text(),
+        }))
         command(
-            ["gh", "pr", "edit", url, "--repo", TARGET,
-             "--title", "Harden privacy, fix browser recovery and space email actions",
-             "--body-file", str(ROOT / "pull-request.txt")], env=env,
+            ["gh", "api", "--method", "PATCH", f"repos/{TARGET}/pulls/{number}",
+             "--input", str(metadata)], env=env,
         )
     else:
         url = command(
