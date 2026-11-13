@@ -144,6 +144,14 @@ def transient_invoice_fixture_port(log):
 
 def publish(env, progress, work):
     progress.update("Verifying source", f"Authorised. Verifying the tested commit `{EXPECTED}`.")
+    merged = json.loads(command(
+        ["gh", "pr", "list", "--repo", TARGET, "--head", BRANCH, "--base", "main",
+         "--state", "merged", "--json", "url,headRefOid,mergeCommit"], env=env,
+    ))
+    already = next((pr for pr in merged if pr["headRefOid"] == EXPECTED), None)
+    if already:
+        progress.update("Verified release already squash-merged", f"[{already['url']}]({already['url']})\n\nMerged as `{already['mergeCommit']['oid']}`. No duplicate PR or branch was created.", conclusion="success", url=already["url"])
+        return
     source = work / "StrangersRepo"
     command(["git", "clone", "--no-checkout", f"https://github.com/{TARGET}.git", str(source)], env=env)
     bundle = str(ROOT / "wholesale-staff-integration.bundle")
