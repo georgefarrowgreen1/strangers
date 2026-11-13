@@ -77,6 +77,15 @@ class AuthenticationTests(unittest.TestCase):
 
 
 class RetryTests(unittest.TestCase):
+    def test_only_the_observed_invoice_port_collision_is_retryable(self):
+        log = "\n".join(f"not ok {i} - wholesale invoices: case {i}\n failureType: 'hookFailed'\n Address already in use (127.0.0.1:39849)" for i in range(9)) + "\n# fail 9\n"
+        self.assertTrue(publish.transient_invoice_fixture_port(log))
+        self.assertFalse(publish.transient_invoice_fixture_port(log.replace("# fail 9", "# fail 10")))
+        self.assertFalse(publish.transient_invoice_fixture_port(log.replace("case 0", "case 0\n Address already in use (127.0.0.1:39850)")))
+        self.assertFalse(publish.transient_invoice_fixture_port(log.replace("hookFailed", "testCodeFailure", 1)))
+        self.assertFalse(publish.transient_invoice_fixture_port(log.replace("wholesale invoices: case 0", "an unrelated failure")))
+        self.assertFalse(publish.transient_invoice_fixture_port(log + "ERR_ASSERTION"))
+
     def test_only_single_observed_migration_lock_is_retryable(self):
         log = "not ok 132 - Migration 16 preserves legacy Sandbox tokens/mappings\n database is locked: SQLITE_BUSY\n# fail 1\n"
         self.assertTrue(publish.transient_database_lock(log))

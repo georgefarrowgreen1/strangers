@@ -129,6 +129,19 @@ def transient_database_lock(log):
             and not bool(re.search(r"# fail (?:[2-9]|[1-9]\d+)(?:\s|$)", log)))
 
 
+def transient_invoice_fixture_port(log):
+    # One shared invoice before-hook failed to start; none of its nine cases ran.
+    # Retry that observed infrastructure failure once, never an assertion failure.
+    names = set(re.findall(r"not ok \d+ - ([^\r\n]+)", log))
+    ports = set(re.findall(r"Address already in use \(127\.0\.0\.1:(\d+)\)", log))
+    failures = set(re.findall(r"# fail (\d+)(?:\s|$)", log))
+    return (len(names) == 9 and all(name.startswith("wholesale invoices:") for name in names)
+            and len(ports) == 1 and failures == {"9"}
+            and "failureType: 'hookFailed'" in log
+            and "failureType: 'testCodeFailure'" not in log
+            and "ERR_ASSERTION" not in log)
+
+
 def publish(env, progress, work):
     progress.update("Verifying source", f"Authorised. Verifying the tested commit `{EXPECTED}`.")
     source = work / "StrangersRepo"
@@ -208,10 +221,10 @@ def publish(env, progress, work):
                     continue
                 if retried_test is None and run["conclusion"] == "failure":
                     log = command(["gh", "run", "view", str(run["id"]), "--repo", TARGET, "--log-failed"], env=env)
-                    if transient_database_lock(log):
+                    if transient_database_lock(log) or transient_invoice_fixture_port(log):
                         command(["gh", "run", "rerun", str(run["id"]), "--repo", TARGET, "--failed"], env=env)
                         retried_test, retried_at = identity, time.monotonic()
-                        progress.update("Retrying a temporary test database lock", f"[{url}]({url})\n\nThe migration test hit SQLITE_BUSY. Rerunning its normal Tests job once; a successful test run is still required before merge.", url=url)
+                        progress.update("Retrying a temporary test fixture startup failure", f"[{url}]({url})\n\nA test fixture hit the verified SQLite lock or invoice-server port collision. Rerunning its normal Tests job once; a successful test run is still required before merge.", url=url)
                         time.sleep(5)
                         continue
                 raise RuntimeError(f"Tests concluded {run['conclusion']}; the PR has been left for review: {url}")
