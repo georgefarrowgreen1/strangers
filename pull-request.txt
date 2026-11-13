@@ -1,7 +1,7 @@
-Customer wholesale ordering now uses the approved compact account/cart header, large phone images and horizontal desktop cards. Orders and invoices are reached through My account on every screen; the basket opens in a native window so the catalogue can use the page width.
+Wholesale customers now see “Hi, [contact name]” in the desktop account button and account menu, with their business underneath. The greeting follows saved contact changes, handles blank/long names, renders names as text, and clears its visible and accessible labels when the ordering identity is invalidated.
 
-Bag weight and bean/grind choices open animated, keyboard-accessible dropdowns. Desktop search expands from its icon beside weight and sort controls, without the old Bag size caption. Order again reviews the last owned order at current prices before adding anything, and Add gives brief confirmation feedback. Existing private coffees, configured grinds, hidden prices, minimum orders, account/location editing, saved baskets and uncertain checkout recovery keep their checks.
+Quantity and Add controls finish flush with the weight/grind selector on desktop. Categories have a visible segmented track and solid selected state; photo labels use larger, opaque themed pills. Photos fill their rounded frames at their original aspect ratio, with edge cropping as approved.
 
-Sitewide clicks/taps no longer draw blue focus outlines. Keyboard focus remains visible with neutral cues, and page landmarks/account icons avoid oversized rings. All styling and motion use locally served theme assets with reduced-motion support.
+Validation covers contact updates, blank/long names, escaped text, identity changes, mobile/desktop ordering and light/dark layouts. No dependency, database migration, service or configuration changes are required.
 
-Validation: `npm test` (340 passing), the full 218-scenario browser regression with affected-suite reruns, phone/tablet/desktop light and dark browser journeys, and 14 sitewide pointer/keyboard focus checks. No database migration, dependency, service or configuration change.
+Release checks: `npm test` passed all 340 API/PDF/unit tests; `npm run test:e2e` passed all 219 browser tests. Eight actual-source phone/tablet/desktop visual checks also passed in light and dark mode.
