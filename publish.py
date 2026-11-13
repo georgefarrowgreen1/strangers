@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "security/data-access-review"
-EXPECTED = "c8d2bb25b6026e6a793209726b7ba393386cea0c"
-PRIOR = None
+EXPECTED = "da54be88d3854861206e39a8fbd6b3f88af1d27f"
+PRIOR = "c8d2bb25b6026e6a793209726b7ba393386cea0c"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -152,10 +152,15 @@ def publish(env, progress, work):
     ))
     if prs:
         url = prs[0]["url"]
+        command(
+            ["gh", "pr", "edit", url, "--repo", TARGET,
+             "--title", "Harden privacy, fix browser recovery and space email actions",
+             "--body-file", str(ROOT / "pull-request.txt")], env=env,
+        )
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Harden customer privacy and external data access boundaries",
+             "--title", "Harden privacy, fix browser recovery and space email actions",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
