@@ -1,8 +1,8 @@
 # Compact wholesale footer publisher
 
-Publishes the verified `fix/compact-wholesale-footer` commit `9470a2be7bd7f193cac828bafaacde3de55a0f4c` through the existing Tests-gated PR and squash merge. Cloudflare Workers Builds deploys main.
+Publishes the verified `fix/compact-wholesale-footer` commit `d74f38b9b5ec1ac4c035b71f74ac388c3e915ba3` through the existing Tests-gated PR and squash merge. Cloudflare Workers Builds deploys main.
 
-The approved footer becomes a slim Strangers mark, Terms and Website row using the existing theme, with 44 px targets. Header order history retains email deep links; there are no backend, schema or configuration changes.
+The approved footer becomes a slim Strangers mark, Terms and Website row using the existing theme, with 44 px targets. Header order history retains email deep links; there are no backend, schema or configuration changes. A diary regression found by CI is also fixed: maintenance completion inputs remain intact across live redraws, retaining draft text, focus and selection without new storage.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 
