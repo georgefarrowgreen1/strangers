@@ -13,8 +13,8 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "fix/staff-orders-access-copy"
-EXPECTED = "c38cb68a90289c3bedcc3b704cb4d2f79a377fba"
+BRANCH = "security/data-access-review"
+EXPECTED = "c8d2bb25b6026e6a793209726b7ba393386cea0c"
 PRIOR = None
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
@@ -155,7 +155,7 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Describe staff wholesale dashboard access accurately",
+             "--title", "Harden customer privacy and external data access boundaries",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
@@ -174,7 +174,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("Staff access wording squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("Security and privacy safeguards squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")
