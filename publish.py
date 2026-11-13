@@ -219,7 +219,7 @@ def publish(env, progress, work):
                 if retried_test == identity and time.monotonic() - retried_at < 60:
                     time.sleep(5)
                     continue
-                if retried_test is None and run["conclusion"] == "failure":
+                if retried_test is None and run["conclusion"] == "failure" and run.get("run_attempt", 1) == 1:
                     log = command(["gh", "run", "view", str(run["id"]), "--repo", TARGET, "--log-failed"], env=env)
                     if transient_database_lock(log) or transient_invoice_fixture_port(log):
                         command(["gh", "run", "rerun", str(run["id"]), "--repo", TARGET, "--failed"], env=env)
