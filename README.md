@@ -1,10 +1,10 @@
-# Publish the compact mobile wholesale catalogue
+# Publish custom coffee management and clearer refresh actions
 
-Publishes the authorised mobile catalogue refinement through a ready PR, required Tests and squash merge into the target repository's main. Frozen source: `4da08814b3bcb3796338ab067670745e9dd1eebf`; tree `99e3dcc1e5b3fb394fc9bdee3bb6c996d46ce617`, based on main `de5da1c06e952cb86d66d2c98322d3617dd1cf2f`.
+Publishes the authorised Wholesale refinements through a ready PR, required Tests and squash merge into the target repository's main. Frozen source: `de8e20958c126ff8748e6d096aa3c99d88b92193`; tree `28c931f3fec0b1c8b63e6918d6828d6f2ea0d72e`, based on main `0c9332b909de05fdd5e34360552265ac6327e7ab`.
 
-Phone customers reach coffee sooner with a compact coffee count, global bag-size selector and sort icon, followed by full-width search and category pills. The existing controls retain choices, focus and keyboard order across resizing; product images remain fully contained at their original proportions. Desktop retains its full layout. No backend migration or configuration is required.
+Admin has a dedicated Custom coffees section reusing the existing customer allowlists. General catalogue rows exclude custom coffees. Private drafts with no assigned customers remain hidden, and clearing the last customer preserves private access; catalogue, new orders and uploaded photos share the same restriction. Existing assignments are preserved. Order and invoice history share clearer circular refresh buttons with the existing busy rotation and reduced-motion support. No database migration or setup is required.
 
-Validation passed: npm test (325 API/PDF tests plus type checking), npm run test:e2e (178 browser tests), 16 focused catalogue/photo/ordering checks, Worker dry build and diff checks. Phone, iPad and desktop screens were checked in light and dark, including 320 px overflow, 44 px controls, keyboard order, resize focus and original photo proportions.
+Validation passed: npm test (331 API/PDF tests plus type checking), npm run test:e2e (181 browser tests), 26 focused API/browser/navigation checks, Worker dry build and diff checks. Phone, iPad and desktop flows were checked in light/dark, including private drafts, selected-customer access, photo/order revocation, stale edits, 320 px layout and refresh loading/retry behaviour.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 
