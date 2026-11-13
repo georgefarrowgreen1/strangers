@@ -13,8 +13,8 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "feature/compact-mobile-wholesale-header"
-EXPECTED = "34d5ce1652180f8aaca08e3b6a821e1f2610fc1d"
+BRANCH = "feature/rota-leave-management"
+EXPECTED = "d62fad1d76a5c9c768d430ef60b2f36f4ed12c4a"
 PRIOR = None
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
@@ -190,7 +190,7 @@ def publish(env, progress, work):
             raise RuntimeError("The existing PR URL did not match the verified repository.")
         metadata = work / "pr-metadata.json"
         metadata.write_text(json.dumps({
-            "title": "Compact mobile wholesale header with native account menu",
+            "title": "Add rota holiday management and private absence dashboards",
             "body": (ROOT / "pull-request.txt").read_text(),
         }))
         command(
@@ -200,7 +200,7 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Compact mobile wholesale header with native account menu",
+             "--title", "Add rota holiday management and private absence dashboards",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
@@ -219,7 +219,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("Compact mobile wholesale header squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("Rota holiday management squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")

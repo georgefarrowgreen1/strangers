@@ -1,8 +1,9 @@
-# Wholesale UI refinement publisher
+# Strangers verified release publisher
 
-Publishes the verified `feature/compact-mobile-wholesale-header` commit `34d5ce1652180f8aaca08e3b6a821e1f2610fc1d` through the existing Tests-gated PR and squash merge. Cloudflare Workers Builds deploys main.
+Publishes the verified `feature/rota-leave-management` source through the existing Tests-gated PR and squash merge. Cloudflare Workers Builds deploys main. Frozen source: `d62fad1d76a5c9c768d430ef60b2f36f4ed12c4a`; tree `6a412fe6628a7dc6b2e9dcda9d90a9ed4c919af8`, based on main `467c3c4fab83f92c458f4b089765faaee79992fe`.
 
-The approved mobile header is one 64 px row with the Strangers mark, Coffee/Orders, cart and a native account menu. Existing account controls, staff-preview Admin access, session privacy and desktop inline controls are preserved. Local verification covers 470 API/browser tests, a Worker dry build and 18 light/dark responsive layout checks.
+This release adds native rota holiday management, individual days-based balances, approvals, blackout/capacity rules, private absence types and inclusive bank-holiday days in lieu. Migration 24 preserves legacy records. No real employee allowances or Who’s Off data are imported; admins configure individual years and reconcile opening balances before enabling requests. Validation covers 503 API/browser tests, type checking and a Worker dry build.
+
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 
