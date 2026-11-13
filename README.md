@@ -1,10 +1,10 @@
-# Publish custom coffee management and clearer refresh actions
+# Publish Worker request-lifetime recovery
 
-Publishes the authorised Wholesale refinements through a ready PR, required Tests and squash merge into the target repository's main. Frozen source: `de8e20958c126ff8748e6d096aa3c99d88b92193`; tree `28c931f3fec0b1c8b63e6918d6828d6f2ea0d72e`, based on main `0c9332b909de05fdd5e34360552265ac6327e7ab`.
+Publishes the authorised production-error fix through a ready PR, required Tests and squash merge into the target repository's main. Frozen source: `697884ff059d43d111b56e4bc31f19b877ce7f69`; tree `aa5a229328255045221a6f97416b3f75fa5e2f90`, based on main `a386aab635c5dcbf83ceea0b497840eae9274e06`.
 
-Admin has a dedicated Custom coffees section reusing the existing customer allowlists. General catalogue rows exclude custom coffees. Private drafts with no assigned customers remain hidden, and clearing the last customer preserves private access; catalogue, new orders and uploaded photos share the same restriction. Existing assignments are preserved. Order and invoice history share clearer circular refresh buttons with the existing busy rotation and reduced-motion support. No database migration or setup is required.
+An interrupted request could leave a module-cached initialization promise tied to an ended Cloudflare request, breaking later page/API loads (E-0FMM57 and E-M4FG35). Schema setup now caches only completed readiness per DB; session signing caches only resolved CryptoKeys per DB. Stored signing keys, authentication and migrations are retained. No database migration or setup is required.
 
-Validation passed: npm test (331 API/PDF tests plus type checking), npm run test:e2e (181 browser tests), 26 focused API/browser/navigation checks, Worker dry build and diff checks. Phone, iPad and desktop flows were checked in light/dark, including private drafts, selected-customer access, photo/order revocation, stale edits, 320 px layout and refresh loading/retry behaviour.
+Validation passed: npm test (335 API/PDF/unit tests plus type checking), npm run test:e2e (183 browser tests), 14 focused migration/identity/security checks, eight simultaneous real Worker cold starts, Worker dry build and diff checks. Three regressions fail against the former request-owned caches; all four new lifetime/cache tests pass with the fix.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 
