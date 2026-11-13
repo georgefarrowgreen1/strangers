@@ -1,9 +1,10 @@
-# Strangers verified release publisher
+# Publish the compact mobile wholesale catalogue
 
-Publishes the verified `feature/rota-leave-management` source through the existing Tests-gated PR and squash merge. Cloudflare Workers Builds deploys main. Frozen source: `d62fad1d76a5c9c768d430ef60b2f36f4ed12c4a`; tree `6a412fe6628a7dc6b2e9dcda9d90a9ed4c919af8`, based on main `467c3c4fab83f92c458f4b089765faaee79992fe`.
+Publishes the authorised mobile catalogue refinement through a ready PR, required Tests and squash merge into the target repository's main. Frozen source: `4da08814b3bcb3796338ab067670745e9dd1eebf`; tree `99e3dcc1e5b3fb394fc9bdee3bb6c996d46ce617`, based on main `de5da1c06e952cb86d66d2c98322d3617dd1cf2f`.
 
-This release adds native rota holiday management, individual days-based balances, approvals, blackout/capacity rules, private absence types and inclusive bank-holiday days in lieu. Migration 24 preserves legacy records. No real employee allowances or Who’s Off data are imported; admins configure individual years and reconcile opening balances before enabling requests. Validation covers 503 API/browser tests, type checking and a Worker dry build.
+Phone customers reach coffee sooner with a compact coffee count, global bag-size selector and sort icon, followed by full-width search and category pills. The existing controls retain choices, focus and keyboard order across resizing; product images remain fully contained at their original proportions. Desktop retains its full layout. No backend migration or configuration is required.
 
+Validation passed: npm test (325 API/PDF tests plus type checking), npm run test:e2e (178 browser tests), 16 focused catalogue/photo/ordering checks, Worker dry build and diff checks. Phone, iPad and desktop screens were checked in light and dark, including 320 px overflow, 44 px controls, keyboard order, resize focus and original photo proportions.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 
