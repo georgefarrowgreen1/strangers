@@ -1,8 +1,8 @@
 # Wholesale UI refinement publisher
 
-Publishes the verified `fix/center-wholesale-signin-logo` commit `bb2e8120fe2ce6901364c67577b0442ee2f316c5` through the existing Tests-gated PR and squash merge. Cloudflare Workers Builds deploys main.
+Publishes the verified `feature/compact-mobile-wholesale-header` commit `34d5ce1652180f8aaca08e3b6a821e1f2610fc1d` through the existing Tests-gated PR and squash merge. Cloudflare Workers Builds deploys main.
 
-The wholesale sign-in logo is centred using the existing image and theme. Staff order print/selection tools stay beside desktop filters, with horizontally scrollable filters and 44 px actions; narrow layouts wrap cleanly. This follows the already deployed compact footer and maintenance-note release.
+The approved mobile header is one 64 px row with the Strangers mark, Coffee/Orders, cart and a native account menu. Existing account controls, staff-preview Admin access, session privacy and desktop inline controls are preserved. Local verification covers 470 API/browser tests, a Worker dry build and 18 light/dark responsive layout checks.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 
