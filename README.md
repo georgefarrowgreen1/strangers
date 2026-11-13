@@ -1,10 +1,10 @@
 # Publish Worker request-lifetime recovery
 
-Publishes the authorised production-error fix through a ready PR, required Tests and squash merge into the target repository's main. Frozen source: `697884ff059d43d111b56e4bc31f19b877ce7f69`; tree `aa5a229328255045221a6f97416b3f75fa5e2f90`, based on main `a386aab635c5dcbf83ceea0b497840eae9274e06`.
+Publishes the authorised production-error fix through a ready PR, required Tests and squash merge into the target repository's main. Frozen source: `12f1ef677a35ce2e7fbb1b016526d6a65884a1d2`; tree `b218a8c806bac8526d26f2769ec13089e0e0cec4`, based on main `7351b1542f971c2c99e3db4bc2add829d31e5a74`.
 
 An interrupted request could leave a module-cached initialization promise tied to an ended Cloudflare request, breaking later page/API loads (E-0FMM57 and E-M4FG35). Schema setup now caches only completed readiness per DB; session signing caches only resolved CryptoKeys per DB. Stored signing keys, authentication and migrations are retained. No database migration or setup is required.
 
-Validation passed: npm test (335 API/PDF/unit tests plus type checking), npm run test:e2e (183 browser tests), 14 focused migration/identity/security checks, eight simultaneous real Worker cold starts, Worker dry build and diff checks. Three regressions fail against the former request-owned caches; all four new lifetime/cache tests pass with the fix.
+Validation: the original hotfix passed npm test (335 API/PDF/unit tests plus type checking) and npm run test:e2e (183 browser tests). After preserving the approved absence-management update, the combined source passed 23 focused API/unit checks, 28 browser checks (identity, loader and sickness), eight simultaneous real Worker cold starts, type checking, Worker dry build and diff checks. The normal full required Tests workflow must pass on this updated source before merge. Three regressions fail against the former caches; all four new lifetime/cache tests pass with the fix.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 

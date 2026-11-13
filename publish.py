@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "fix/request-initialization-lifetime"
-EXPECTED = "697884ff059d43d111b56e4bc31f19b877ce7f69"
-PRIOR = None
+EXPECTED = "12f1ef677a35ce2e7fbb1b016526d6a65884a1d2"
+PRIOR = "697884ff059d43d111b56e4bc31f19b877ce7f69"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
