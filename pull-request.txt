@@ -5,3 +5,5 @@ Quantity and Add controls finish flush with the weight/grind selector on desktop
 Validation covers contact updates, blank/long names, escaped text, identity changes, mobile/desktop ordering and light/dark layouts. No dependency, database migration, service or configuration changes are required.
 
 Release checks: `npm test` passed all 340 API/PDF/unit tests; `npm run test:e2e` passed all 219 browser tests. Eight actual-source phone/tablet/desktop visual checks also passed in light and dark mode.
+
+The greeting journey waits for a freshly open native account sheet and confirms the successful profile response before checking updated visible and accessible names. All 14 affected catalogue/privacy browser checks pass after this synchronization change.

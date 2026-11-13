@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "feat/wholesale-followup-ui"
-EXPECTED = "33137c24679ffbe385805d300479a7511071be40"
-PRIOR = None
+EXPECTED = "978bd838b646905aba597db79270d5d4c489f850"
+PRIOR = "33137c24679ffbe385805d300479a7511071be40"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
