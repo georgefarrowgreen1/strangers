@@ -13,9 +13,9 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "feat/wholesale-followup-ui"
-EXPECTED = "978bd838b646905aba597db79270d5d4c489f850"
-PRIOR = "33137c24679ffbe385805d300479a7511071be40"
+BRANCH = "fix/wholesale-reset-mobile-header"
+EXPECTED = "6845acd7d5399deb5bdee3ee406b8de1f93b7157"
+PRIOR = "a7f4facd6a75a8cdf40bca4994a6aa81c665fa15"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -198,7 +198,7 @@ def publish(env, progress, work):
             raise RuntimeError("The existing PR URL did not match the verified repository.")
         metadata = work / "pr-metadata.json"
         metadata.write_text(json.dumps({
-            "title": "Personalise wholesale greetings and refine catalogue clarity",
+            "title": "Fix wholesale password recovery and mobile header layout",
             "body": (ROOT / "pull-request.txt").read_text(),
         }))
         command(
@@ -208,12 +208,13 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Personalise wholesale greetings and refine catalogue clarity",
+             "--title", "Fix wholesale password recovery and mobile header layout",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
     print(f"Pull request: {url}", flush=True)
-    deadline = time.monotonic() + 1080
+    # Allow the target Tests job its full 25-minute budget before reporting a timeout.
+    deadline = time.monotonic() + 1560
     merge_busy_since = None
     retried_test = None
     retried_at = 0
@@ -227,7 +228,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("Wholesale follow-up refinements squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("Wholesale recovery and header fixes squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")

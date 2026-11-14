@@ -1,9 +1,11 @@
-Wholesale customers now see “Hi, [contact name]” in the desktop account button and account menu, with their business underneath. The greeting follows saved contact changes, handles blank/long names, renders names as text, and clears its visible and accessible labels when the ordering identity is invalidated.
+Wholesale password recovery currently references a table that startup never creates. Register migration 28 for its existing initializer and add the omitted reset API/browser tests to the normal test commands. New installations and upgrades create the table automatically using the existing email configuration.
 
-Quantity and Add controls finish flush with the weight/grind selector on desktop. Categories have a visible segmented track and solid selected state; photo labels use larger, opaque themed pills. Photos fill their rounded frames at their original aspect ratio, with edge cropping as approved.
+On phones, the extra Orders & invoices shortcut wrapped below a fixed-height header and overlapped the catalogue controls. Keep history in the account menu on mobile, retain the desktop shortcut, and keep all phone header controls in a single 64 px row. Use “Strangers Wholesale” at every width and “Strangers Coffee Company” in the footer.
 
-Validation covers contact updates, blank/long names, escaped text, identity changes, mobile/desktop ordering and light/dark layouts. No dependency, database migration, service or configuration changes are required.
+Validation:
+- Full npm test passes (typecheck and 349 API tests); full npm run test:e2e passes (221 browser tests).
+- Nine focused recovery, migration and mobile-header checks pass, including successful emailed resets, expired/used links and session invalidation with local email stand-ins.
+- Fourteen visual checks from 320 px phones to 1440 px desktop, light and dark; all controls fit without horizontal overflow.
+- Mobile regression checks verify header containment, non-overlap, 44 px targets, history access and draft preservation across resizing. Catalogue checks verify both brand labels and long contact names at narrow tablet widths.
 
-Release checks: `npm test` passed all 340 API/PDF/unit tests; `npm run test:e2e` passed all 219 browser tests. Eight actual-source phone/tablet/desktop visual checks also passed in light and dark mode.
-
-The greeting journey waits for a freshly open native account sheet and confirms the successful profile response before checking updated visible and accessible names. All 14 affected catalogue/privacy browser checks pass after this synchronization change.
+No new dependency, secret, service or DNS change. The additive migration runs through normal startup; production verification uses a read-only invalid-token probe without sending recovery emails.
