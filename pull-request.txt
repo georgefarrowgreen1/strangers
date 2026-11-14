@@ -1,11 +1,10 @@
-Wholesale password recovery currently references a table that startup never creates. Register migration 28 for its existing initializer and add the omitted reset API/browser tests to the normal test commands. New installations and upgrades create the table automatically using the existing email configuration.
+Wholesale login and password recovery now use the approved compact design: smaller Strangers logo, visible headings, shorter copy, centred recovery/back links, Show/Hide password controls and a quiet Help/Terms footer with Strangers Coffee Company. The recovery confirmation keeps the same conditional message for matching and unknown accounts and explains the link expiry.
 
-On phones, the extra Orders & invoices shortcut wrapped below a fixed-height header and overlapped the catalogue controls. Keep history in the account menu on mobile, retain the desktop shortcut, and keep all phone header controls in a single 64 px row. Use “Strangers Wholesale” at every width and “Strangers Coffee Company” in the footer.
+Preserve the existing sign-in, registration, invitation, temporary-password and reset APIs. Keep failed recovery input for retry, prevent duplicate submissions, mask passwords on navigation/restore and ignore late link-verification responses after the user leaves. Forms remain disabled until initialization and use POST so a browser without JavaScript cannot put credentials in a page URL.
 
 Validation:
-- Full npm test passes (typecheck and 349 API tests); full npm run test:e2e passes (221 browser tests).
-- Nine focused recovery, migration and mobile-header checks pass, including successful emailed resets, expired/used links and session invalidation with local email stand-ins.
-- Fourteen visual checks from 320 px phones to 1440 px desktop, light and dark; all controls fit without horizontal overflow.
-- Mobile regression checks verify header containment, non-overlap, 44 px targets, history access and draft preservation across resizing. Catalogue checks verify both brand labels and long contact names at narrow tablet widths.
+- Full npm test passes (typecheck and 349 API tests); full npm run test:e2e passes (226 browser tests).
+- Thirteen focused browser checks pass, including real recovery emails through a local stand-in, invalid/reused links, temporary passwords, invitation setup, retry/duplicate guards, stale link cancellation and JavaScript-disabled credential protection.
+- Twenty-four layout checks across 320/393/820/1440 px, light and dark; no overflow and all controls retain 44 px targets.
 
-No new dependency, secret, service or DNS change. The additive migration runs through normal startup; production verification uses a read-only invalid-token probe without sending recovery emails.
+No API, schema, dependency, secret or setup changes. Live verification opens the public sign-in/recovery pages without submitting forms or sending emails.

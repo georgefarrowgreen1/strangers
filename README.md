@@ -1,10 +1,10 @@
-# Publish approved wholesale recovery and header fixes
+# Publish approved wholesale login and recovery designs
 
-Frozen source: `6845acd7d5399deb5bdee3ee406b8de1f93b7157`, based on main `a7f4facd6a75a8cdf40bca4994a6aa81c665fa15`.
+Frozen source: `f04f0f5a916e755e3f4d124be43444d62a2e270e`, based on main `94c1620d8eafe9a0c8caa28baa8541f529fef86e`.
 
-Registers automatic migration 28 for the existing password-reset table/index and includes the reset API/browser tests in the normal CI commands. Keeps the phone header in one row with Orders & invoices in the account menu, labels the header Strangers Wholesale at every width, and labels the footer Strangers Coffee Company. Desktop keeps its history shortcut. Uses the existing database and email setup; no new secret, service or configuration is required.
+Implements the approved compact login and recovery panels with a smaller logo, centred recovery/back links, Show/Hide password controls, and a quiet Help/Terms footer labelled Strangers Coffee Company. Includes conditional recovery confirmation, identifier-preserving retries, duplicate-submit guards, password re-masking and cancellation-safe link checks. Registration, invitations, temporary passwords and reset links use the existing APIs. Native form submits remain disabled until the script initializes; forms use POST as a fallback safeguard. No backend/schema/dependency/secret changes are required.
 
-Local validation: typecheck and all 349 API tests pass; all 221 browser tests pass. Nine focused recovery/migration/mobile-header checks and seven catalogue checks pass. Phone/tablet/desktop visual checks pass in light and dark with short and long names. The normal full GitHub Tests workflow must pass before merge.
+Local validation: typecheck and all 349 API tests pass; all 226 browser tests pass. Thirteen focused browser checks and twenty-four actual-source layout checks pass across phones, tablets, desktops, light and dark. The normal GitHub Tests workflow must pass before merge. Live verification reads the public pages without submitting forms or sending email.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 
