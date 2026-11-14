@@ -1,10 +1,12 @@
-Wholesale login and password recovery now use the approved compact design: smaller Strangers logo, visible headings, shorter copy, centred recovery/back links, Show/Hide password controls and a quiet Help/Terms footer with Strangers Coffee Company. The recovery confirmation keeps the same conditional message for matching and unknown accounts and explains the link expiry.
+When a session expires after catalogue HTML loads, protected module requests can redirect to sign-in HTML and leave wholesale.js unable to start. Serve only the data-free bootstrap code without a session, start the client catalogue empty, and keep the source-price snapshot server-only. Catalogue APIs, private pages, customer images, orders and invoices retain their existing access checks.
 
-Preserve the existing sign-in, registration, invitation, temporary-password and reset APIs. Keep failed recovery input for retry, prevent duplicate submissions, mask passwords on navigation/restore and ignore late link-verification responses after the user leaves. Forms remain disabled until initialization and use POST so a browser without JavaScript cannot put credentials in a page URL.
+Move browser files, imports, active links, source-photo URLs and local development pages from /wholesale-preview/ to /wholesale/. Old document URLs redirect with reset/invitation/order queries intact; cached asset requests resolve to the same new files. Existing cookies, database identifiers, basket keys and frozen pending checkout requests remain compatible. A new short-lived model URL avoids cached pre-migration code; authenticated source-snapshot imports remain available to older clients without placing the snapshot back in public/. Wholesale error cards and Admin activity use the correct app name.
 
 Validation:
-- Full npm test passes (typecheck and 349 API tests); full npm run test:e2e passes (226 browser tests).
-- Thirteen focused browser checks pass, including real recovery emails through a local stand-in, invalid/reused links, temporary passwords, invitation setup, retry/duplicate guards, stale link cancellation and JavaScript-disabled credential protection.
-- Twenty-four layout checks across 320/393/820/1440 px, light and dark; no overflow and all controls retain 44 px targets.
+- Full npm test passes: typecheck and 351 API tests.
+- Full npm run test:e2e passes: 228 browser tests, including phone/iPad light and dark.
+- Session-expiry regressions end the session after protected HTML arrives and verify both canonical and cached legacy module graphs return cleanly to sign-in without failed-script cards.
+- Canonical/legacy code requests return JavaScript/CSS without exposing the source snapshot or private APIs; old document links preserve reset, invitation and order queries. Older authenticated snapshot imports remain valid.
+- Existing ordering, private coffees, invoices, image uploads, account recovery and frozen checkout retries pass their standard regressions.
 
-No API, schema, dependency, secret or setup changes. Live verification opens the public sign-in/recovery pages without submitting forms or sending emails.
+No migration, dependency, secret, DNS or API-contract changes. The normal required GitHub Tests must pass before squash merge. Live verification reads assets/auth pages without submitting orders/forms or sending emails.
