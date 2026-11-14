@@ -1,10 +1,10 @@
-# Publish wholesale module fix and path migration
+# Publish approved wholesale UI polish
 
-Frozen source: `9fb7d2bd73cf910e40d944e0107ead5d69beb7e2`, based on main `02bfe5ec8a81f10997a1418cd735d1d1eb181cd4`.
+Frozen source: `e16da01e2e2853dc9b8ef88d201ce6b5fb28113e`, based on main `34164d2ee0a2c29720f933d9b03e04efab7ac389`.
 
-Moves all browser files and active links to `/wholesale/`, keeps cached asset URLs and emailed document queries compatible, and fixes session-expiry module redirects without exposing catalogue data. The source-price snapshot is server-only and errors identify Strangers Wholesale. No database, cookie or browser basket/pending-request keys change; no secret, DNS, dependency or API changes are required.
+Implements the approved desktop/mobile refinements in the existing catalogue: softer card edges, tighter spacing, quieter typography/photo labels, larger desktop photos, consistent controls, account-menu history navigation and a scroll-only header shadow. Add keeps the brand colour, shows a brief check and gently updates the basket badge, respecting reduced motion and session shielding. Existing live catalogue, pricing, permissions, menus and checkout remain. No demo data, migrations, dependencies or configuration changes.
 
-Local validation: typecheck and all 351 API tests pass; all 228 browser tests pass, including the session-expiry race, authenticated legacy snapshot imports, compatibility asset/page paths, and phone/iPad light and dark journeys. The normal GitHub Tests workflow must pass before merge. Live verification reads public assets and auth pages without submitting forms or sending emails.
+Local validation: typecheck and all 352 API tests pass; all 232 browser tests pass. Nine focused browser journeys and ten layout checks pass across320/393/820/1440/1920px in light and dark. The normal required GitHub Tests must also pass before squash merge.
 
 Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
 

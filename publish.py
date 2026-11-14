@@ -13,9 +13,9 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "fix/wholesale-paths"
-EXPECTED = "9fb7d2bd73cf910e40d944e0107ead5d69beb7e2"
-PRIOR = "02bfe5ec8a81f10997a1418cd735d1d1eb181cd4"
+BRANCH = "feat/wholesale-ui-polish"
+EXPECTED = "e16da01e2e2853dc9b8ef88d201ce6b5fb28113e"
+PRIOR = "34164d2ee0a2c29720f933d9b03e04efab7ac389"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -198,7 +198,7 @@ def publish(env, progress, work):
             raise RuntimeError("The existing PR URL did not match the verified repository.")
         metadata = work / "pr-metadata.json"
         metadata.write_text(json.dumps({
-            "title": "Fix wholesale module loading and move browser files to /wholesale/",
+            "title": "Polish wholesale catalogue on desktop and mobile",
             "body": (ROOT / "pull-request.txt").read_text(),
         }))
         command(
@@ -208,7 +208,7 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Fix wholesale module loading and move browser files to /wholesale/",
+             "--title", "Polish wholesale catalogue on desktop and mobile",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
@@ -228,7 +228,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("Wholesale module fix and path migration squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("Wholesale desktop and mobile polish squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")

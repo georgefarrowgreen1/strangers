@@ -1,12 +1,12 @@
-When a session expires after catalogue HTML loads, protected module requests can redirect to sign-in HTML and leave wholesale.js unable to start. Serve only the data-free bootstrap code without a session, start the client catalogue empty, and keep the source-price snapshot server-only. Catalogue APIs, private pages, customer images, orders and invoices retain their existing access checks.
+Refine the existing customer catalogue to match the approved desktop and mobile previews: quieter card borders/shadows, tighter spacing, smaller photo labels, softer supporting text, larger frame-filling photos and aligned ordering controls. Keep Orders & invoices in the account menu across sizes, remove the redundant bag-size caption, and add only a soft header shadow after scrolling.
 
-Move browser files, imports, active links, source-photo URLs and local development pages from /wholesale-preview/ to /wholesale/. Old document URLs redirect with reset/invitation/order queries intact; cached asset requests resolve to the same new files. Existing cookies, database identifiers, basket keys and frozen pending checkout requests remain compatible. A new short-lived model URL avoids cached pre-migration code; authenticated source-snapshot imports remain available to older clients without placing the snapshot back in public/. Wholesale error cards and Admin activity use the correct app name.
+Successful Add keeps the brand-colour button, briefly shows Added with a check and pulses the basket count. Reduced motion disables movement; identity invalidation cancels the count animation. Preserve the existing catalogue data, customer-specific coffees, native choices/focus, pricing, account/history/basket flows and explicit checkout.
 
 Validation:
-- Full npm test passes: typecheck and 351 API tests.
-- Full npm run test:e2e passes: 228 browser tests, including phone/iPad light and dark.
-- Session-expiry regressions end the session after protected HTML arrives and verify both canonical and cached legacy module graphs return cleanly to sign-in without failed-script cards.
-- Canonical/legacy code requests return JavaScript/CSS without exposing the source snapshot or private APIs; old document links preserve reset, invitation and order queries. Older authenticated snapshot imports remain valid.
-- Existing ordering, private coffees, invoices, image uploads, account recovery and frozen checkout retries pass their standard regressions.
+- Full npm test passes: typecheck and 352 API tests.
+- Full npm run test:e2e passes: 232 browser tests.
+- Nine focused browser journeys pass, including phone/iPad/widescreen light/dark, Add confirmation/reset, native choices, contact-name resizing and account-menu orders.
+- Ten actual-source layout checks pass from320 to1920px in light/dark: no overflow, aligned desktop ordering row, frame-filling photos, stable phone header and scroll elevation.
+- Add submits no checkout request. Reduced motion disables check movement and the count pulse; existing checkout recovery, private coffees, hidden prices, invoices and account privacy pass their standard regressions.
 
-No migration, dependency, secret, DNS or API-contract changes. The normal required GitHub Tests must pass before squash merge. Live verification reads assets/auth pages without submitting orders/forms or sending emails.
+No dependency, backend, schema, secret, DNS or setup changes. The normal required GitHub Tests must pass before squash merge. Live release checks read public assets and auth pages without submitting orders or emails.
