@@ -8,6 +8,8 @@ Title: Make Admin Overview focus on daily operations
 
 The source is the actual application, not the illustrative mockup. No data migration, configuration, external service or secret change is needed.
 
-Local release validation completed: 355 API tests plus typecheck passed; all 241 browser tests passed. Safeguard unit tests: 12 passed. Focused browser checks: 14 passed; Admin host/API checks: 10 passed; complete staff journey: 1 passed; new API/DST checks: 3 passed. Eight actual phone/iPad/desktop light/dark layouts were verified.
+Local release validation completed: 355 API tests plus typecheck passed; all 241 browser tests passed. Safeguard unit tests: 14 passed. Focused browser checks: 14 passed; Admin host/API checks: 10 passed; complete staff journey: 1 passed; new API/DST checks: 3 passed. Eight actual phone/iPad/desktop light/dark layouts were verified.
 
 After merge, confirm the exact main commit’s Cloudflare production build succeeds, then run 123 read-only HTTP checks and four read-only live browser journeys. Protected admin assets must remain protected; authenticated layouts are verified locally. Do not place production orders or send emails during verification.
+
+The first target CI attempt hit one local SQLite lock while the migration fixture used Wrangler to read invoice settings (no assertion failure). The publisher now recognises only that exact local read/query/test combination and can rerun the normal required Tests once. It still refuses assertion failures, other queries, multiple failures or a second retry. Source stays cf5ffe9; no application change is needed.

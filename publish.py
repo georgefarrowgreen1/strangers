@@ -129,6 +129,19 @@ def transient_database_lock(log):
             and not bool(re.search(r"# fail (?:[2-9]|[1-9]\d+)(?:\s|$)", log)))
 
 
+def transient_schema_read_lock(log):
+    # Observed on this release: Wrangler's separate local SQL reader collided
+    # with the running migration fixture. Never retry assertions or another query.
+    return ("database is locked: SQLITE_BUSY" in log
+            and bool(re.search(r"not ok \d+ - migrations run once each, in order, and are recorded; the list indexes are used", log))
+            and "--local --persist-to" in log
+            and "--json --command SELECT id FROM wholesale_invoice_settings" in log
+            and "test/migration.test.mjs:85:" in log
+            and bool(re.search(r"# fail 1(?:\s|$)", log))
+            and not bool(re.search(r"# fail (?:[2-9]|[1-9]\d+)(?:\s|$)", log))
+            and "ERR_ASSERTION" not in log and "AssertionError" not in log)
+
+
 def transient_invoice_fixture_port(log):
     # One shared invoice before-hook failed to start; none of its nine cases ran.
     # Retry that observed infrastructure failure once, never an assertion failure.
@@ -252,7 +265,7 @@ def publish(env, progress, work):
                     continue
                 if retried_test is None and run["conclusion"] == "failure" and run.get("run_attempt", 1) == 1:
                     log = command(["gh", "run", "view", str(run["id"]), "--repo", TARGET, "--log-failed"], env=env)
-                    if transient_database_lock(log) or transient_invoice_fixture_port(log):
+                    if transient_database_lock(log) or transient_schema_read_lock(log) or transient_invoice_fixture_port(log):
                         command(["gh", "run", "rerun", str(run["id"]), "--repo", TARGET, "--failed"], env=env)
                         retried_test, retried_at = identity, time.monotonic()
                         progress.update("Retrying a temporary test fixture startup failure", f"[{url}]({url})\n\nA test fixture hit the verified SQLite lock or invoice-server port collision. Rerunning its normal Tests job once; a successful test run is still required before merge.", url=url)

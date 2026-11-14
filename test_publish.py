@@ -77,6 +77,17 @@ class AuthenticationTests(unittest.TestCase):
 
 
 class RetryTests(unittest.TestCase):
+    def test_exact_schema_fixture_reader_lock_can_retry_once(self):
+        log = "not ok 100 - migrations run once each, in order, and are recorded; the list indexes are used\nCommand failed: wrangler d1 execute kitchen-diary --local --persist-to /tmp/test --json --command SELECT id FROM wholesale_invoice_settings\ndatabase is locked: SQLITE_BUSY\ntest/migration.test.mjs:85:24\n# fail 1\n"
+        self.assertTrue(publish.transient_schema_read_lock(log))
+        for old, new in [("# fail 1", "# fail 2"), ("# fail 1", "# fail 10"), ("SELECT id", "UPDATE id"), ("test/migration.test.mjs:85:", "test/other.test.mjs:85:"), ("the list indexes are used", "an unrelated test"), ("--local --persist-to", "--remote --persist-to")]:
+            self.assertFalse(publish.transient_schema_read_lock(log.replace(old, new)))
+
+    def test_schema_reader_retry_never_accepts_assertion_failures(self):
+        log = "not ok 100 - migrations run once each, in order, and are recorded; the list indexes are used\nwrangler --local --persist-to /tmp/test --json --command SELECT id FROM wholesale_invoice_settings\ndatabase is locked: SQLITE_BUSY\ntest/migration.test.mjs:85:24\n# fail 1\n"
+        for error in ["ERR_ASSERTION", "AssertionError"]:
+            self.assertFalse(publish.transient_schema_read_lock(log + error))
+
     def test_only_the_observed_invoice_port_collision_is_retryable(self):
         log = "\n".join(f"not ok {i} - wholesale invoices: case {i}\n failureType: 'hookFailed'\n Address already in use (127.0.0.1:39849)" for i in range(9)) + "\n# fail 9\n"
         self.assertTrue(publish.transient_invoice_fixture_port(log))
