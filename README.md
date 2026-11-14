@@ -1,15 +1,13 @@
-# Publish approved wholesale UI polish
+# Strangers deployment publisher
 
-Frozen source: `e16da01e2e2853dc9b8ef88d201ce6b5fb28113e`, based on main `34164d2ee0a2c29720f933d9b03e04efab7ac389`.
+This release publishes `feat/admin-daily-overview` to `strangerscoffee/StrangersRepo` through the persistent encrypted `STRANGERS_DEPLOY_TOKEN` Actions secret. It verifies the expected collaborator and write access, checks the frozen bundle and destination branch, creates a ready pull request and waits for the full required Tests workflow before a saved-user squash merge. Cloudflare then deploys main.
 
-Implements the approved desktop/mobile refinements in the existing catalogue: softer card edges, tighter spacing, quieter typography/photo labels, larger desktop photos, consistent controls, account-menu history navigation and a scroll-only header shadow. Add keeps the brand colour, shows a brief check and gently updates the basket badge, respecting reduced motion and session shielding. Existing live catalogue, pricing, permissions, menus and checkout remain. No demo data, migrations, dependencies or configuration changes.
+Source: `cf5ffe9820f410495c3621105cf67d800751b93d`
+Base: `04773ea6dd9b3b754ec5b3b0cc3db54bcec4068e`
+Title: Make Admin Overview focus on daily operations
 
-Local validation: typecheck and all 352 API tests pass; all 232 browser tests pass. Nine focused browser journeys and ten layout checks pass across320/393/820/1440/1920px in light and dark. The normal required GitHub Tests must also pass before squash merge.
+The source is the actual application, not the illustrative mockup. No data migration, configuration, external service or secret change is needed.
 
-Deployment access uses the encrypted Actions repository secret `STRANGERS_DEPLOY_TOKEN`. It must be a classic GitHub token for `georgefarrowgreen1` with `public_repo` access (the target is public and is owned by a different personal account). Add or rotate it in this repository’s Settings → Secrets and variables → Actions; never paste it into chat or commit it. Future runs read the secret automatically without device sign-in codes. Token expiry, revocation or permission changes require updating that secret. Missing access stops with setup guidance instead of prompting for another code.
+Local release validation completed: 355 API tests plus typecheck passed; all 241 browser tests passed. Safeguard unit tests: 12 passed. Focused browser checks: 14 passed; Admin host/API checks: 10 passed; complete staff journey: 1 passed; new API/DST checks: 3 passed. Eight actual phone/iPad/desktop light/dark layouts were verified.
 
-The token is supplied only to the publishing step, held in its subprocess environment, redacted from reported errors and never persisted in the checkout. Temporary GitHub configuration is removed after each run; the reusable secret remains encrypted in GitHub. The expected account ID, target repository, source commit and destination branch are still verified. All changes use the normal Tests-gated PR and squash merge; no target workflow is changed or bypassed.
-
-A narrowly identified migration-fixture `SQLITE_BUSY` failure or the invoice fixture's single-port startup collision may rerun its normal Tests job once. The retry is allowed only from the first workflow attempt, so restarting this publisher cannot grant further retries. Assertion failures and other failures stop publication; a successful full test run remains required before merge. A brief GitHub API replica delay when updating a newly created progress check is retried separately.
-
-Release merges use the verified saved deployment identity after the required full Tests pass. The publisher disables native bot auto-merge on its exact open head, since bot-origin merges can suppress downstream workflow/deployment events. It never disables required tests or changes target workflows. A changed PR head is refused before changing merge settings.
+After merge, confirm the exact main commit’s Cloudflare production build succeeds, then run 123 read-only HTTP checks and four read-only live browser journeys. Protected admin assets must remain protected; authenticated layouts are verified locally. Do not place production orders or send emails during verification.

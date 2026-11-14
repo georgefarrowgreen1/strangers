@@ -13,9 +13,9 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "feat/wholesale-ui-polish"
-EXPECTED = "e16da01e2e2853dc9b8ef88d201ce6b5fb28113e"
-PRIOR = "34164d2ee0a2c29720f933d9b03e04efab7ac389"
+BRANCH = "feat/admin-daily-overview"
+EXPECTED = "cf5ffe9820f410495c3621105cf67d800751b93d"
+PRIOR = "04773ea6dd9b3b754ec5b3b0cc3db54bcec4068e"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -198,7 +198,7 @@ def publish(env, progress, work):
             raise RuntimeError("The existing PR URL did not match the verified repository.")
         metadata = work / "pr-metadata.json"
         metadata.write_text(json.dumps({
-            "title": "Polish wholesale catalogue on desktop and mobile",
+            "title": "Make Admin Overview focus on daily operations",
             "body": (ROOT / "pull-request.txt").read_text(),
         }))
         command(
@@ -208,7 +208,7 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Polish wholesale catalogue on desktop and mobile",
+             "--title", "Make Admin Overview focus on daily operations",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)

@@ -1,12 +1,7 @@
-Refine the existing customer catalogue to match the approved desktop and mobile previews: quieter card borders/shadows, tighter spacing, smaller photo labels, softer supporting text, larger frame-filling photos and aligned ordering controls. Keep Orders & invoices in the account menu across sizes, remove the redundant bag-size caption, and add only a soft header shadow after scrolling.
+Admin Overview now leads with daily operational work instead of static account totals, weekly hours and backup cards. It shows live unassigned shifts, customer orders to prepare/dispatch, invoice balances, pending holiday/shift/account reviews, active diary checks and next-week planning in a compact responsive layout. Routine setup/account/email notices remain available under System & accounts.
 
-Successful Add keeps the brand-colour button, briefly shows Added with a check and pulses the basket count. Reduced motion disables movement; identity invalidation cancels the count animation. Preserve the existing catalogue data, customer-specific coffees, native choices/focus, pricing, account/history/basket flows and explicit checkout.
+The existing admin-only API supplies all values. Order totals and queue filters include the full matching dataset and exclude staff previews/deleted records. Holiday counts are separate from other absences. Site deadlines use saved weekday hours in Europe/London; missing hours are never assumed. Invoice summaries reuse existing manual/Live accounting reconciliation and flag uncertain balances. The page refreshes on change and each visible minute without refreshing over an editor or sheet.
 
-Validation:
-- Full npm test passes: typecheck and 352 API tests.
-- Full npm run test:e2e passes: 232 browser tests.
-- Nine focused browser journeys pass, including phone/iPad/widescreen light/dark, Add confirmation/reset, native choices, contact-name resizing and account-menu orders.
-- Ten actual-source layout checks pass from320 to1920px in light/dark: no overflow, aligned desktop ordering row, frame-filling photos, stable phone header and scroll elevation.
-- Add submits no checkout request. Reduced motion disables check movement and the count pulse; existing checkout recovery, private coffees, hidden prices, invoices and account privacy pass their standard regressions.
+No schema migration, dependency, secret, service or DNS change. Overview performs reads; operational actions remain in their existing reviewed flows. Existing access and identity guards remain in force.
 
-No dependency, backend, schema, secret, DNS or setup changes. The normal required GitHub Tests must pass before squash merge. Live release checks read public assets and auth pages without submitting orders or emails.
+Validation: npm test passed (355 tests, including typecheck) and the complete Chromium browser suite passed (241 tests). The new Overview/queue/permission/DST checks, phone/iPad/desktop light/dark journeys, background email/error navigation, Admin host checks and complete staff journey also passed in focused runs. Production verification will check deployment provenance, access boundaries and read-only live browser journeys.
