@@ -1,15 +1,12 @@
-# Strangers forecasting deployment publisher
+# Strangers production audit fixes publisher
 
-This release publishes `feat/forecast-backtesting` to `strangerscoffee/StrangersRepo` through the existing encrypted `STRANGERS_DEPLOY_TOKEN` Actions secret. It verifies the expected collaborator and write access, checks the frozen bundle and destination branch, creates a ready pull request and waits for the full required Tests workflow before a saved-user squash merge. Cloudflare then deploys main.
+Source: `933462e939055d425994de0af4edef925d7295c6`
+Base: `ec3db40b7054c8e8f15dd99a2b1c7ccb39eb3740`
+Branch: `fix/production-audit-findings`
+Title: Fix production audit findings in orders, payroll and planning
 
-Source: `a80a57326fb37d0525cb811ca13940df6770b4c8`
-Base: `9ebb83c5a0d8807ee99e505b9637dbdcd09a5d08`
-Title: Improve forecast selection and historical validation
+Publishes only this frozen bundle to strangerscoffee/StrangersRepo after local validation. Existing encrypted STRANGERS_DEPLOY_TOKEN access verifies the saved collaborator and write permission, creates the PR, requires the complete normal Tests workflow and squash-merges under the saved user identity. Cloudflare then deploys main. No secret, additional migration, dependency, external service or DNS change; the newer announcement feature already on main is retained.
 
-The source compares six bounded forecasting methods using existing history, fixes date alignment, reconciles coffee predictions with totals and reports historical test error. Existing records, import cutover and roast-plan rules are unchanged. No migration, dependency, configuration, external service or secret change is needed.
+All nine audited issues are covered by focused regressions: catalogue/photo isolation, stock/grind increases, transactional repeat-order creation/recovery, invoice race guards, dated roast demand, cross-month payroll conservation, stale actual-hour saves, spreadsheet-safe text and frozen staff request recovery. Local full API passed again (383 plus typecheck), full browser passed (271 before final closure addition), and the expanded staff-order browser suite passed (15). The final merged API suite passed (386 plus typecheck) and all affected browser suites passed (33), with final phone/iPad light/dark visual review. Normal complete GitHub Tests on the final frozen head is required before merge.
 
-Local validation: 361 API/maths tests plus typecheck passed. Two focused Insights browser journeys and phone/iPad light/dark layout review passed. The full local browser suite was attempted, then interrupted after Chromium Target crashed and process EAGAIN errors before pages opened. It is not claimed to have passed. The complete normal API/browser workflow on GitHub must succeed before merge. Publisher safeguard tests: 14 passed.
-
-After merge, verify the exact main commit's Cloudflare production build, then run the forecasting release read-only HTTP and browser scripts. Protected admin assets and APIs must remain protected. Do not place production orders, send emails or alter customer data during verification.
-
-The saved-user merge identity, frozen source/destination checks, secret redaction and narrowly defined single test-fixture retry safeguards remain unchanged. No retry is permitted for application assertions or generic browser failures.
+Publisher identity, frozen branch/head checks, secret redaction and narrow single test-fixture retry safeguards are unchanged. No generic application assertion or browser failure is bypassed. Verify exact main tree and Cloudflare build, then use the adapted read-only HTTP/security-header/browser scripts. Never place production orders or send verification emails.
