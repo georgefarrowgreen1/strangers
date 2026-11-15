@@ -1,14 +1,12 @@
-# Strangers production audit fixes publisher
+# Strangers mobile wholesale Orders fix publisher
 
-Source: `3b6d72c0d286292fff310aad2a0feff987986131`
-Base: `ec3db40b7054c8e8f15dd99a2b1c7ccb39eb3740`
-Branch: `fix/production-audit-findings`
-Title: Fix production audit findings in orders, payroll and planning
+Source: `dfe2cd382cdb160fcc4dbe6038d2fb6ee21d6d96`
+Base: `b128c705377ee311140450d8bda18a1f7799eb30`
+Branch: `fix/admin-wholesale-mobile-overflow`
+Title: Fix mobile wholesale order controls and clipped rows
 
-Publishes only this frozen bundle to strangerscoffee/StrangersRepo after local validation. Existing encrypted STRANGERS_DEPLOY_TOKEN access verifies the saved collaborator and write permission, creates the PR, requires the complete normal Tests workflow and squash-merges under the saved user identity. Cloudflare then deploys main. No secret, additional migration, dependency, external service or DNS change; the newer announcement feature already on main is retained.
+Publishes this frozen CSS/browser-test change after complete local validation. Existing encrypted saved-user access verifies the collaborator and write permission, creates a ready PR, waits for complete normal Tests, and squash-merges under the saved user identity. Cloudflare then deploys main. No secret, migration, dependency, service, or DNS change.
 
-All nine audited issues are covered by focused regressions: catalogue/photo isolation, stock/grind increases, transactional repeat-order creation/recovery, invoice race guards, dated roast demand, cross-month payroll conservation, stale actual-hour saves, spreadsheet-safe text and frozen staff request recovery. Local full API passed again (383 plus typecheck), full browser passed (271 before final closure addition), and the expanded staff-order browser suite passed (15). The final merged API suite passed (386 plus typecheck) and all affected browser suites passed (33), with final phone/iPad light/dark visual review. Normal complete GitHub Tests on the final frozen head is required before merge.
+The Orders header no longer expands the list track beyond its panel. Phone actions occupy two rows, all settings remain visible, compact labels fit, and prices/statuses/preparation buttons stay inside the panel. Ten new responsive regressions cover phone, tablet and desktop in both themes. The complete local API suite passed (386 plus typecheck) and the complete normal browser suite passed (286). Final phone/iPad light/dark visual review precedes publication; complete GitHub Tests remain mandatory.
 
-Publisher identity, frozen branch/head checks, secret redaction and narrow single test-fixture retry safeguards are unchanged. No generic application assertion or browser failure is bypassed. Verify exact main tree and Cloudflare build, then use the adapted read-only HTTP/security-header/browser scripts. Never place production orders or send verification emails.
-
-The first full GitHub run passed all 386 API and 276 browser cases but failed during session-security fixture teardown (an intercepted request outlived its browser context). The fixture now releases and awaits route callbacks before context disposal; all assertions remain intact, and its focused concurrent browser checks passed (13). The complete normal GitHub Tests must pass again on this final head before merge.
+Publisher identity, frozen branch/head checks, secret redaction and narrow single test-fixture retry safeguards remain unchanged. No generic application assertion or browser failure is bypassed. Verify exact merged tree, successful Cloudflare build and read-only live checks. Never submit real production orders or verification email.
