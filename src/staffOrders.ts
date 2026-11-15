@@ -10,7 +10,8 @@ import {wholesaleCustomer} from "./wholesaleAccounts";
 import {catalogue,packsOf} from "./wholesaleCatalogue";
 import {catalogueFor} from "./wholesaleWhiteLabel";
 import {customerLocations} from "./wholesaleCustomers";
-import {object} from "./wholesaleStore";
+import {get,object} from "./wholesaleStore";
+import {audit} from "./audit";
 import {clearTab,listTabs,setOnTab} from "./wholesaleTabs";
 import {amendLines,skipRun} from "./wholesaleStanding";
 import {requireStaffOrders} from "./staffOrdersAccess";
@@ -65,6 +66,31 @@ async function customers(req:Request,env:Env){
 }
 export async function handleStaffOrders(req:Request,env:Env,route:string,user:User,links:{preview?:string;diary?:string}={},ctx?:ExecutionContext):Promise<Response>{
   await requireStaffOrders(env,user);
+  const closeAttempt=/^attempts\/(WS-[A-F0-9]{32})\/close$/.exec(route);
+  if(closeAttempt&&req.method==="POST"){
+    const body=object(await readJson(req,2048));
+    if(typeof body.customerId!=="string"||!/^[a-f0-9-]{36}$/.test(body.customerId))throw invalid("Choose the original customer.");
+    const at=Date.now(),id=closeAttempt[1];
+    // Competes atomically with the original INSERT. Never cancels an existing
+    // order: a saved order wins and is recovered; otherwise a tombstone prevents
+    // any delayed original request from arriving after the user starts again.
+    const marker={preview:false,customerId:body.customerId,createdBy:user.id,createdName:user.name,takenFor:{source:"Other",at},unplacedAttempt:true,requestKey:"closed-attempt:"+user.id,status:"Cancelled",deletedAt:at,deletedBy:user.name,createdAt:at,date:today(),lines:[],pence:0,grams:0,packs:0};
+    const inserted=await env.DB.prepare("INSERT INTO wholesale_preview(kind,id,data,version,updated_at) VALUES('order',?,?,1,?) ON CONFLICT(kind,id) DO NOTHING").bind(id,JSON.stringify(marker),at).run();
+    const order=await get<Record<string,any>>(env,"order",id);
+    if(!order||order.createdBy!==user.id||!order.takenFor||order.preview!==false)throw new ApiError(404,"not_found","This request belongs to another account.");
+    await requireStaffOrders(env,user);
+    if(order.deletedAt==null)return json({closed:false,order:staffView(order)});
+    if(inserted.meta.changes)await audit(env,"staff_order_attempt_closed",user.name,`${user.name} closed unplaced wholesale request ${id}. No customer order was cancelled.`);
+    return json({closed:true});
+  }
+  const receipt=/^orders\/(WS-[A-F0-9]{32})\/receipt$/.exec(route);
+  if(receipt&&req.method==="GET"){
+    const order=await get<Record<string,any>>(env,"order",receipt[1]);
+    if(!order||order.createdBy!==user.id||!order.takenFor||order.preview!==false)throw new ApiError(404,"not_found","No submitted order found for this account.");
+    if(order.deletedAt!=null)throw new ApiError(410,"order_deleted","This order or request is closed. Acknowledge the outcome before starting another order.");
+    await requireStaffOrders(env,user);
+    return json({order:staffView(order)});
+  }
   const orderMatch=/^orders\/((?:PREVIEW|WS)-[A-F0-9]{32})$/.exec(route);
   if(orderMatch){
     if(req.method!=="PATCH")return json({code:"method_not_allowed",message:"Use PATCH to change an order."},405,{Allow:"PATCH"});
@@ -78,7 +104,7 @@ export async function handleStaffOrders(req:Request,env:Env,route:string,user:Us
   const change=/^orders\/(WS-[A-F0-9]{32})\/(lines|skip)$/.exec(route);
   if(change&&((change[2]==="lines"&&req.method==="PUT")||(change[2]==="skip"&&req.method==="POST"))){
     const body=await readJson(req,32*1024),id=change[1];
-    const saved=change[2]==="lines"?await amendLines(env,id,body,user.name):await skipRun(env,id,body,user.name,{},b=>updateOrderStatus(env,id,b,user.name,{customerOnly:true}));
+    const saved=change[2]==="lines"?await amendLines(env,id,body,user.name):await skipRun(env,id,body,user.name,{});
     await requireStaffOrders(env,user);
     return json({order:staffView(saved as any)});
   }
