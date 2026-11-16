@@ -1,12 +1,14 @@
-# Strangers mobile wholesale Orders fix publisher
+# Strangers production audit fixes publisher
 
-Source: `dfe2cd382cdb160fcc4dbe6038d2fb6ee21d6d96`
-Base: `b128c705377ee311140450d8bda18a1f7799eb30`
-Branch: `fix/admin-wholesale-mobile-overflow`
-Title: Fix mobile wholesale order controls and clipped rows
+Source: `868706b6400b34593b7cf2199c028eef1b1230f0`
+Base: `c2ee2bd00bf1436c83d07e452e798fbc17c2c356`
+Branch: `fix/production-audit-2026-11-16`
+Title: Fix all seven production audit findings
 
-Publishes this frozen CSS/browser-test change after complete local validation. Existing encrypted saved-user access verifies the collaborator and write permission, creates a ready PR, waits for complete normal Tests, and squash-merges under the saved user identity. Cloudflare then deploys main. No secret, migration, dependency, service, or DNS change.
+Publishes the frozen production-audit fixes after complete local validation. Existing encrypted saved-user access verifies collaborator identity and write permission, creates a ready PR, waits for the complete normal Tests workflow, and squash-merges under the saved user identity. Cloudflare then deploys main.
 
-The Orders header no longer expands the list track beyond its panel. Phone actions occupy two rows, all settings remain visible, compact labels fit, and prices/statuses/preparation buttons stay inside the panel. Ten new responsive regressions cover phone, tablet and desktop in both themes. The complete local API suite passed (386 plus typecheck) and the complete normal browser suite passed (286). Final phone/iPad light/dark visual review precedes publication; complete GitHub Tests remain mandatory.
+The change validates current standing-order catalogue eligibility before repricing, retains reviewed fulfilment batch versions and confirms actual saves, persists/retries dispatch email events atomically, recovers interrupted Slack claims through explicit review, snapshots all backup reads in one transaction and bounds streaming PDF/photo uploads. Migration 30 appends email-outbox and Slack-lease tables; shipped migrations and existing records/IDs/snapshots are preserved. Order alerts adds recovery controls that preserve unsaved settings. Old ambiguous Slack sent markers are retained without automatic replay; identifiable legacy dispatch failures have explicit reviewed recovery. No new dependency, secret, service or DNS change.
 
-Publisher identity, frozen branch/head checks, secret redaction and narrow single test-fixture retry safeguards remain unchanged. No generic application assertion or browser failure is bypassed. Verify exact merged tree, successful Cloudflare build and read-only live checks. Never submit real production orders or verification email.
+The complete local API/unit suite passed (402 plus typecheck) and the complete normal browser suite passed (306). The final scoped long-name wrapping fix then passed all 15 related browser checks; complete normal GitHub Tests on this final head remains mandatory before merge. Phone/iPad light/dark screenshots were inspected. A real forced port-collision regression also covers bounded fixture startup recovery and verifies that a competing HTTP process cannot impersonate the test Worker.
+
+Publisher identity, frozen branch/head checks, secret redaction and existing narrow CI infrastructure retry safeguards remain unchanged. Application assertions and browser failures are never bypassed. Verify the exact merged tree, successful Cloudflare build and read-only live checks. Never submit production orders, emails or Slack test messages.
