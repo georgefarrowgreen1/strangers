@@ -1,7 +1,15 @@
-On narrow phones the leave sheet has insufficient content insets, native dates can escape their grid columns, and a short viewport can clip the main action. Requests also shows dates without identifying the absence type and offers an immediate decline beside review.
+## Admin dashboard
 
-Contain native date/time controls with zero-minimum grid tracks, improve sheet/header spacing and safe-area height, stack narrow date fields and keep the leave action visible while scrolling. Half days show one synchronized date plus explicit hours. Editing fields invalidates late preview responses before Submit can return, and an unconfirmed submission freezes its approval choice along with its original dates/payload. Opening another sheet starts at the top.
+- Overview groups scheduled dispatch work and diary deadlines in Due today and links to the wider fulfilment, payment and review queues.
+- Wholesale adds a mobile section picker, section URLs with browser Back restoring filters, and a desktop order and packing preview. Order settings groups announcements and alerts. Customer approvals and custom coffee visibility are easier to find.
+- Invoicing adds invoice and business search and queues for overdue, due soon and payments needing review. Insights separates Roast plan, Forecast and Sales and starts with the roast summary on mobile. The existing forecast and roast calculations drive these views.
+- People has searchable account states and a full profile with account actions grouped together. Sickness adds name search and a follow-up filter. Sites link to diary and rota settings for the selected site. Activity adds date filters and error reference search. Security and Backups & exports surface the current status and common actions.
 
-Requests now identifies the person, absence type, dates and private note, with a full-width mobile Review request action. Approve/decline stays inside the existing protected, versioned review. Shift pickup/cover actions use contained touch-sized rows; empty queues explain what appears there. Preserve recent holiday Days/People views, blackouts, admin exceptions, allowances, uncertain create recovery and all current permissions/privacy.
+The views use the existing light and dark theme, permissions and versioned write flows. No migration, dependency or production configuration change is required.
 
-Validation: ten new browser regressions cover 320px/393px phones and portrait/landscape iPads in light/dark themes, native-control containment, visible actions, date synchronization, review decisions, stale preview rejection and identical uncertain retries. Screenshots inspected. Full normal local checks passed: typecheck, 420 API/unit tests and 336 browser tests; complete normal GitHub Tests on the frozen head gates saved-user squash and Cloudflare deployment. No API, migration, secret, dependency, service or DNS change. Live verification is read-only; no production employee records are changed or emails sent.
+## Verification
+
+- `npm test` passed all 420 checks. The updated due-today regression also passed its focused rerun.
+- `npm run test:e2e` exercised 338 browser cases. The 10 initial failures were resolved and verified in focused reruns of Overview, the staff journey and Sickness. The final revision also passed the focused order layout, Activity errors and roast-planning suites.
+- Phone, iPad and desktop in light and dark
+- The Worker bundled successfully in a Wrangler deployment dry run.

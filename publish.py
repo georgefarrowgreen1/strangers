@@ -13,9 +13,9 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "fix/rota-mobile-leave-2026-11-17"
-EXPECTED = "a517941553962354c232fff1865289668b68ac31"
-PRIOR = "326a700b009a73eb19b8787a7e6c8bc7d64903f8"
+BRANCH = "feat/admin-workspaces"
+EXPECTED = "f6c9c763ab8e581b5eb99bf81f26b11063c8bda4"
+PRIOR = "2f718b305caded1e87d706449085969e5d239a51"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -211,7 +211,7 @@ def publish(env, progress, work):
             raise RuntimeError("The existing PR URL did not match the verified repository.")
         metadata = work / "pr-metadata.json"
         metadata.write_text(json.dumps({
-            "title": "Fix mobile rota leave forms and request review layout",
+            "title": "Build action-focused Admin dashboard workspaces",
             "body": (ROOT / "pull-request.txt").read_text(),
         }))
         command(
@@ -221,7 +221,7 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Fix mobile rota leave forms and request review layout",
+             "--title", "Build action-focused Admin dashboard workspaces",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
@@ -241,7 +241,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("Mobile rota leave fixes squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("Admin dashboard updates squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")
