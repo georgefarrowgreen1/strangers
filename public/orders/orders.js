@@ -7,7 +7,7 @@
  'use strict';
  const {el,svgi}=SC,{grindFor,decafLine,iconPaths,coffeeStyle}=SCWholesalePreparation,packing=SCWholesalePacking;
  const $=id=>document.getElementById(id);
- const wideDesk=matchMedia('(min-width: 1340px)');
+ const wideDesk=matchMedia('(min-width: 1240px)');
  const packProblems=new Map();
  let activeOrder=null,heldOrder=null,mobilePacking=false,deskTotals=null,totalsMode='remaining',dispatchReview=null,totalsSequence=0;
  let orderingIdentity=null;
@@ -35,7 +35,7 @@
  const STATUSES=['New','Preparing','Ready','Dispatched','Cancelled'];
  const NEXT={New:['Preparing','Mark preparing'],Preparing:['Ready','Mark ready'],Ready:['Dispatched','Mark dispatched']};
  let rows=[],cursor=null,total=0,status='open',selected=null,sequence=0,timer=null,searchTimer=null,customerTimer=null,started=false;
- let view='orders',customers=[],customersMore=false,picking=false,busy=new Set(),editing=false;
+ let view='orders',customers=[],customersMore=false,customerRequest=0,picking=false,busy=new Set(),editing=false;
  let ordersKey='';
  const findOrder=id=>rows.find(row=>row.id===id)||(heldOrder?.id===id?heldOrder:null);
  let tabs={open:[],cleared:[],threshold:6000},tabSelected=null,tabConfirm=false;
@@ -45,14 +45,14 @@
  const weight=grams=>new Intl.NumberFormat('en-GB',{maximumFractionDigits:2}).format(grams/1000)+' kg';
  const date=at=>new Date(at).toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
  const dispatchDay=day=>new Date(day+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
- const pill=value=>el('span',{class:'pill '+String(value).toLowerCase()},value);
+ const pill=value=>el('span',{class:'pill '+String(value).toLowerCase().replaceAll(' ','-')},value);
  function closeDialogs(){for(const id of ['dispatchDialog','orderDialog','customerDialog','totalsDialog','tabDialog','newOrderDialog'])if($(id).open)$(id).close();}
  function lock(clear=false){
   document.documentElement.setAttribute('data-orders-locked','');closeDialogs();
-  if(clear){rows=[];customers=[];tabs={open:[],cleared:[],threshold:6000};tabSelected=null;$('tabList').replaceChildren();$('clearedList').replaceChildren();$('tabDetail').replaceChildren();selected=null;cursor=null;picked.clear();picking=false;editing=false;batch=null;
+  if(clear){rows=[];customers=[];customerRequest++;tabs={open:[],cleared:[],threshold:6000};tabSelected=null;$('tabList').replaceChildren();$('clearedList').replaceChildren();$('tabDetail').replaceChildren();selected=null;cursor=null;picked.clear();picking=false;editing=false;batch=null;
    activeOrder=heldOrder=null;mobilePacking=false;deskTotals=null;totalsSequence++;packProblems.clear();dispatchReview=null;
-   for(const id of ['orderList','orderDetail','orderEdit','mobilePacking','packingDesk','deskBagTotals','deskDispatchBody','customerList','customerDetail','totalsBody','newOrderForm','newOrderFoot'])$(id).replaceChildren();draft=null;
-   $('signedIn').textContent='';$('ordersContent').hidden=true;}
+   for(const id of ['orderList','orderDetail','orderEdit','orderDialogAction','mobilePacking','packingDesk','deskBagTotals','deskDispatchBody','customerList','customerDetail','customerActions','customerCount','tabCount','totalsBody','newOrderForm','newOrderFoot'])$(id).replaceChildren();draft=null;
+   $('signedIn').textContent='';$('ordersContent').hidden=true;$('viewTabs').hidden=true;}
  }
  function message(text,{retry=false,denied=false}={}){
   $('accessStatus').hidden=false;$('accessStatus').replaceChildren(el('p',{},text),retry?el('button',{type:'button',class:'btn',onclick:()=>load({reverify:true})},'Try again'):null,denied?el('a',{href:'/'},'Back to Kitchen Diary'):null);
@@ -73,8 +73,8 @@
      el('button',{type:'button',class:'btn soft sm',disabled:!picked.size,onclick:()=>openTotals([...picked])},'Bag totals'),
      el('button',{type:'button',class:'btn sm',disabled:!picked.size,onclick:()=>printScope({ids:[...picked],label:`${picked.size} selected ${picked.size===1?'order':'orders'}`})},svg('doc'),'Print selected'),
      el('button',{type:'button',class:'btn soft sm',onclick:()=>{if(batch?.running)return;picking=false;picked.clear();batch=null;draw()}},'Done'))
-   :el('div',{class:'print-bar'},el('button',{type:'button',class:'btn sm',onclick:()=>printScope({status:'New',label:'New orders'})},svg('doc'),'Print new orders'),
-     el('button',{type:'button',class:'btn soft sm',onclick:()=>{picking=true;picked.clear();batch=null;draw()}},'Select orders'),
+   :el('div',{class:'print-bar'},el('button',{type:'button',class:'btn soft sm',onclick:()=>printScope({status:'New',label:'New orders'})},svg('doc'),'Print new orders'),
+     el('button',{type:'button',class:'btn soft sm',onclick:()=>{picking=true;picked.clear();batch=null;draw();$('orderList').querySelector('[data-order-id]')?.focus()}},'Select orders'),
      el('button',{type:'button',class:'btn soft sm',onclick:()=>openTotals([])},'Bags to process'));
  }
  // Dispatch day and standing order, set in Admin ("Dispatch Fri 20 Nov · Standing order, every 2 weeks").
@@ -85,7 +85,7 @@
   const deskMeta=[row.locationName===row.business?'':row.locationName,row.delivery==='Roastery collection'?'Collection':row.delivery,row.dispatchDate?dispatchDay(row.dispatchDate):'Unscheduled',row.customerNote||row.note?'Note':''].filter(Boolean).join(' · ');
   const main=el('button',{type:'button',class:'order-row'+(picking?' is-picking':''),'data-order-id':row.id,...(picking?{'aria-pressed':String(chosen)}:wideDesk.matches?{'aria-current':row.id===activeOrder?'true':'false'}:{}),onclick:()=>picking?togglePick(row.id):wideDesk.matches?chooseDeskOrder(row.id):openOrder(row.id)},
    picking?el('span',{class:'pick '+(chosen?'on':'off'),'aria-hidden':'true'},chosen?svg('ok'):null):null,
-   el('span',{},el('b',{},row.business),el('span',{class:'row-desktop-meta'},deskMeta),el('span',{class:'row-meta'},`${row.locationName} · ${row.delivery} · ${bags}`),el('span',{class:'row-meta'},date(row.createdAt)),dispatchText(row)?el('span',{class:'row-meta row-dispatch'},dispatchText(row)):null,row.onTab?el('span',{class:'row-meta row-tab'},'On tab'):null,row.note?el('span',{class:'row-meta row-note'},'Note: '+row.note):null,warning(row.account)),
+   el('span',{class:'queue-label'},el('b',{},row.business),el('span',{class:'row-desktop-meta'},deskMeta),el('span',{class:'row-meta'},`${row.locationName===row.business?'':row.locationName+' · '}${row.delivery} · ${bags}`),dispatchText(row)?el('span',{class:'row-meta row-dispatch'},dispatchText(row)):el('span',{class:'row-meta'},date(row.createdAt)),row.onTab?el('span',{class:'row-meta row-tab'},'On tab'):null,row.note?el('span',{class:'row-meta row-note'},'Note: '+row.note):null,warning(row.account)),
    el('span',{class:'row-end'},pill(row.status),el('span',{class:'row-desktop-meta'},bags),picking?null:svg('chev')));
   return el('div',{class:'order-entry'+(picking?' is-picking':''),'aria-busy':String(working)},main,!picking&&next?el('button',{type:'button',class:'btn soft quick','data-quick':row.id,disabled:working,onclick:()=>quick(row.id)},working?'Saving…':next[1]):null);
  }
@@ -133,6 +133,7 @@
   const active=document.activeElement;
   const filter=active?.dataset.orderFilter;
   const orderId=active?.dataset.orderId;
+  $('orderStatus').value=status;
   $('statusFilters').replaceChildren(...choices.map(([id,label])=>el('button',{type:'button','data-order-filter':id,'aria-pressed':String(status===id),onclick:()=>{status=id;load()}},label)));
   $('printBar').replaceChildren(printBar());batchBar();
   $('orderCount').textContent=rows.length<total?`${rows.length} of ${total} orders`:`${total} ${total===1?'order':'orders'}`;
@@ -160,7 +161,7 @@
  function packingOrderBody(row,mobile=false){
   return el('div',{class:mobile?'mobile-pack-body':'desk-panel-body'},
    el('div',{class:'business-title'},el('h3',mobile?{}:{id:'deskBusiness',tabindex:'-1'},row.business),pill(row.status)),
-   el('p',{class:'desk-meta'},`${row.reference?row.reference+' · ':''}${row.locationName} · ${row.packs} ${row.packs===1?'bag':'bags'} · ${weight(row.grams)}`),
+   el('p',{class:'desk-meta'},[row.reference,row.locationName===row.business?'':row.locationName,`${row.packs} ${row.packs===1?'bag':'bags'}`,weight(row.grams)].filter(Boolean).join(' · ')),
    packing.stageTrack(row.status),warning(row.account,true),
    el('div',{class:'desk-destination'},el('b',{},row.delivery),el('span',{},dispatchText(row)||'No dispatch date set'),
     row.delivery==='Delivery'&&(row.address||row.postcode)?el('span',{},[row.address,row.postcode].filter(Boolean).join(', ')):null),
@@ -176,7 +177,7 @@
   const focused=document.activeElement;
   const line=host.contains(focused)?focused.dataset.packLine:undefined;
   const nextFocused=host.contains(focused)&&focused.hasAttribute('data-pack-next');
-  host.replaceChildren(el('header',{class:'desk-panel-head'},el('h2',{},'Active order'),next?el('button',{type:'button',class:'btn soft sm',onclick:()=>{chooseDeskOrder(next.id);$('deskBusiness').focus({preventScroll:true});}},'Next to pack'):null));
+  host.replaceChildren(el('header',{class:'panel-head'},el('h2',{},'Active order'),next?el('button',{type:'button',class:'btn soft sm',onclick:()=>{chooseDeskOrder(next.id);$('deskBusiness').focus({preventScroll:true});}},'Next to pack'):null));
   if(row)host.append(packingOrderBody(row));
   else host.append(el('p',{class:'empty'},'Choose an order to start packing.'));
   if(line!==undefined)host.querySelector(`[data-pack-line="${line}"]:enabled`)?.focus({preventScroll:true});
@@ -188,9 +189,9 @@
   const toggle=el('div',{class:'filters desk-totals-switch',role:'group','aria-label':'Bag totals status'},...Object.entries({remaining:'To pack',packed:'Packed'}).map(([mode,label])=>el('button',{type:'button','data-totals-mode':mode,'aria-pressed':String(mode===totalsMode),onclick:()=>{totalsMode=mode;drawDeskTotals();host.querySelector(`[data-totals-mode="${mode}"]`).focus({preventScroll:true});}},label)));
   const scope=$('orderDispatchScope').selectedOptions[0].textContent;
   const count=current.reduce((sum,line)=>sum+line.quantity,0);
-  host.replaceChildren(el('header',{class:'desk-panel-head'},el('h2',{},'Bag totals')),
+  host.replaceChildren(el('header',{class:'panel-head'},el('h2',{},'Bag totals')),
    el('div',{class:'desk-panel-body'},toggle,el('p',{class:'desk-meta'},'Open orders · '+scope),
-    deskTotals===null?el('p',{class:'empty'},'Loading bag totals…'):
+    deskTotals===null?SC.skeleton({label:'Loading bag totals…',rows:2}):
     deskTotals.error?el('div',{class:'desk-totals-empty'},el('p',{},'Bag totals could not be loaded.'),el('button',{type:'button',class:'btn sm soft',onclick:loadDeskTotals},'Retry')):
     el('div',{class:'desk-bag-summary'},el('div',{class:'desk-total-line'},el('p',{class:'desk-total'},el('strong',{},String(count)),count===1?' bag':' bags'),count?el('b',{class:'desk-meta'},weight(current.reduce((sum,line)=>sum+line.grams*line.quantity,0))):null),
      current.length?el('ul',{class:'desk-bag-list'},...current.map(line=>el('li',{},el('span',{},el('b',{},line.title),el('small',{},line.packLabel+' · '+grindFor(line).label)),el('strong',{},'× '+line.quantity)))):el('p',{class:'desk-meta'},totalsMode==='packed'?'No bags packed in open orders.':'No bags left to pack.'))));
@@ -220,6 +221,7 @@
   mobilePacking=active;
   $('mobilePacking').hidden=!active;
   $('orderDetail').hidden=$('orderEdit').hidden=active;
+  $('orderDialogAction').hidden=active;
   $('orderTitle').textContent=active?'Pack order':'Order details';
   $('doneOrder').textContent=active?'Back to details':'Done';
   if(active)renderPackingProgress(selected);
@@ -285,6 +287,10 @@
   if(row.delivery==='Delivery'&&(row.address||row.postcode))$('orderDetail').append(el('h3',{class:'packing-heading'},'Delivery address'),el('p',{class:'address'},[row.address,row.postcode].filter(Boolean).join('\n')));
   for(const [label,text]of[['Delivery notes',row.deliveryNotes],['Customer comments',row.customerNote]])if(text)$('orderDetail').append(el('div',{class:'detail-note'},el('b',{},label),text));
   if(row.trackingUrl){try{const url=new URL(row.trackingUrl);if(['http:','https:'].includes(url.protocol)&&!url.username&&!url.password)$('orderDetail').append(el('a',{href:url.href,target:'_blank',rel:'noopener noreferrer',class:'tracking'},'Track delivery ↗'))}catch{}}
+  $('orderDialogAction').replaceChildren();
+  if(NEXT[row.status])$('orderDialogAction').append(el('button',{type:'button',class:'btn',onclick:()=>{
+   setMobilePacking(true);$('mobilePacking').parentElement.scrollTop=0;$('orderTitle').focus({preventScroll:true});
+  }},row.status==='Ready'?'Process dispatch':'Pack order'));
   if(!editing)renderEdit(row);
   if(mobilePacking)renderPackingProgress(row.id);
  }
@@ -299,7 +305,6 @@
   const trackingField=el('label',{class:'field',id:'trackingField',hidden:!(sending||row.trackingUrl)},el('span',{},'Tracking link (optional)'),tracking,
    row.status!=='Dispatched'?el('small',{class:'field-hint'},'Add it before marking dispatched and it goes in the customer\'s shipped email.'):null);
   for(const input of [statusSelect,tracking,note])input.addEventListener('input',()=>{editing=true;});
-  const next=NEXT[row.status];
   $('orderEdit').replaceChildren(
    el('div',{class:'edit-grid'},el('label',{class:'field'},el('span',{},'Status'),statusSelect),trackingField),
    el('label',{class:'field'},el('span',{},'Internal note'),note,el('small',{id:'editHint'},'For Strangers staff only. Customers never see it.')),
@@ -309,9 +314,6 @@
     row.customerId?el('button',{type:'button',class:'btn soft',id:'tabToggle',onclick:()=>toggleTab(row.id)},row.onTab?'Take off tab':'Put on tab'):null,
     row.customerId&&OPEN_STATUSES.includes(row.status)?el('button',{type:'button',class:'btn soft',id:'changeBags',onclick:()=>openAmend(row)},'Change bags'):null,
     row.standingEvery&&OPEN_STATUSES.includes(row.status)?el('button',{type:'button',class:'btn soft',id:'skipDelivery',onclick:()=>askSkip(row)},'Skip this delivery'):null,
-    next?el('button',{type:'button',class:'btn soft','data-open-packing':'',onclick:()=>{
-     setMobilePacking(true);$('mobilePacking').parentElement.scrollTop=0;$('orderTitle').focus({preventScroll:true});
-    }},row.status==='Ready'?'Process dispatch':'Pack order'):null,
     el('button',{type:'button',class:'btn',id:'saveOrder',onclick:()=>save(row.id)},'Save')));
  }
  // Changing the bags (until dispatched, no invoice: the server checks) and skipping a standing delivery. Bags only:
@@ -470,13 +472,13 @@
  function drawTabs(){
   const open=tabs.open,ready=open.filter(t=>t.ready).length;
   $('tabCount').textContent=open.length?`${open.length} ${open.length===1?'tab':'tabs'}${ready?` · ${ready} ready to clear`:''}`:'';
-  $('tabList').replaceChildren(...open.map(t=>el('button',{type:'button',class:'tab-card glass'+(t.ready?' ready':''),'data-tab':t.customerId,onclick:()=>openTab(t.customerId)},
+  $('tabList').replaceChildren(...open.map(t=>el('button',{type:'button',class:'tab-card'+(t.ready?' ready':''),'data-tab':t.customerId,onclick:()=>openTab(t.customerId)},
    el('span',{class:'tab-head'},el('b',{},t.business),t.ready?el('span',{class:'pill ready'},svg('ok'),'Ready to clear'):t.autoTab?el('span',{class:'pill'},'Automatic'):null),
    el('span',{class:'tab-kg'},el('strong',{},weight(t.grams)),el('span',{},` of ${weight(tabs.threshold)}`)),
    tabProgress(t,tabs.threshold),
    t.items?.length?tabItemPeek(t.items):null,
    el('span',{class:'row-meta'},t.orders.length?`${t.orders.filter(o=>o.counts).length} ${t.orders.filter(o=>o.counts).length===1?'order':'orders'} · ${t.packs} ${t.packs===1?'bag':'bags'}${t.ready?'':` · ${weight(t.toGo)} to go`}`:'Nothing on the tab yet'))));
-  if(!open.length)$('tabList').append(el('div',{class:'empty glass tab-empty'},'No open tabs. Open an order and choose Put on tab.'));
+  if(!open.length)$('tabList').append(el('div',{class:'empty'},'No open tabs. Open an order and choose Put on tab.'));
   // Cleared tabs open to show what was on them.
   $('clearedList').replaceChildren(...tabs.cleared.map(c=>el('button',{type:'button',class:'order-row cleared-row','data-cleared':c.id,onclick:()=>openCleared(c.id)},el('span',{},el('b',{},c.business),el('span',{class:'row-meta'},`${c.kept?.length?'Part cleared':'Cleared'} ${date(c.clearedAt)} by ${c.clearedBy}${c.kept?.length?` · ${c.kept.length} kept on the tab`:''}`)),el('span',{class:'row-end'},el('span',{class:'cleared-kg'},weight(c.grams)),c.kept?.length?pill('Part'):null,c.early?pill('Early'):null,svg('chev')))));
   if(!tabs.cleared.length)$('clearedList').append(el('div',{class:'empty'},'No tabs cleared yet.'));
@@ -544,9 +546,10 @@
  // Customers: contact and delivery details, read-only.
  function drawCustomers(){
   $('customerCount').textContent=`${customers.length}${customersMore?'+':''} ${customers.length===1?'customer':'customers'}`;
-  $('customerList').replaceChildren(...customers.map(c=>el('button',{type:'button',class:'order-row','data-customer-id':c.id,onclick:()=>openCustomer(c.id)},
-   el('span',{},el('b',{},c.business),el('span',{class:'row-meta'},[c.contact,c.phone].filter(Boolean).join(' · ')||'No contact saved'),el('span',{class:'row-meta'},`${c.locations.length} ${c.locations.length===1?'location':'locations'}${c.locations[0]?.postcode?' · '+c.locations[0].postcode:''}`)),
-   el('span',{class:'row-end'},c.status==='On hold'?pill('On hold'):null,svg('chev')))));
+  $('customerList').replaceChildren(...customers.map(c=>el('button',{type:'button',class:'order-row customer-row','data-customer-id':c.id,onclick:()=>openCustomer(c.id)},
+   el('span',{class:'customer-icon','aria-hidden':'true'},svg('user')),
+   el('span',{class:'customer-info'},el('b',{},c.business),el('span',{class:'row-meta'},[c.contact,c.phone].filter(Boolean).join(' · ')||'No contact saved'),el('span',{class:'row-meta'},`${c.locations.length} ${c.locations.length===1?'location':'locations'}${c.locations[0]?.postcode?' · '+c.locations[0].postcode:''}`),c.status==='On hold'?pill('On hold'):null),
+   svg('chev'))));
   if(!customers.length)$('customerList').append(el('div',{class:'empty'},$('customerSearch').value.trim()?'No matching customers.':'No customers yet.'));
  }
  function openCustomer(id){
@@ -556,7 +559,7 @@
    el('div',{class:'details'},kv('Contact',c.contact),el('div',{class:'kv'},el('span',{},'Email'),c.email?link('mailto:'+c.email,c.email):el('span',{},'None supplied')),c.accountsEmail?el('div',{class:'kv'},el('span',{},'Accounts email'),link('mailto:'+c.accountsEmail,c.accountsEmail)):null,el('div',{class:'kv'},el('span',{},'Phone'),c.phone?link('tel:'+c.phone.replace(/[^\d+]/g,''),c.phone):el('span',{},'None supplied'))),
    el('h3',{class:'packing-heading'},c.locations.length===1?'Delivery location':'Delivery locations'),
    ...c.locations.map(l=>el('div',{class:'detail-note location'},el('b',{},l.name+(l.id===c.defaultLocationId&&c.locations.length>1?' (default)':'')),[l.address,l.postcode].filter(Boolean).join('\n')||'No address saved',(l.contact||l.phone)&&(l.contact!==c.contact||l.phone!==c.phone)?el('span',{class:'row-meta'},[l.contact,l.phone].filter(Boolean).join(' · ')):null,l.deliveryNotes?el('span',{class:'row-meta'},'Delivery notes: '+l.deliveryNotes):null)));
-  $('customerDetail').append(el('div',{class:'edit-actions'},el('button',{type:'button',class:'btn',disabled:c.status==='On hold',onclick:()=>{$('customerDialog').close();newOrder(c)}},c.status==='On hold'?'On hold: no new orders':'New order for '+c.business)));
+  $('customerActions').replaceChildren(el('button',{type:'button',class:'btn',disabled:c.status==='On hold',onclick:()=>{$('customerDialog').close();newOrder(c)}},c.status==='On hold'?'On hold: no new orders':'New order'));
   $('customerDialog').showModal();
  }
 
@@ -582,34 +585,54 @@
   if(customer)chooseCustomer(customer);else $('newOrderForm').querySelector('input')?.focus();
  }
  async function findCustomers(q){
-  try{const data=await staffJson('GET','customers'+(q?'?q='+encodeURIComponent(q):''));if(!draft||draft.customer)return;draft.found=data.customers.slice(0,30);drawNewOrder(true);}
-  catch(e){if(!e.quiet&&draft){draft.error=e.message;drawNewOrder(true);}}
+  const current=draft;
+  if(!current||current.customer||current.search.trim()!==q)return;
+  try{
+   const data=await staffJson('GET','customers'+(q?'?q='+encodeURIComponent(q):''));
+   if(draft!==current||current.customer||current.search.trim()!==q)return;
+   current.found=data.customers.slice(0,30);current.error='';drawNewOrder(true);
+  }catch(e){if(!e.quiet&&draft===current&&!current.customer&&current.search.trim()===q){current.error=e.message;drawNewOrder(true);}}
  }
  async function chooseCustomer(c){
-  draft.customer=c;draft.catalogue=null;draft.lines=[];draft.error='';draft.locationId=c.defaultLocationId||'primary';draft.emailCustomer=!!c.email&&draft.source==='Email';
-  draft.requestId=crypto.randomUUID();drawNewOrder();
-  try{const data=await staffJson('GET','catalogue?customer='+encodeURIComponent(c.id));if(!draft||draft.customer?.id!==c.id)return;draft.catalogue=data;draft.lines=[blankLine()];drawNewOrder();}
-  catch(e){if(!e.quiet&&draft){draft.error=e.message;drawNewOrder();}}
+  const current=draft;
+  current.customer=c;current.catalogue=null;current.lines=[];current.error='';current.locationId=c.defaultLocationId||'primary';current.emailCustomer=!!c.email&&current.source==='Email';
+  const request=current.requestId=crypto.randomUUID();drawNewOrder();
+  try{
+   const data=await staffJson('GET','catalogue?customer='+encodeURIComponent(c.id));
+   if(draft!==current||current.requestId!==request||current.customer?.id!==c.id)return;
+   current.catalogue=data;current.lines=[blankLine()];drawNewOrder();
+   $('noCoffee-1')?.focus({preventScroll:true});
+  }catch(e){if(!e.quiet&&draft===current&&current.requestId===request){current.error=e.message;drawNewOrder();}}
  }
  function blankLine(st=draft){const p=st.catalogue?.products.find(p=>p.inStock);return {productId:p?.id||'',pack:p?.packs.includes('kilo')?'kilo':p?.packs[0]||'kilo',grind:p?.grinds[0]?.id||'beans',quantity:1};}
  const productOf=(id,st=draft)=>st?.catalogue?.products.find(p=>p.id===id);
  const draftGrams=()=>draft.lines.reduce((sum,l)=>sum+(productOf(l.productId)?(PACK[l.pack]?.grams||0)*(Number(l.quantity)||0):0),0);
  const draftBags=()=>draft.lines.reduce((sum,l)=>sum+(productOf(l.productId)?Number(l.quantity)||0:0),0);
  function lineRow(line,i,st=draft,redraw=drawNewOrder,changed=drawTotals){
-  const p=productOf(line.productId,st);
-  const coffee=el('select',{'aria-label':`Coffee ${i+1}`,onchange:()=>{line.productId=coffee.value;const np=productOf(line.productId,st);if(np){if(!np.packs.includes(line.pack))line.pack=np.packs[0];if(!np.grinds.some(g=>g.id===line.grind))line.grind=np.grinds[0]?.id||'beans';}redraw();}},
+  const p=productOf(line.productId,st),taking=st===draft;
+  const coffee=el('select',{...(taking?{id:'noCoffee-'+(i+1)}:{}),'aria-label':`Coffee ${i+1}`,onchange:()=>{line.productId=coffee.value;const np=productOf(line.productId,st);if(np){if(!np.packs.includes(line.pack))line.pack=np.packs[0];if(!np.grinds.some(g=>g.id===line.grind))line.grind=np.grinds[0]?.id||'beans';}redraw(true);}},
    ...st.catalogue.products.map(x=>el('option',{value:x.id,disabled:!x.inStock,...(x.id===line.productId?{selected:true}:{})},x.title+(x.yours?' (their coffee)':'')+(x.decaf?' · decaf':'')+(x.inStock?'':' · out of stock'))));
   const size=el('select',{'aria-label':`Bag size for coffee ${i+1}`,onchange:()=>{line.pack=size.value;changed()}},...(p?.packs||['kilo']).map(k=>el('option',{value:k,...(k===line.pack?{selected:true}:{})},PACK[k].label)));
   const grind=el('select',{'aria-label':`Grind for coffee ${i+1}`,onchange:()=>{line.grind=grind.value}},...(p?.grinds||[]).map(g=>el('option',{value:g.id,...(g.id===line.grind?{selected:true}:{}),...(g.hint?{title:g.hint}:{})},g.label)));
   const qty=el('input',{type:'number',min:'1',max:'999',step:'1',inputmode:'numeric',value:String(line.quantity),'aria-label':`Bags of coffee ${i+1}`,oninput:()=>{line.quantity=Math.max(0,Math.min(999,Math.floor(Number(qty.value)||0)));changed()}});
-  return el('div',{class:'no-line'},el('label',{class:'field no-coffee'},el('span',{},'Coffee'),coffee),el('label',{class:'field'},el('span',{},'Bag'),size),el('label',{class:'field no-grind'},el('span',{},'Grind'),grind),el('label',{class:'field no-qty'},el('span',{},'Bags'),qty),
-   st.lines.length>1?el('button',{type:'button',class:'btn soft sm no-remove','aria-label':`Remove coffee ${i+1}`,onclick:()=>{st.lines.splice(i,1);redraw()}},'Remove'):null);
+  const coffeeField=el('label',{class:'field no-coffee'},el('span',{},'Coffee'),coffee);
+  const bagField=el('label',{class:'field'},el('span',{},'Bag size'),size);
+  const grindField=el('label',{class:'field no-grind'},el('span',{},'Grind'),grind);
+  const qtyField=el('label',{class:'field no-qty'},el('span',{},'Bags'),qty);
+  const remove=st.lines.length>1?el('button',{type:'button',class:'btn soft sm no-remove','aria-label':`Remove coffee ${i+1}`,onclick:()=>{
+   st.lines.splice(i,1);redraw();
+   if(taking)$('noCoffee-'+Math.min(i+1,st.lines.length))?.focus({preventScroll:true});
+  }},'Remove'):null;
+  if(!taking)return el('div',{class:'no-line'},coffeeField,bagField,grindField,qtyField,remove);
+  return el('div',{class:'no-line no-coffee-card'},
+   el('div',{class:'no-line-heading'},el('b',{},`Coffee ${i+1}`),p?.yours?el('span',{class:'pill preparing'},'Customer’s coffee'):null,remove),
+   coffeeField,el('div',{class:'no-line-options'},bagField,grindField,qtyField));
  }
  function drawTotals(){
   const box=$('noTotals');if(!box||!draft?.catalogue)return;
-  const grams=draftGrams();
-  box.replaceChildren(el('b',{},`${draftBags()} ${draftBags()===1?'bag':'bags'} · ${kgText(grams)}`),el('span',{class:'hint'},'No minimum for orders you take.'));
-  const place=$('placeOrder');if(place)place.disabled=draft.sending||!draftBags();
+  const grams=draftGrams(),bags=draftBags();
+  box.replaceChildren(el('b',{},`${bags} ${bags===1?'bag':'bags'} · ${kgText(grams)}`),el('span',{class:'hint'},draft.delivery==='Delivery'?'Delivery':'Roastery collection'));
+  const place=$('placeOrder');if(place)place.disabled=draft.sending||!bags;
  }
  function drawNewOrder(keepFocus=false){
   if(!draft)return;
@@ -626,43 +649,58 @@
    $('newOrderFoot').replaceChildren(el('span',{}),el('div',{class:'edit-actions'},...actions));
    return;
   }
-  const form=$('newOrderForm'),c=draft.customer,active=keepFocus?document.activeElement?.id:null;
+  const form=$('newOrderForm'),c=draft.customer,active=keepFocus?document.activeElement?.id:null,scroll=form.scrollTop;
   const parts=[];
   if(!c){
-   const search=el('input',{id:'noSearch',type:'search',maxlength:'120',placeholder:'Business, contact or postcode',value:draft.search,autocomplete:'off','aria-label':'Find the customer',oninput:()=>{draft.search=search.value;clearTimeout(draft.timer);draft.timer=setTimeout(()=>findCustomers(search.value.trim()),250)}});
-   parts.push(el('label',{class:'field'},el('span',{},'Customer'),search),
+   const search=el('input',{id:'noSearch',type:'search',maxlength:'120',placeholder:'Business, contact or postcode',value:draft.search,autocomplete:'off','aria-label':'Find the customer',oninput:()=>{
+    draft.search=search.value;clearTimeout(draft.timer);draft.timer=setTimeout(()=>findCustomers(search.value.trim()),250);
+   }});
+   parts.push(el('section',{class:'no-customer-search','aria-labelledby':'noFindTitle'},el('h3',{id:'noFindTitle'},'Find the customer'),search,
     el('div',{class:'order-list glass no-found',role:'list'},...draft.found.map(x=>el('button',{type:'button',class:'order-row',role:'listitem',disabled:x.status==='On hold',onclick:()=>chooseCustomer(x)},el('span',{},el('b',{},x.business),el('span',{class:'row-meta'},[x.contact,x.locations?.[0]?.postcode].filter(Boolean).join(' · '))),el('span',{class:'row-end'},x.status==='On hold'?pill('On hold'):svg('chev')))),
-     !draft.found.length?el('div',{class:'empty'},draft.search?'No matching customers.':'Type to find the customer.'):null));
+     !draft.found.length?el('div',{class:'empty'},draft.search?'No matching customers.':'Type to find the customer.'):null)));
    if(!draft.found.length&&!draft.search&&!draft.loaded){draft.loaded=true;findCustomers('');}
   }else{
    const locs=c.locations||[],loc=locs.find(l=>l.id===draft.locationId)||locs[0];
-   parts.push(el('div',{class:'no-customer'},el('span',{},el('span',{class:'row-meta'},'Customer'),el('b',{},c.business)),el('button',{type:'button',class:'btn soft sm',onclick:()=>{draft.customer=null;draft.catalogue=null;draft.lines=[];draft.found=[];draft.loaded=false;draft.error='';drawNewOrder()}},'Change')));
-   const seg=(label,options,value,set)=>el('fieldset',{class:'field no-seg'},el('legend',{},label),el('div',{class:'filters seg',role:'group'},...options.map(([v,t])=>el('button',{type:'button','aria-pressed':String(value===v),onclick:()=>{set(v);drawNewOrder()}},t))));
-   parts.push(seg('How it came in',[['Email','Email'],['In person','In person'],['Phone','Phone'],['Other','Other']],draft.source,v=>{draft.source=v;draft.emailCustomer=!!c.email&&v==='Email'}));
-   if(!draft.catalogue)parts.push(SC.skeleton({label:'Loading coffees…',rows:2}));
-   else{
-    parts.push(el('h3',{class:'packing-heading'},'Coffee'),el('div',{class:'no-lines'},...draft.lines.map((l,i)=>lineRow(l,i))),
-     el('button',{type:'button',class:'btn soft sm',onclick:()=>{draft.lines.push(blankLine());drawNewOrder()}},'Add another coffee'),
-     el('div',{class:'no-totals',id:'noTotals','aria-live':'polite'}));
-    parts.push(seg('Delivery',[['Roastery collection','Collection'],['Delivery','Delivery']],draft.delivery,v=>{draft.delivery=v}));
-    if(locs.length>1||draft.delivery==='Delivery')parts.push(el('label',{class:'field'},el('span',{},'Location'),el('select',{id:'noLocation',onchange:e=>{draft.locationId=e.target.value;drawNewOrder()}},...locs.map(l=>el('option',{value:l.id,...(l.id===loc?.id?{selected:true}:{})},l.name+(l.postcode?' · '+l.postcode:''))))),
-     draft.delivery==='Delivery'?el('p',{class:'hint'},loc&&(loc.address||loc.postcode)?[loc.address,loc.postcode].filter(Boolean).join(', '):'No address saved for this location: choose collection, or ask an admin to add it.'):null);
+   parts.push(el('div',{class:'no-customer'},el('div',{class:'no-customer-name'},el('span',{class:'no-customer-icon','aria-hidden':'true'},svg('user')),el('div',{},el('span',{class:'row-meta'},'Customer'),el('b',{},c.business))),
+    el('button',{type:'button',class:'btn soft sm',onclick:()=>{
+     draft.customer=null;draft.catalogue=null;draft.lines=[];draft.found=[];draft.loaded=false;draft.error='';drawNewOrder();$('noSearch')?.focus();
+    }},'Change customer')));
+   if(!draft.catalogue){
+    if(!draft.error)parts.push(SC.skeleton({label:'Loading coffees…',rows:2}));
+    else parts.push(el('button',{type:'button',class:'btn soft',onclick:()=>chooseCustomer(c)},'Retry catalogue'));
+   }else{
+    const selectField=(label,id,options,value,set)=>el('label',{class:'field'},el('span',{},label),
+     el('select',{id,onchange:event=>{set(event.target.value);drawNewOrder(true)}},...options.map(([key,text])=>el('option',{value:key,selected:key===value},text))));
+    const source=selectField('Order source','noSource',['Email','In person','Phone','Other'].map(v=>[v,v]),draft.source,v=>{draft.source=v;draft.emailCustomer=!!c.email&&v==='Email'});
+    const method=selectField('Fulfilment','noDelivery',[['Roastery collection','Roastery collection'],['Delivery','Delivery']],draft.delivery,v=>{draft.delivery=v});
+    const location=locs.length>1||draft.delivery==='Delivery'?selectField('Location','noLocation',locs.map(l=>[l.id,[l.name,l.postcode].filter(Boolean).join(' · ')]),loc?.id,v=>{draft.locationId=v}):null;
+    const address=draft.delivery==='Delivery'?el('p',{class:loc?.address&&loc?.postcode?'no-address':'no-address account-banner review'},loc?.address&&loc?.postcode?[loc.address,loc.postcode].join(', '):'No delivery address saved. Choose collection or ask an admin to add the address.'):null;
     const ref=el('input',{id:'noRef',maxlength:'80',value:draft.reference,oninput:()=>{draft.reference=ref.value}});
     const note=el('textarea',{id:'noNote',rows:'3',maxlength:'1000',oninput:()=>{draft.note=note.value}});note.value=draft.note;
-    parts.push(el('label',{class:'field'},el('span',{},'Their reference (optional)'),ref),el('label',{class:'field'},el('span',{},'Comments from the customer (optional)'),note,el('small',{},'Shown on the order and to the customer. For notes only staff see, add an internal note after placing it.')));
-    const mail=el('input',{type:'checkbox',id:'noEmail',disabled:!c.email,...(draft.emailCustomer&&c.email?{checked:true}:{}),onchange:()=>{draft.emailCustomer=mail.checked}});
-    parts.push(el('label',{class:'check'},mail,el('span',{},c.email?`Email ${c.business} a confirmation (${c.email})`:'No email saved, so no confirmation can be sent')));
-    const tab=el('input',{type:'checkbox',id:'noTab',disabled:!!draft.catalogue.autoTab,...(draft.onTab||draft.catalogue.autoTab?{checked:true}:{}),onchange:()=>{draft.onTab=tab.checked}});
-    parts.push(el('label',{class:'check'},tab,el('span',{},draft.catalogue.autoTab?`Goes on ${c.business}'s tab (their orders always do)`:`Put it on ${c.business}'s tab`)));
+    const mail=el('input',{type:'checkbox',class:'switch',id:'noEmail',disabled:!c.email,checked:!!(draft.emailCustomer&&c.email),onchange:()=>{draft.emailCustomer=mail.checked}});
+    const tab=el('input',{type:'checkbox',class:'switch',id:'noTab',disabled:!!draft.catalogue.autoTab,checked:!!(draft.onTab||draft.catalogue.autoTab),onchange:()=>{draft.onTab=tab.checked}});
+    parts.push(el('div',{class:'no-workspace'},
+     el('section',{class:'no-card','aria-labelledby':'noCoffeeTitle'},
+      el('header',{class:'no-card-heading'},el('h3',{id:'noCoffeeTitle'},'Coffee'),el('p',{class:'hint'},'No minimum for staff-entered orders.')),
+      el('div',{class:'no-lines'},...draft.lines.map((line,index)=>lineRow(line,index))),
+      el('button',{type:'button',class:'btn soft no-add-coffee',onclick:()=>{
+       draft.lines.push(blankLine());drawNewOrder();$('noCoffee-'+draft.lines.length)?.focus();
+      }},'Add another coffee')),
+     el('section',{class:'no-card no-details','aria-labelledby':'noDetailsTitle'},el('h3',{id:'noDetailsTitle'},'Order details'),
+      el('div',{class:'no-details-grid'},source,method,location,address),
+      el('label',{class:'field'},el('span',{},'Customer reference (optional)'),ref),
+      el('label',{class:'field'},el('span',{},'Customer comments (optional)'),note,el('small',{},'Visible to the customer.')),
+      el('div',{class:'no-preferences'},el('label',{class:'check'},el('span',{},el('b',{},'Email confirmation'),el('small',{},c.email||'No email saved')),mail),
+       el('label',{class:'check'},el('span',{},draft.catalogue.autoTab?'Always goes on the customer’s tab':'Put on the customer’s tab'),tab)))));
    }
   }
   if(draft.error)parts.push(el('p',{class:'edit-error',role:'alert'},draft.error));
   form.replaceChildren(...parts);
-  $('newOrderFoot').replaceChildren(el('span',{class:'hint'},c&&draft.catalogue?'Today\'s prices apply. It goes on the Slack orders channel like any order.':''),
+  $('newOrderFoot').replaceChildren(c&&draft.catalogue?el('div',{class:'no-totals',id:'noTotals','aria-live':'polite'}):el('span',{}),
    el('div',{class:'edit-actions'},el('button',{type:'button',class:'btn soft',onclick:()=>$('newOrderDialog').close()},'Cancel'),
     c&&draft.catalogue?el('button',{type:'button',class:'btn',id:'placeOrder',onclick:placeNewOrder},draft.sending?'Placing…':'Place order'):null));
   drawTotals();
-  if(active)$(active)?.focus();
+  if(keepFocus){form.scrollTop=scroll;if(active)$(active)?.focus({preventScroll:true});}
  }
  async function closeUnplacedAttempt(){
   const current=draft,p=current?.pending;if(!p||current.sending||p.identity!==orderingIdentity)return;
@@ -718,22 +756,27 @@
   }
  }
  async function loadCustomers(){
-  const current=sequence;
+  const current=sequence,request=++customerRequest,q=$('customerSearch').value.trim();
+  const isCurrent=()=>current===sequence&&request===customerRequest;
   if(!$('customerList').hasChildNodes())$('customerList').replaceChildren(SC.skeleton({label:'Loading customers…'}));
   $('customerList').setAttribute('aria-busy','true');
+  $('refreshCustomers').setAttribute('aria-busy','true');
+  $('refreshCustomers').disabled=true;
   try{
-   const q=$('customerSearch').value.trim(),response=await fetch('/api/staff-orders/customers'+(q?'?q='+encodeURIComponent(q):''),{cache:'no-store'});
-   if(current!==sequence)return;
+   const response=await fetch('/api/staff-orders/customers'+(q?'?q='+encodeURIComponent(q):''),{cache:'no-store'});
+   if(!isCurrent())return;
    if(response.status===403){lock(true);message('You do not have access to wholesale orders. Ask an admin to enable it.',{denied:true});return;}
    const data=await response.json();if(!response.ok||!Array.isArray(data.customers))throw new Error();
-   if(current!==sequence)return;customers=data.customers;customersMore=!!data.more;drawCustomers();
-  }catch{if(current===sequence)$('customerList').replaceChildren(el('div',{class:'empty'},'Customers could not be loaded. Check your connection and try again.'));}
-  finally{if(current===sequence)$('customerList').setAttribute('aria-busy','false');}
+   if(!isCurrent()||q!==$('customerSearch').value.trim())return;customers=data.customers;customersMore=!!data.more;drawCustomers();
+  }catch{if(isCurrent()&&q===$('customerSearch').value.trim())$('customerList').replaceChildren(el('div',{class:'empty'},'Customers could not be loaded. Check your connection and try again.'));}
+  finally{if(request===customerRequest){$('customerList').setAttribute('aria-busy','false');$('refreshCustomers').removeAttribute('aria-busy');$('refreshCustomers').disabled=false;}}
  }
  function showView(next){
   view=next;$('ordersView').hidden=view!=='orders';$('customersView').hidden=view!=='customers';$('tabsView').hidden=view!=='tabs';
   for(const b of $('viewTabs').querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.view===view));
-  setWorkspaceTitle();SC.reveal($(view+'View'));
+  $('workspaceHeading').hidden=view==='orders';
+  if(view!=='orders')$('workspaceTitle').textContent=view==='tabs'?'Customer tabs':'Customers';
+  SC.reveal($(view+'View'));
   if(view==='orders')loadDeskTotals();
   if(view==='customers')loadCustomers();
   if(view==='tabs')loadTabs();
@@ -774,7 +817,7 @@
     if(heldOrder?.id===id)heldOrder=result.orders.find(row=>row.id===id&&OPEN_STATUSES.includes(row.status))||null;
    }
    rows=more&&!changed?[...new Map([...rows,...data.orders].map(row=>[row.id,row])).values()]:data.orders;cursor=data.nextCursor;total=data.count;
-   draw();$('accessStatus').hidden=true;$('ordersContent').hidden=false;document.documentElement.removeAttribute('data-orders-locked');if(changed||reverify)SC.reveal($('orderList'));
+   draw();$('accessStatus').hidden=true;$('ordersContent').hidden=false;$('viewTabs').hidden=false;document.documentElement.removeAttribute('data-orders-locked');if(changed||reverify)SC.reveal($('orderList'));
    loadDeskTotals();
    if(wasOpen&&wasSelected){const row=findOrder(wasSelected);if(row){selected=row.id;renderDetail(row);if(!$('orderDialog').open)$('orderDialog').showModal()}else{$('orderDialog').close();selected=null;}}
    if(reverify&&view==='customers')loadCustomers();
@@ -783,17 +826,18 @@
   finally{if(current===sequence){$('orderList').setAttribute('aria-busy','false');$('refresh').disabled=false;$('refresh').setAttribute('aria-busy','false');$('loadMore').disabled=false;}}
  }
  $('refresh').onclick=()=>load({reverify:true});$('loadMore').onclick=()=>load({more:true});
+ $('orderStatus').replaceChildren(...filters.map(([value,label])=>el('option',{value},label)));
+ $('orderStatus').onchange=event=>{status=event.target.value;load();};
  $('orderDispatchScope').onchange=()=>{totalsSequence++;deskTotals=null;drawDeskTotals();load();};
- const setWorkspaceTitle=()=>{$('workspaceTitle').textContent=wideDesk.matches&&view==='orders'?'Packing desk':'Wholesale orders';};
- wideDesk.addEventListener('change',()=>{setWorkspaceTitle();if(!wideDesk.matches&&status==='prepare')status='open';if(started)load();});
- setWorkspaceTitle();
+ wideDesk.addEventListener('change',()=>{if(!wideDesk.matches&&status==='prepare')status='open';if(started)load();});
  $('search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>load(),250)};
  $('customerSearch').oninput=()=>{clearTimeout(customerTimer);customerTimer=setTimeout(loadCustomers,250)};
+ $('refreshCustomers').onclick=loadCustomers;
  for(const b of $('viewTabs').querySelectorAll('button'))b.onclick=()=>showView(b.dataset.view);
  $('closeOrder').onclick=()=>$('orderDialog').close();
  $('doneOrder').onclick=()=>{
   if(!mobilePacking){$('orderDialog').close();return;}
-  setMobilePacking(false);$('orderEdit').querySelector('[data-open-packing]')?.focus();
+  setMobilePacking(false);$('orderDialogAction').querySelector('button')?.focus();
  };
  $('orderDialog').addEventListener('close',()=>{if($('orderDialog').open)return;selected=null;editing=false;amend=null;setMobilePacking(false);$('orderEdit').replaceChildren()});
  $('closeDeskDispatch').onclick=$('cancelDeskDispatch').onclick=()=>$('dispatchDialog').close();
@@ -815,7 +859,8 @@
  $('closeCustomer').onclick=$('doneCustomer').onclick=()=>$('customerDialog').close();
  $('refreshTabs').onclick=()=>load({reverify:true});$('closeTab').onclick=()=>$('tabDialog').close();$('tabDialog').addEventListener('close',()=>{tabSelected=null;tabConfirm=false;});
  $('closeTotals').onclick=()=>$('totalsDialog').close();
- $('newOrder').onclick=()=>newOrder(null);$('closeNewOrder').onclick=()=>$('newOrderDialog').close();
+ for(const button of document.querySelectorAll('[data-new-order]'))button.onclick=()=>newOrder(null);
+ $('closeNewOrder').onclick=()=>$('newOrderDialog').close();
  $('newOrderDialog').addEventListener('close',()=>{if(draft&&!draft.sending)draft=null;});
  $('newOrderForm').addEventListener('submit',e=>e.preventDefault());
  // Printing moves focus to the print dialog: that isn't leaving the page, so it doesn't lock it.
