@@ -1,16 +1,11 @@
-## Admin dashboard
+## Changes
 
-- Overview groups scheduled dispatch work and diary deadlines in Due today and links to the wider fulfilment, payment and review queues.
-- Wholesale adds a mobile section picker, section URLs with browser Back restoring filters, and a desktop order and packing preview. Order settings groups announcements and alerts. Customer approvals and custom coffee visibility are easier to find.
-- Invoicing adds invoice and business search and queues for overdue, due soon and payments needing review. Insights separates Roast plan, Forecast and Sales and starts with the roast summary on mobile. The existing forecast and roast calculations drive these views.
-- People has searchable account states and a full profile with account actions grouped together. Sickness adds name search and a follow-up filter. Sites link to diary and rota settings for the selected site. Activity adds date filters and error reference search. Security and Backups & exports surface the current status and common actions.
+- Give Admin a sortable wholesale order queue with dispatch filters, an order and invoice inspector, and optional packing through confirmed dispatch or collection.
+- Give Staff a desktop packing desk with an order queue, active checklist and live bag totals, plus a dedicated mobile packing sheet.
+- Share version-checked packing progress across both roles. Bag changes reset the checklist and return Ready orders to Preparing.
 
-The views use the existing light and dark theme, permissions and versioned write flows. No migration, dependency or production configuration change is required.
+## Validation
 
-## Verification
-
-- `npm test` passed all 420 checks. The updated due-today regression also passed its focused rerun.
-- `npm run test:e2e` exercised 338 browser cases. The 10 initial failures were resolved and verified in focused reruns of Overview, the staff journey and Sickness. The final revision also passed the focused order layout, Activity errors and roast-planning suites.
-- Phone, iPad and desktop in light and dark
-- The Worker bundled successfully in a Wrangler deployment dry run.
-- The first CI pass verified the Admin and Wholesale changes and caught a Rota leave test that measured an animated rectangle and could match a background Cancel action. The revised test uses layout height and checks the active sheet with a pending request behind it. All ten Rota mobile leave cases passed the targeted rerun.
+- 430 API checks and the Cloudflare build dry run passed.
+- All 347 browser checks passed across the full run and targeted reruns. The reruns covered two updated desktop selectors, the staff-preview filter and a local Worker restart during fixture setup.
+- Verified packing across both roles, draft preservation on mobile, and dispatch confirmation with a local fixture.

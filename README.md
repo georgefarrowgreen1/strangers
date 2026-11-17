@@ -1,9 +1,5 @@
-# Admin dashboard publisher
+# Wholesale fulfilment publisher
 
-Source: `4e47754b0ca0c03de24ad2fc7bb64387b9b4e868`
-Base: `2f718b305caded1e87d706449085969e5d239a51`
-Branch: `feat/admin-workspaces`
+Source commit `fc03bff1ba3042cfe5ee61d3db38b14710a9deae` based on `177d490b0d12dd65e618cf7f3aed93999fdb1cc7` via `feat/desktop-order-fulfilment`.
 
-Publishes the tested Admin dashboard workspaces with the existing saved identity, exact source and destination checks, required Tests workflow and guarded squash merge. The release uses the current site theme and existing permissions. Check the merged tree, Cloudflare deployment and live assets without changing production data.
-
-This revision verifies leave sheet geometry using CSS layout pixels and scopes Cancel to the active sheet with an existing request in the fixture.
+Publishes the verified Admin and Staff wholesale fulfilment workspaces with the existing deployment identity and required Tests gate. Verify the Cloudflare deployment and live routes after merge.
