@@ -13,3 +13,4 @@ The views use the existing light and dark theme, permissions and versioned write
 - `npm run test:e2e` exercised 338 browser cases. The 10 initial failures were resolved and verified in focused reruns of Overview, the staff journey and Sickness. The final revision also passed the focused order layout, Activity errors and roast-planning suites.
 - Phone, iPad and desktop in light and dark
 - The Worker bundled successfully in a Wrangler deployment dry run.
+- The first CI pass verified the Admin and Wholesale changes and caught a Rota leave test that measured an animated rectangle and could match a background Cancel action. The revised test uses layout height and checks the active sheet with a pending request behind it. All ten Rota mobile leave cases passed the targeted rerun.
