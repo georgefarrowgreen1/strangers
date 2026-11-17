@@ -8,6 +8,7 @@
 ## Verification
 
 - Full API and browser suites, with the tabs suite rerun after correcting its wait for a newly cleared record
+- Rerun the email-delivery and tabs tests after waiting for routed responses during Playwright teardown
 - Phone and iPad layouts in light and dark mode, plus desktop smoke checks
 - Cloudflare Worker dry run
 

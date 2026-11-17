@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "feat/staff-wholesale-workspace-release"
-EXPECTED = "2c93da0578e0880523f864c1aec6edb8c393ee43"
-PRIOR = None
+EXPECTED = "1e87e4767823e56a73ab3c6c8c3c31adcac2c72f"
+PRIOR = "2c93da0578e0880523f864c1aec6edb8c393ee43"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
