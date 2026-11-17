@@ -1,11 +1,14 @@
 ## Changes
 
-- Give Admin a sortable wholesale order queue with dispatch filters, an order and invoice inspector, and optional packing through confirmed dispatch or collection.
-- Give Staff a desktop packing desk with an order queue, active checklist and live bag totals, plus a dedicated mobile packing sheet.
-- Share version-checked packing progress across both roles. Bag changes reset the checklist and return Ready orders to Preparing.
+- Give Staff Wholesale a shared navigation, panel and control layout across Orders, Tabs and Customers.
+- Remove the Packing desk heading and move New order into the toolbar so the queue starts higher.
+- Redesign order entry and use the site's shared dropdown and switch styles.
+- Keep partial tab clearing, order recovery, packing, printing and dispatch on their existing workflows.
 
-## Validation
+## Verification
 
-- 430 API checks and the Cloudflare build dry run passed.
-- All 347 browser checks passed across the full run and targeted reruns. The reruns covered two updated desktop selectors, the staff-preview filter and a local Worker restart during fixture setup.
-- Verified packing across both roles, draft preservation on mobile, and dispatch confirmation with a local fixture.
+- Full API and browser suites, with the tabs suite rerun after correcting its wait for a newly cleared record
+- Phone and iPad layouts in light and dark mode, plus desktop smoke checks
+- Cloudflare Worker dry run
+
+No migration or configuration change is needed for this pull request.

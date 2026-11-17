@@ -1,5 +1,5 @@
-# Wholesale fulfilment publisher
+# Staff Wholesale publisher
 
-Source commit `fc03bff1ba3042cfe5ee61d3db38b14710a9deae` based on `177d490b0d12dd65e618cf7f3aed93999fdb1cc7` via `feat/desktop-order-fulfilment`.
+Source commit `2c93da0578e0880523f864c1aec6edb8c393ee43` based on `c206b66b7460261977f5c3790526ab3b5f40bbfc` via `feat/staff-wholesale-workspace-release`.
 
-Publishes the verified Admin and Staff wholesale fulfilment workspaces with the existing deployment identity and required Tests gate. Verify the Cloudflare deployment and live routes after merge.
+Publishes the Staff Wholesale redesign and the compact Orders toolbar. The existing publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.

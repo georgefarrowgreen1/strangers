@@ -13,8 +13,8 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "feat/desktop-order-fulfilment"
-EXPECTED = "fc03bff1ba3042cfe5ee61d3db38b14710a9deae"
+BRANCH = "feat/staff-wholesale-workspace-release"
+EXPECTED = "2c93da0578e0880523f864c1aec6edb8c393ee43"
 PRIOR = None
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
@@ -211,7 +211,7 @@ def publish(env, progress, work):
             raise RuntimeError("The existing PR URL did not match the verified repository.")
         metadata = work / "pr-metadata.json"
         metadata.write_text(json.dumps({
-            "title": "Build Admin and Staff wholesale fulfilment workspaces",
+            "title": "Unify the Staff Wholesale workspace",
             "body": (ROOT / "pull-request.txt").read_text(),
         }))
         command(
@@ -221,7 +221,7 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", "Build Admin and Staff wholesale fulfilment workspaces",
+             "--title", "Unify the Staff Wholesale workspace",
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
@@ -241,7 +241,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("Wholesale fulfilment updates squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("Staff Wholesale updates squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")
