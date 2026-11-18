@@ -33,6 +33,7 @@ import { isWholesaleCode, wholesalePath } from "./hosts";
 import { catalogueRetrievedAt } from "./wholesale/catalogue.js";
 import { catalogue } from "./wholesaleCatalogue";
 import { catalogueFor } from "./wholesaleWhiteLabel";
+import { retailInstagram } from "./retailInstagram";
 export { LiveHub } from "./live";
 
 export default {
@@ -198,6 +199,8 @@ const wholesalePage = (req: Request, env: Env, url: URL) => env.ASSETS.fetch(pag
 const ADMIN_PAGES = new Set(["/admin", "/admin/", "/admin.html", "/admin/index.html"]);
 const WHOLESALE_PAGES = new Set(["/wholesale", "/wholesale/", "/wholesale/index.html"]);
 const OLD_WHOLESALE_DASHBOARD = new Set(["/wholesale/dashboard", "/wholesale/dashboard/", "/wholesale/dashboard/index.html"]);
+const SHOP_PAGE = /^\/shop\/(?:(?:home|information|location|locations|brewguides|brew-guides|about|contact|shipping|privacy-policy|terms-conditions|wholesale|norwich-racing-team|basket|cart|checkout)\/|coffee\/(?:[a-z0-9-]+\/|p\/[a-z0-9-]+\/)?|blog\/(?:tag\/[a-z0-9+%_-]+\/|\d{4}\/\d{1,2}\/\d{1,2}\/[a-z0-9-]+\/)?)?$/i;
+const SHOP_FILE = /^\/shop\/(?:shop\.(?:css|js)|(?:catalogue|site-content)\.json|content\/[a-f0-9]{12}\.json|photos\/[a-z0-9-]+\.webp)$/;
 
 async function route(req: Request, env: Env, ctx: ExecutionContext, url: URL): Promise<Response> {
   const isGet = req.method === "GET" || req.method === "HEAD";
@@ -210,6 +213,20 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, url: URL): P
     req = new Request(target, req); url = target;
   }
   const p = url.pathname;
+  // Public retail preview, independent of wholesale accounts, catalogue, orders and browser storage.
+  if (p === "/shop" || p.startsWith("/shop/")) {
+    if (url.hostname !== env.LEGACY_PREVIEW_HOST?.toLowerCase()) return new Response("Not found", { status: 404 });
+    if (!isGet) return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD" } });
+    if (p === "/shop/instagram.json") return retailInstagram(req, env, ctx, url);
+    const instagramPhoto = p.match(/^\/shop\/instagram-photo\/([A-Za-z0-9_-]{3,35})$/);
+    if (instagramPhoto) return retailInstagram(req, env, ctx, url, instagramPhoto[1]);
+    if (p === "/shop/mark.svg") return staticFile(new Request(new URL("/mark.svg", url), req), env, "/mark.svg");
+    if (SHOP_FILE.test(p)) return staticFile(req, env, p);
+    if (!p.endsWith("/") && SHOP_PAGE.test(p + "/")) return redirect(p + "/" + url.search);
+    if (!SHOP_PAGE.test(p)) return new Response("Not found", { status: 404 });
+    const page = await env.ASSETS.fetch(pageRequest(req, new URL("/shop/", url)));
+    return withFingerprints(noStore(page), env, url);
+  }
   if (p === "/api/email/resend-webhook") return handleResendWebhook(req, env, () => ensureSchema(env));
   if(p.startsWith("/api/quickbooks/webhook/"))return handleWebhook(req,env,ctx,processEvents);
   const app = appForHost(url.hostname, env.ROTA_HOST, env.ADMIN_HOST, env.PREVIEW_HOST, env.LEGACY_PREVIEW_HOST);
