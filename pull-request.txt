@@ -1,7 +1,7 @@
 ## Retail development Worker
 
 - Add the independent `strangers-dev-preview` Worker with a bundle of public retail assets, version metadata, a read-only Instagram feed and simulated checkout.
-- Add local asset watching, focused browser checks and a preview workflow that publishes a version URL and promotes the selected version separately.
+- Add local asset watching, focused browser checks and a workflow in the existing publisher repository that publishes a version URL and promotes the selected version separately.
 - Namespace the shop's shared theme under `/shop/` so a Cloudflare path route can serve the complete retail app. Keep the shared Worker's retail routes available while the dedicated Worker is provisioned.
 - Include the reviewed mobile header, cart count and animated menu in the retail preview source.
 
