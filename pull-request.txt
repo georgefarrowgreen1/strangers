@@ -1,9 +1,11 @@
 ## Public retail shop preview
 
-- Add a public shop at `/shop/` on `preview.staffstrangerscoffee.com` using the trade shop’s theme. Use the retail site's catalogue, photography, prices and variants, and carry over its Locations, Brew guides, About, Contact and Delivery pages.
-- Keep the preview basket in separate browser storage. Checkout is a simulation and makes no order or payment request. Product pages link to the live retail shop.
-- Scope the read-only preview routes to the legacy preview host and preserve the existing wholesale entry, sign-in and protected catalogue routes.
+- Use the public Strangers site as the content baseline. Rebuild its homepage, 16 products, 11 shop categories, company and policy pages, 27 blog articles and topic pages in the trade site's theme.
+- Preserve retail photos, tasting and provenance information, shopping options and prices. Add path aliases for the original public URLs. Keep the production newsletter and contact forms linked from the preview.
+- Keep the simulated basket and checkout separate from live orders and wholesale storage. Serve public preview routes only under `/shop/` on `preview.staffstrangerscoffee.com` and preserve legacy wholesale entry, sign-in and recovery.
+
+- Refresh the homepage Instagram gallery from the public homepage. Support the official Instagram API when its Worker secret is configured and retain the local gallery if the providers are unavailable.
 
 ## Review
 
-Checked the full retail flow in Chromium and WebKit at desktop and mobile sizes, including 320 px. Verified the public route boundary and legacy wholesale access, then ran typechecking and a Worker dry run.
+Rendered 93 mapped routes at desktop and narrow mobile widths, including every indexed public sitemap URL. Checked best-seller add-to-basket, variants, shipping estimates, archived posts, policy pages and checkout in Chromium and WebKit. Verified the public route boundary, existing wholesale access, fixture checks for both Instagram providers, typechecking and a Worker dry run.
