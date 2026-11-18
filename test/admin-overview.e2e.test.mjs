@@ -1,3 +1,4 @@
+import { selectWholesaleSection } from './admin-workspace-helpers.mjs';
 import{test,before,after}from'node:test';import assert from'node:assert/strict';import{createRequire}from'node:module';import{mkdir}from'node:fs/promises';
 import{startServer,SETUP_CODE}from'./harness.mjs';import{seedOverview}from'./admin-overview-fixture.mjs';
 const{chromium}=createRequire(import.meta.url)('playwright');let srv,browser,admin;
@@ -23,15 +24,50 @@ test('overview order queues open full real-customer results, support clearing, a
 });
 
 test("Admin mobile section links restore the active order search when going back", async () => {
- const {ctx,page,errors}=await open(393,"dark");
+ const {ctx,page,errors}=await open(320,"dark");
  try {
+  const dockOverruns = () => page.locator("#tabBar button").evaluateAll(buttons => buttons.flatMap(button => {
+    const bounds = button.getBoundingClientRect();
+    const label = button.querySelector(".tab-label");
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const content = [...range.getClientRects(), ...Array.from(button.querySelectorAll(".badge"), badge => badge.getBoundingClientRect())];
+    const outside = content.filter(rect => rect.left < bounds.left - 1 || rect.right > bounds.right + 1 || rect.top < bounds.top - 1 || rect.bottom > bounds.bottom + 1);
+    if (!outside.length && button.scrollWidth <= button.clientWidth + 1) return [];
+    return [{
+      label: label.textContent, width: bounds.width, scrollWidth: button.scrollWidth,
+      font: getComputedStyle(label).font,
+      outside: outside.map(({ left, right, top, bottom }) => ({ left, right, top, bottom })),
+    }];
+  }));
+  assert.deepEqual(await dockOverruns(), [], "each dock label stays within its button");
+  const widerFont = await page.addStyleTag({ content: "#tabBar .tab-label { font: 700 12px/1.2 monospace; letter-spacing: .04em }" });
+  assert.deepEqual(await dockOverruns(), [], "wider fallback text stays inside each dock button and can wrap");
+  await widerFont.evaluate(style => style.remove());
   await page.locator('.ov-work [data-id="prepare"]').click();
   await page.locator("#wSection").waitFor();
-  assert.equal(await page.locator("#wSection").inputValue(), "orders");
+  assert.equal(await page.locator("#wSection .w-section-value").innerText(), "Orders");
   assert.equal(new URL(page.url()).hash, "#wholesale/orders");
   await page.getByRole("searchbox", {name:"Search wholesale orders"}).fill("Overview test");
   await page.locator(".w-active-filters", {hasText:"Overview test"}).waitFor();
-  await page.locator("#wSection").selectOption("invoices");
+  await page.locator("#wSection").press("Enter");
+  const sections = page.getByRole("dialog", { name: "Wholesale sections" });
+  await sections.waitFor();
+  assert.deepEqual(await sections.locator("h3").allTextContents(), ["Order management", "Catalogue and reporting"]);
+  assert.equal(await sections.getByRole("button", { name: "Orders", exact: true }).getAttribute("aria-current"), "page");
+  assert.equal(await page.locator(".app").evaluate(element => element.inert), true);
+  await page.keyboard.press("Escape");
+  assert.equal(await sections.isHidden(), true);
+  assert.equal(await page.locator("#wSection").evaluate(element => element === document.activeElement), true);
+  await page.locator("#wSection").press("Enter");
+  await sections.waitFor();
+  await page.setViewportSize({ width: 1180, height: 1000 });
+  await sections.waitFor({ state: "hidden" });
+  await page.waitForFunction(() => document.activeElement.matches('#sideNav [data-id="orders"]'));
+  await page.setViewportSize({ width: 320, height: 1000 });
+  await page.waitForFunction(() => document.activeElement.id === "wSection");
+  await selectWholesaleSection(page, "invoices");
+  assert.equal(await page.locator("#wSection").evaluate(element => element === document.activeElement), true);
   await page.getByRole("searchbox", {name:"Search invoices"}).waitFor();
   assert.equal(new URL(page.url()).hash, "#wholesale/invoices");
   await page.getByRole("button",{name:"Overdue",exact:true}).click();
@@ -40,9 +76,14 @@ test("Admin mobile section links restore the active order search when going back
   await page.locator('.wi-invoice-row', {hasText:"OV-1"}).waitFor();
   await page.goBack();
   await page.locator(".w-active-filters",{hasText:"Overview test"}).waitFor();
-  assert.equal(await page.locator("#wSection").inputValue(), "orders");
+  assert.equal(await page.locator("#wSection .w-section-value").innerText(), "Orders");
   assert.equal(await page.locator('#wq').inputValue(), "Overview test");
   assert.equal(await page.locator('.w-order').count(), 2);
+  await page.locator('#tabBar [data-go="overview"]').click();
+  await page.locator(".admin-overview").waitFor();
+  await page.locator('#tabBar [data-go="wholesale"]').click();
+  await page.locator(".w-active-filters", {hasText:"Overview test"}).waitFor();
+  assert.equal(await page.locator('#wq').inputValue(), "Overview test");
   assert.deepEqual(errors,[]);
  } finally { await ctx.close(); }
 });
