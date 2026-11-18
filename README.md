@@ -1,5 +1,5 @@
 # Strangers release publisher
 
-Source commit `c7d8592644c3932bdc47b7fcd2aa1dda2724402d` based on `6c81c25ea1041a73124ea0ca89f477cfa32a9709` via `feature/public-retail-preview`.
+Source commit `665317e8a67f9da8c6f0562aa5ca9460afb4ae3d` based on `4c460414c0c97626638ffddda9a985ead0681adf` via `feature/strangers-dev-preview`.
 
 Publishes the public retail shop preview at `https://preview.staffstrangerscoffee.com/shop/`. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.

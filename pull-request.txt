@@ -1,11 +1,10 @@
-## Public retail shop preview
+## Retail development Worker
 
-- Use the public Strangers site as the content baseline. Rebuild its homepage, 16 products, 11 shop categories, company and policy pages, 27 blog articles and topic pages in the trade site's theme.
-- Preserve retail photos, tasting and provenance information, shopping options and prices. Add path aliases for the original public URLs. Keep the production newsletter and contact forms linked from the preview.
-- Keep the simulated basket and checkout separate from live orders and wholesale storage. Serve public preview routes only under `/shop/` on `preview.staffstrangerscoffee.com` and preserve legacy wholesale entry, sign-in and recovery.
-- Refresh the homepage Instagram gallery from the public homepage. Support the official Instagram API when its Worker secret is configured and retain the local gallery if the providers are unavailable.
-- Keep keyboard focus clear of the sticky header, route archived coffee links through the preview, and make all ten coffees from the original featured shelf available on the homepage.
+- Add the independent `strangers-dev-preview` Worker with a bundle of public retail assets, version metadata, a read-only Instagram feed and simulated checkout.
+- Add local asset watching, focused browser checks and a preview workflow that publishes a version URL and promotes the selected version separately.
+- Namespace the shop's shared theme under `/shop/` so a Cloudflare path route can serve the complete retail app. Keep the shared Worker's retail routes available while the dedicated Worker is provisioned.
+- Include the reviewed mobile header, cart count and animated menu in the retail preview source.
 
-## Review
+## Verification
 
-Rendered 93 mapped routes at desktop and narrow mobile widths, including every indexed public sitemap URL. Checked best-seller add-to-basket, variants, shipping estimates, archived posts, policy pages and checkout in Chromium and WebKit. Verified the public route boundary, existing wholesale access, fixture checks for both Instagram providers, typechecking and a Worker dry run.
+Passed the focused standalone retail tests, shared Worker retail, wholesale and admin asset regressions, type checking, workflow lint, Wrangler dry run and local asset refresh.
