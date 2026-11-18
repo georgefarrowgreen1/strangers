@@ -15,3 +15,5 @@ All 436 API tests passed across the initial run and isolated retries. The retrie
 The initial GitHub browser run found four failures across two layouts. The follow-up keeps the mobile notification confirmation visible throughout the sheet entrance and keeps the split-desktop order header on one row with wider system fonts. The focused reruns passed 36 Chromium tests and four WebKit notification cases.
 
 The second GitHub browser run passed 360 of 361 cases and caught a phone invoice footer moving below the viewport during a sheet transition. The final follow-up anchors mobile Admin windows and fades replacement content without moving the window. The invoice flow now verifies the footer at the start, midpoint and end of the animation.
+
+A separate API test was sensitive to request timing because its future test timestamp was only one second beyond the acceptance window. The fixture now uses six minutes and still requires rejection and no delivery state changes.
