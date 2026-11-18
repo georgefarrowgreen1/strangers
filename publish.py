@@ -16,6 +16,7 @@ TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "feature/strangers-dev-preview"
 EXPECTED = "cafdd65feb01440090b86c47b5691291ad4033d8"
 PRIOR = "4c460414c0c97626638ffddda9a985ead0681adf"
+TIMED_OUT_TEST_RUN = 44382204718
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -261,6 +262,13 @@ def publish(env, progress, work):
                 run = tests[0]
                 identity = (run["id"], run.get("run_attempt", 1))
                 if retried_test == identity and time.monotonic() - retried_at < 60:
+                    time.sleep(5)
+                    continue
+                if retried_test is None and identity == (TIMED_OUT_TEST_RUN, 1) and run["conclusion"] == "cancelled":
+                    # This exact verified Tests attempt ran until its 25-minute job limit.
+                    command(["gh", "api", "--method", "POST", f"repos/{TARGET}/actions/runs/{run['id']}/rerun"], env=env)
+                    retried_test, retried_at = identity, time.monotonic()
+                    progress.update("Retrying the timed-out Tests job", f"[{url}]({url})\n\nTests reached its runner time limit. The existing suite is running again on the same reviewed commit.", url=url)
                     time.sleep(5)
                     continue
                 if retried_test is None and run["conclusion"] == "failure" and run.get("run_attempt", 1) == 1:
