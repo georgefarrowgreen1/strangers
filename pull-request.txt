@@ -3,7 +3,7 @@
 - Give Kitchen Diary, Rota and Staff Wholesale a shared mobile workspace dock and desktop header switcher. Keep local sections in the Diary and Rota sidebars on wide screens, and keep the Wholesale packing desk full width. Keep the local tab strip anchored across Orders, Tabs and Customers.
 - Respect Staff Wholesale access when displaying shortcuts. Remember local sections and order filters in the tab and preserve direct links.
 - Group the Admin sidebar into Work, Team and sites, and System. Replace the mobile Wholesale section selector with a grouped sheet that shows the current section and keeps pending-account review accessible.
-- Keep keyboard focus usable during navigation, sheet dismissal and viewport changes, including at narrow mobile sizes.
+- Keep keyboard focus usable during navigation, sheet dismissal and viewport changes, including wider fallback fonts at 320 pixels.
 
 ## Verification
 

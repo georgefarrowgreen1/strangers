@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "feature/admin-staff-navigation"
-EXPECTED = "07e8d5d9dc925e03e13ba8da776d7323019247f1"
-PRIOR = "63ace4c0fdee129d184f72fff85c7c024a7e1239"
+EXPECTED = "9428bae5bdec86384d59d1fcf9187e91ff3bc9c1"
+PRIOR = "07e8d5d9dc925e03e13ba8da776d7323019247f1"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
