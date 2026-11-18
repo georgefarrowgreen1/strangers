@@ -7,9 +7,12 @@ import { startServer } from './harness.mjs';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
 const legacy = 'preview.staffstrangerscoffee.com';
+const standalone = process.env.RETAIL_PREVIEW_STANDALONE === '1';
 let server, browser;
 before(async () => {
-  server = await startServer({ host: legacy, vars: { PREVIEW_HOST: 'strangerscoffee.trade', LEGACY_PREVIEW_HOST: legacy } });
+  server = standalone
+    ? await startServer({ config: 'wrangler.retail-preview.jsonc' })
+    : await startServer({ host: legacy, vars: { PREVIEW_HOST: 'strangerscoffee.trade', LEGACY_PREVIEW_HOST: legacy } });
   browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   if (process.env.SHOT_DIR) await mkdir(process.env.SHOT_DIR, { recursive: true });
 });
@@ -70,6 +73,7 @@ for (const [name, viewport, colorScheme] of layouts) {
       await page.waitForFunction(() => document.querySelector('.social-grid img')?.naturalWidth > 0);
       assert.match(await page.locator('footer').innerText(), /122 Ber Street, Norwich NR1 3ES/);
 
+      if (name === 'mobile') await page.getByRole('button', { name: 'Menu', exact: true }).click();
       await page.getByRole('navigation', { name: 'Main navigation' }).getByText('Shop coffee').click();
       await page.getByRole('searchbox', { name: 'Search coffee' }).fill('cherry bomb');
       assert.equal(await page.locator('#products .product-card').count(), 1);
@@ -131,6 +135,85 @@ for (const [name, viewport, colorScheme] of layouts) {
   });
 }
 
+test('the mobile shop menu opens and closes without moving the page and keeps keyboard focus visible', async () => {
+  const page = await browser.newPage({ viewport: { width: 320, height: 640 } });
+  try {
+    await page.route('**/shop/instagram.json', route => route.fulfill({ json: { posts: [] } }));
+    await page.goto(`${server.base}/shop/`);
+    const toggle = page.getByRole('button', { name: 'Menu', exact: true });
+    const basket = page.getByRole('link', { name: 'Basket, 0 items' });
+    const nav = page.locator('#shop-nav');
+    const firstLink = nav.getByRole('link', { name: 'Shop coffee' });
+    const hero = page.getByRole('heading', { name: 'Coffee from the heart of Norwich.' });
+    await hero.waitFor();
+    await page.waitForFunction(() => {
+      const logo = document.querySelector('.shop-header .wordmark img');
+      return logo.currentSrc.endsWith('/shop/logo.svg') && logo.naturalWidth > 0;
+    });
+    assert.equal(await nav.evaluate(node => node.inert), true);
+    assert.equal(await basket.locator('#basket-count').innerText(), '0');
+    assert.equal(await basket.locator('#basket-count').isVisible(), true);
+    assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
+    const heroTop = (await hero.boundingBox()).y;
+    const menuBox = await toggle.boundingBox();
+    const basketBox = await basket.boundingBox();
+    assert.ok(menuBox.height >= 44 && basketBox.height >= 44);
+    assert.ok(basketBox.x + basketBox.width <= menuBox.x);
+
+    await basket.focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await toggle.evaluate(node => node === document.activeElement), true);
+    await page.keyboard.press('Enter');
+    await nav.waitFor({ state: 'visible' });
+    assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
+    assert.equal(await nav.evaluate(node => node.inert), false);
+    assert.equal((await hero.boundingBox()).y, heroTop);
+    await page.keyboard.press('Tab');
+    assert.equal(await firstLink.evaluate(node => node === document.activeElement), true);
+    await page.keyboard.press('Escape');
+    assert.equal(await toggle.evaluate(node => node === document.activeElement), true);
+    assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
+    assert.equal(await nav.evaluate(node => node.inert), true);
+    await nav.waitFor({ state: 'hidden' });
+
+    const transitions = await nav.evaluate(async panel => {
+      const button = panel.previousElementSibling;
+      const animatedProperties = () => panel.getAnimations().map(animation => animation.transitionProperty);
+      button.click();
+      const opening = animatedProperties();
+      await Promise.all(panel.getAnimations().map(animation => animation.finished));
+      button.click();
+      return { opening, closing: animatedProperties() };
+    });
+    for (const direction of [transitions.opening, transitions.closing]) {
+      assert.ok(direction.includes('opacity') && direction.includes('transform'));
+    }
+    await nav.waitFor({ state: 'hidden' });
+
+    await toggle.click();
+    await page.locator('.hero-visual').click();
+    await nav.waitFor({ state: 'hidden' });
+    await toggle.click();
+    await page.setViewportSize({ width: 900, height: 640 });
+    await toggle.waitFor({ state: 'hidden' });
+    await firstLink.waitFor();
+    assert.equal(await nav.evaluate(node => node.inert), false);
+    await page.setViewportSize({ width: 320, height: 640 });
+    await nav.waitFor({ state: 'hidden' });
+    assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await toggle.click();
+    await nav.waitFor({ state: 'visible' });
+    assert.equal(await nav.evaluate(node => getComputedStyle(node).transitionProperty), 'none');
+    await firstLink.click();
+    await page.getByRole('heading', { name: 'Shop coffee' }).waitFor();
+    assert.equal(await nav.isVisible(), false);
+    await toggle.click();
+    assert.equal(await firstLink.getAttribute('aria-current'), 'page');
+  } finally { await page.close(); }
+});
+
 test('public shop keyboard focus stays below the sticky header', async () => {
   for (const viewport of [{ width: 320, height: 568 }, { width: 768, height: 1024 }]) {
     const page = await browser.newPage({ viewport });
@@ -161,15 +244,38 @@ test('public shop keyboard focus stays below the sticky header', async () => {
   }
 });
 
-test('public preview only serves read-only shop routes and keeps wholesale sign-in available', async () => {
+test('public preview serves read-only retail assets within the shop', async () => {
   const request = (path, options) => fetch(server.base + path, { redirect: 'manual', ...options });
   const shortcut = await request('/shop?category=decaf');
   assert.equal(shortcut.headers.get('location'), '/shop/?category=decaf');
   assert.equal((await request('/shop/checkout/', { method: 'POST' })).status, 405);
   assert.equal((await request('/shop/instagram.json', { method: 'POST' })).status, 405);
+  const logo = await request('/shop/logo.svg');
+  assert.equal(logo.status, 200);
+  assert.match(logo.headers.get('content-type'), /image\/svg\+xml/);
+  const home = await request('/shop/');
+  assert.match(await home.text(), /href="\/shop\/theme\.css\?v=[A-Za-z0-9]+"/);
+  const theme = await request('/shop/theme.css');
+  assert.equal(theme.status, 200);
+  assert.match(theme.headers.get('content-type'), /text\/css/);
   assert.equal((await request('/shop/photos/unknown.webp')).status, 404);
+  assert.equal((await request('/shop/unknown')).status, 404);
+  const head = await request('/shop/', { method: 'HEAD' });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), '');
+});
+
+test('retail and wholesale entry points follow the active Worker boundary', async () => {
+  const request = path => fetch(server.base + path, { redirect: 'manual' });
   const entry = await request('/');
   assert.equal(entry.status, 302);
+  if (standalone) {
+    assert.equal(entry.headers.get('location'), '/shop/');
+    for (const path of ['/signin', '/theme.css', '/wholesale/', '/api/wholesale/catalogue', '/admin/']) {
+      assert.equal((await request(path)).status, 404, path);
+    }
+    return;
+  }
   assert.equal(entry.headers.get('location'), '/signin');
   assert.match(await (await request('/signin')).text(), /Wholesale sign-in/);
   assert.equal((await request('/api/wholesale/catalogue')).status, 401);
