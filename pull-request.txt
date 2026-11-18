@@ -11,3 +11,5 @@
 - Checked the JavaScript syntax and patch, type-checked the Worker and performed a Wrangler deployment dry run.
 
 All 436 API tests passed across the initial run and isolated retries. The retries covered 24 failures caused by local Worker fixture restarts or dropped sockets.
+
+The initial GitHub browser run found four failures across two layouts. The follow-up keeps the mobile notification confirmation visible throughout the sheet entrance and keeps the split-desktop order header on one row with wider system fonts. The focused reruns passed 36 Chromium tests and four WebKit notification cases.
