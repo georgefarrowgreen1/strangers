@@ -1,10 +1,12 @@
-## Navigation
+## Admin and Staff UI review
 
-- Give Kitchen Diary, Rota and Staff Wholesale a shared mobile workspace dock and desktop header switcher. Keep local sections in the Diary and Rota sidebars on wide screens, and keep the Wholesale packing desk full width. Keep the local tab strip anchored across Orders, Tabs and Customers.
-- Respect Staff Wholesale access when displaying shortcuts. Remember local sections and order filters in the tab and preserve direct links.
-- Group the Admin sidebar into Work, Team and sites, and System. Replace the mobile Wholesale section selector with a grouped sheet that shows the current section and keeps pending-account review accessible.
-- Keep keyboard focus usable during navigation, sheet dismissal and viewport changes, including wider fallback fonts at 320 pixels.
+- Give People profiles room beside their directory at compact desktop widths. Keep selected Activity filters visible and preserve search selection and open reports during refresh. Space Admin cards and row actions consistently across narrow layouts.
+- Keep common Wholesale order shortcuts compact and keep actions visible in long order, bag, dispatch, and coffee sheets. Give packing dialogs a meaningful heading and Insights tables keyboard scrolling.
+- Keep Staff workspace focus when moving between the dock and desktop header. Allow room for the connection banner when bringing a control into view.
+- Keep the Diary inspection jump bar below the shared header, move sign-off into the page on short screens, and restore focus to the exact maintenance or site control.
+- Keep Rota account menus visible after rotation and preserve shift drafts across layouts. Restore leave, cover, and review launchers on dismissal and keep short landscape form actions reachable.
+- Reopen Staff Wholesale dialogs at the summary, keep keyboard focus in them, and keep a dismissed order closed during background refresh. Keep long names and the delivery location field within the sheet.
 
-## Verification
+## Review
 
-Reviewed the built navigation at mobile, tablet and desktop widths in Chromium and WebKit. The existing CI suite covers data, permissions and workflows. Added browser coverage for workspace round trips, the first live access change, remembered filters, and direct order links. The order conflict regression now redraws the list through search before checking explicit refresh.
+Audited the Admin, Kitchen Diary, Rota and Staff Wholesale routes with local fixtures at phone, landscape, tablet and desktop sizes in light and dark mode. Reviewed the consolidated changes independently in Chromium and WebKit. Added regression coverage for the changed navigation, layout, focus and order flows.

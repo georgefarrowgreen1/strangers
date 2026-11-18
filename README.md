@@ -1,5 +1,5 @@
 # Strangers release publisher
 
-Source commit `9428bae5bdec86384d59d1fcf9187e91ff3bc9c1` based on `725d46434ed6e7793cf5ec68ea0f35833effdab1` via `feature/admin-staff-navigation`.
+Source commit `6684d7f3d18fc46c4428e2438afc88839105eded` based on `f0263112da209699335c7047d8efdac2ef776166` via `feature/ui-ux-audit`.
 
-Publishes the Admin and Staff navigation updates. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes the changes from the Admin and Staff UI audit. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
