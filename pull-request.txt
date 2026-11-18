@@ -1,15 +1,13 @@
-## Changes
+## Summary
 
-- Give Staff Wholesale a shared navigation, panel and control layout across Orders, Tabs and Customers.
-- Remove the Packing desk heading and move New order into the toolbar so the queue starts higher.
-- Redesign order entry and use the site's shared dropdown and switch styles.
-- Keep partial tab clearing, order recovery, packing, printing and dispatch on their existing workflows.
+- Reflow Staff Diary, Rota, Staff Wholesale and Admin at narrow widths. Keep controls and sticky actions in bounds, handle long names and records, and make dialogs scroll within the available viewport.
+- Apply the existing glass theme to modal and menu motion, with spring reveals, touch feedback, and immediate handling of reduced motion and session privacy.
+- Improve keyboard focus and return, loading and retry feedback, and the readability of the Wholesale order toolbar and Insights charts.
 
 ## Verification
 
-- Full API and browser suites, with the tabs suite rerun after correcting its wait for a newly cleared record
-- Rerun the email-delivery and tabs tests after waiting for routed responses during Playwright teardown
-- Phone and iPad layouts in light and dark mode, plus desktop smoke checks
-- Cloudflare Worker dry run
+- Reviewed the five staff and admin surfaces with synthetic data in Chromium and WebKit, including 320px mobile layouts, desktop, light and dark modes, long content and short viewports.
+- Ran the Staff Diary journey, Rota, Staff Wholesale, Admin, motion and Wholesale Insights regression suites. Reviewed modal focus, PIN retries, order draft preservation and the session privacy shield.
+- Checked the JavaScript syntax and patch, type-checked the Worker and performed a Wrangler deployment dry run.
 
-No migration or configuration change is needed for this pull request.
+All 436 API tests passed across the initial run and isolated retries. The retries covered 24 failures caused by local Worker fixture restarts or dropped sockets.

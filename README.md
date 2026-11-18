@@ -1,5 +1,5 @@
-# Staff Wholesale publisher
+# Strangers releases
 
-Source commit `1e87e4767823e56a73ab3c6c8c3c31adcac2c72f` based on `c206b66b7460261977f5c3790526ab3b5f40bbfc` via `feat/staff-wholesale-workspace-release`.
+Source commit `c4404d9e8532e960031662561c85ada6ff45b614` based on `44d7420f478b55666a351862ff306b5556258452` via `feat/staff-admin-ui-audit`.
 
-Publishes the Staff Wholesale redesign and the compact Orders toolbar. The existing publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes the Staff Diary, Rota, Staff Wholesale and Admin UI audit. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
