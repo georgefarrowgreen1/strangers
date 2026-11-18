@@ -1,14 +1,10 @@
-## Findings fixed
+## Navigation
 
-- Whole and partial wholesale tab clears now commit in a single guarded transaction. Staff and Admin send the order versions they reviewed, and stale reviews change no orders. A failed clear returns the operator to the review with the selection intact.
-- Staff Wholesale writes now send the same live change counters as Admin and customer wholesale writes.
-- Scheduled standing-order recovery, Slack, dispatch email, diary reminders, holiday reminders and QuickBooks jobs report failures independently. One failed job no longer prevents later jobs from running.
-- Simultaneous backups use different storage keys and remain separately downloadable. Existing timestamp-only links still work.
-- Dispatch dates and holiday quarters validate before date arithmetic. Duplicate holiday approval entries are rejected, and quarterly accrual groups shifts by person and day before calculating totals.
-- Catalogue photo routes stay outside public asset handling, and the authenticated Admin photo response uses no-store.
+- Give Kitchen Diary, Rota and Staff Wholesale a shared mobile workspace dock and desktop header switcher. Keep local sections in the Diary and Rota sidebars on wide screens, and keep the Wholesale packing desk full width.
+- Respect Staff Wholesale access when displaying shortcuts. Remember local sections and order filters in the tab and preserve direct links.
+- Group the Admin sidebar into Work, Team and sites, and System. Replace the mobile Wholesale section selector with a grouped sheet that shows the current section and keeps pending-account review accessible.
+- Keep keyboard focus usable during navigation, sheet dismissal and viewport changes, including at narrow mobile sizes.
 
 ## Verification
 
-Reviewed Worker host routing, authorization, storage and backups, Diary and Rota functionality, staff and customer ordering, Admin, invoicing, insights, live updates, and notification/accounting integrations. Tested the fixes against local synthetic accounts, orders and provider fixtures, including transactional races and partial job failure. Checked dependency advisories, TypeScript and the Worker deployment dry run.
-
-The production Tests workflow exercises the full API and browser suites on the release commit.
+Reviewed the built navigation at mobile, tablet and desktop widths in Chromium and WebKit. The existing CI suite covers data, permissions and workflows. Added browser coverage for workspace round trips, access changes, remembered filters and direct order links.

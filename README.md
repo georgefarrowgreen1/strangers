@@ -1,5 +1,5 @@
-# Strangers releases
+# Strangers release publisher
 
-Source commit `9eeeb37bdf5e7f63612885b73b445d06bfa4f55e` based on `e0e8cf5e8b370da50b9c1103d9d24357d8a66c2b` via `feat/full-production-functions-audit`.
+Source commit `0b81989c831017198024bfe238e0bde4479e6c7d` based on `725d46434ed6e7793cf5ec68ea0f35833effdab1` via `feature/admin-staff-navigation`.
 
-Publishes the production-functions audit fixes. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes the Admin and Staff navigation updates. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
