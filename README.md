@@ -1,5 +1,5 @@
 # Strangers release publisher
 
-Source commit `42d0717917f23422b4b1a42ebb268e6b5ace6dfb` based on `38ab8c9388d0a7fb8040efed3367ae0de7b9be0f` via `feature/ui-ux-audit`.
+Source commit `3f2b3010ab11055f7842f26c5a1580fce640b9c1` based on `6c81c25ea1041a73124ea0ca89f477cfa32a9709` via `feature/public-retail-preview`.
 
-Publishes the changes from the Admin and Staff UI audit. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes the public retail shop preview at `https://preview.staffstrangerscoffee.com/shop/`. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.

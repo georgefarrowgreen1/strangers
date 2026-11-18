@@ -1,13 +1,9 @@
-## Admin and Staff UI review
+## Public retail shop preview
 
-- Give People profiles room beside their directory at compact desktop widths. Keep selected Activity filters visible and preserve search selection and open reports during refresh. Space Admin cards and row actions consistently across narrow layouts.
-- Keep common Wholesale order shortcuts compact and keep actions visible in long order, bag, dispatch, and coffee sheets. Give packing dialogs a meaningful heading and Insights tables keyboard scrolling.
-- Keep Staff workspace focus when moving between the dock and desktop header. Allow room for the connection banner when bringing a control into view.
-- Keep the Diary inspection jump bar below the shared header, move sign-off into the page on short screens, and restore focus to the exact maintenance or site control, including alerts that open while the lists are loading.
-- Keep Rota account menus visible after rotation and preserve shift drafts across layouts. Restore leave and review launchers on dismissal and keep short landscape form actions reachable. Move focus between the holiday-year edit and confirmation steps.
-- Reopen Staff Wholesale dialogs at the summary, keep keyboard focus in them, and keep a dismissed order closed during background refresh. Keep long names and the delivery location field within the sheet.
-- Integrate the current Staff profile release. Clarify the profile and work-site actions, keep extra sites selected while editing, support keyboard selection and profile saving in Rota, and match Rota emails to the current shift-change guidance.
+- Add a public shop at `/shop/` on `preview.staffstrangerscoffee.com` using the trade shop’s theme. Use the retail site's catalogue, photography, prices and variants, and carry over its Locations, Brew guides, About, Contact and Delivery pages.
+- Keep the preview basket in separate browser storage. Checkout is a simulation and makes no order or payment request. Product pages link to the live retail shop.
+- Scope the read-only preview routes to the legacy preview host and preserve the existing wholesale entry, sign-in and protected catalogue routes.
 
 ## Review
 
-Audited the Admin, Kitchen Diary, Rota and Staff Wholesale routes with local fixtures at phone, landscape, tablet and desktop sizes in light and dark mode. Reviewed the consolidated changes independently in Chromium and WebKit. Repeated the profile and work-site checks after integrating production PR #191, and reran the holiday pages after production PRs #192 and #194. Added regression coverage for the changed navigation, layout, focus and order flows.
+Checked the full retail flow in Chromium and WebKit at desktop and mobile sizes, including 320 px. Verified the public route boundary and legacy wholesale access, then ran typechecking and a Worker dry run.
