@@ -1,19 +1,14 @@
-## Summary
+## Findings fixed
 
-- Reflow Staff Diary, Rota, Staff Wholesale and Admin at narrow widths. Keep controls and sticky actions in bounds, handle long names and records, and make dialogs scroll within the available viewport.
-- Apply the existing glass theme to modal and menu motion, with spring reveals, touch feedback, and immediate handling of reduced motion and session privacy.
-- Improve keyboard focus and return, loading and retry feedback, and the readability of the Wholesale order toolbar and Insights charts.
+- Whole and partial wholesale tab clears now commit in a single guarded transaction. Staff and Admin send the order versions they reviewed, and stale reviews change no orders. A failed clear returns the operator to the review with the selection intact.
+- Staff Wholesale writes now send the same live change counters as Admin and customer wholesale writes.
+- Scheduled standing-order recovery, Slack, dispatch email, diary reminders, holiday reminders and QuickBooks jobs report failures independently. One failed job no longer prevents later jobs from running.
+- Simultaneous backups use different storage keys and remain separately downloadable. Existing timestamp-only links still work.
+- Dispatch dates and holiday quarters validate before date arithmetic. Duplicate holiday approval entries are rejected, and quarterly accrual groups shifts by person and day before calculating totals.
+- Catalogue photo routes stay outside public asset handling, and the authenticated Admin photo response uses no-store.
 
 ## Verification
 
-- Reviewed the five staff and admin surfaces with synthetic data in Chromium and WebKit, including 320px mobile layouts, desktop, light and dark modes, long content and short viewports.
-- Ran the Staff Diary journey, Rota, Staff Wholesale, Admin, motion and Wholesale Insights regression suites. Reviewed modal focus, PIN retries, order draft preservation and the session privacy shield.
-- Checked the JavaScript syntax and patch, type-checked the Worker and performed a Wrangler deployment dry run.
+Reviewed Worker host routing, authorization, storage and backups, Diary and Rota functionality, staff and customer ordering, Admin, invoicing, insights, live updates, and notification/accounting integrations. Tested the fixes against local synthetic accounts, orders and provider fixtures, including transactional races and partial job failure. Checked dependency advisories, TypeScript and the Worker deployment dry run.
 
-All 436 API tests passed across the initial run and isolated retries. The retries covered 24 failures caused by local Worker fixture restarts or dropped sockets.
-
-The initial GitHub browser run found four failures across two layouts. The follow-up keeps the mobile notification confirmation visible throughout the sheet entrance and keeps the split-desktop order header on one row with wider system fonts. The focused reruns passed 36 Chromium tests and four WebKit notification cases.
-
-The second GitHub browser run passed 360 of 361 cases and caught a phone invoice footer moving below the viewport during a sheet transition. The final follow-up anchors mobile Admin windows and fades replacement content without moving the window. The invoice flow now verifies the footer at the start, midpoint and end of the animation.
-
-A separate API test was sensitive to request timing because its future test timestamp was only one second beyond the acceptance window. The fixture now uses six minutes and still requires rejection and no delivery state changes.
+The production Tests workflow exercises the full API and browser suites on the release commit.

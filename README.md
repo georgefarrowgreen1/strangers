@@ -1,5 +1,5 @@
 # Strangers releases
 
-Source commit `6955ff0296b7a85dce324e9e0759d2fd4fb4de85` based on `44d7420f478b55666a351862ff306b5556258452` via `feat/staff-admin-ui-audit`.
+Source commit `9eeeb37bdf5e7f63612885b73b445d06bfa4f55e` based on `e0e8cf5e8b370da50b9c1103d9d24357d8a66c2b` via `feat/full-production-functions-audit`.
 
-Publishes the Staff Diary, Rota, Staff Wholesale and Admin UI audit. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes the production-functions audit fixes. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
