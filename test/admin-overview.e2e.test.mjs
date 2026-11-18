@@ -99,3 +99,26 @@ test("Admin profile and sheets contain long names, email addresses and keyboard 
   assert.deepEqual(errors,[]);
  } finally { await ctx.close(); }
 });
+
+test("People beside an open profile: names keep their width, badges sit under them", async () => {
+ for (const name of ["Alex Sargeant", "Bea Long-Surname-Holloway"]) {
+  const r=await fetch(srv.base+"/api/admin/users",{method:"POST",headers:{cookie:admin,"content-type":"application/json"},body:JSON.stringify({name,username:name.toLowerCase().replace(/[^a-z]/g,""),role:"staff",password:"temporary-password"})});
+  assert.ok(r.ok);
+ }
+ for (const [width,scheme] of [[1180,"dark"],[1440,"light"]]) {
+  const {ctx,page,errors}=await open(width,scheme);
+  try {
+   await page.goto(srv.base+"/admin#people");
+   await page.locator('[data-person]',{hasText:"Alex Sargeant"}).click();
+   await page.locator(".person-workspace").waitFor();
+   const names=await page.locator(".people-directory>.item .tx b").evaluateAll(ns=>ns.map(n=>({t:n.textContent,w:n.getBoundingClientRect().width,h:n.getBoundingClientRect().height})));
+   // Every name gets most of the column (before the fix the badges left it a letter or two wide).
+   for (const n of names) assert.ok(n.w >= 150, `${n.t} is squeezed to ${n.w}px wide`);
+   for (const n of names.filter((x)=>x.t.length<40)) assert.ok(n.h < 60, `${n.t} wraps onto too many lines (${n.h}px high)`);
+   const row=page.locator('.people-directory>.item',{hasText:"Alex Sargeant"});
+   assert.match(await row.innerText(),/Not signed in yet/);
+   if (process.env.SHOT_DIR) await page.screenshot({path:`${process.env.SHOT_DIR}/people-split-${width}-${scheme}.png`});
+   assert.deepEqual(errors,[]);
+  } finally { await ctx.close(); }
+ }
+});
