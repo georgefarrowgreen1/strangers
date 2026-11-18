@@ -1,0 +1,123 @@
+name: Retail dev preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Review a commit, initialize the Worker, or promote a reviewed version
+        type: choice
+        options: [review, initialize, promote]
+        default: review
+      source_ref:
+        description: Branch or commit from strangerscoffee/StrangersRepo to review
+        type: string
+        default: main
+      version_id:
+        description: Worker Version ID for promotion or rollback
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  PREVIEW_CONFIG: wrangler.retail-preview.jsonc
+
+jobs:
+  review:
+    if: github.repository == 'georgefarrowgreen1/strangers' && (inputs.action == 'review' || inputs.action == 'initialize')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: ${{ inputs.action == 'initialize' && 'retail-preview-promotion' || format('retail-preview-{0}', inputs.source_ref) }}
+      cancel-in-progress: ${{ inputs.action != 'initialize' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: strangerscoffee/StrangersRepo
+          ref: ${{ inputs.action == 'initialize' && 'main' || inputs.source_ref }}
+          token: ${{ secrets.STRANGERS_DEPLOY_TOKEN }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save playwright@1.63.0 && npx playwright install chromium
+      - run: npm run test:retail-preview
+      - name: Publish and verify the retail preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.RETAIL_PREVIEW_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.RETAIL_PREVIEW_CLOUDFLARE_ACCOUNT_ID }}
+          PREVIEW_ACTION: ${{ inputs.action }}
+        run: |
+          if [[ -z "$CLOUDFLARE_API_TOKEN" || -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo "::error::Set the retail preview Cloudflare credential and account ID in this publisher repository."
+            exit 1
+          fi
+          source_commit=$(git rev-parse HEAD)
+          export WRANGLER_OUTPUT_FILE_PATH="$RUNNER_TEMP/retail-preview.jsonl"
+          if [[ "$PREVIEW_ACTION" == initialize ]]; then
+            npx wrangler deploy --config "$PREVIEW_CONFIG"
+            origin=$(jq -er 'select(.type=="deploy") | .targets[] | select(contains("strangers-dev-preview.") and endswith(".workers.dev"))' "$WRANGLER_OUTPUT_FILE_PATH")
+            origin="https://${origin#https://}"
+          else
+            npx wrangler versions upload --config "$PREVIEW_CONFIG" --tag "$source_commit" --preview-alias "git-${source_commit:0:12}"
+            origin=$(jq -er 'select(.type=="version-upload") | .preview_url' "$WRANGLER_OUTPUT_FILE_PATH")
+          fi
+          version=$(jq -er 'select(.type=="deploy" or .type=="version-upload") | .version_id' "$WRANGLER_OUTPUT_FILE_PATH")
+          headers="$RUNNER_TEMP/retail-preview-headers.txt"
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --max-time 15 --dump-header "$headers" --output /dev/null "$origin/shop/"
+          grep -qi "^x-retail-preview-version: $version" "$headers"
+          grep -qi '^x-robots-tag: noindex' "$headers"
+          {
+            printf '### [Open retail preview](%s/shop/)\n\n' "$origin"
+            printf 'Version `%s` from `%s`\n' "$version" "$source_commit"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  promote:
+    if: github.repository == 'georgefarrowgreen1/strangers' && inputs.action == 'promote'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: retail-preview-promotion
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: strangerscoffee/StrangersRepo
+          ref: main
+          token: ${{ secrets.STRANGERS_DEPLOY_TOKEN }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Deploy the selected version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.RETAIL_PREVIEW_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.RETAIL_PREVIEW_CLOUDFLARE_ACCOUNT_ID }}
+          VERSION_ID: ${{ inputs.version_id }}
+        run: |
+          if [[ ! "$VERSION_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
+            echo "::error::Enter the Worker Version ID shown in the review run."
+            exit 1
+          fi
+          if [[ -z "$CLOUDFLARE_API_TOKEN" || -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo "::error::Set the retail preview Cloudflare credential and account ID in this publisher repository."
+            exit 1
+          fi
+          npx wrangler versions deploy --config "$PREVIEW_CONFIG" --yes "$VERSION_ID@100%"
+          npx wrangler deployments status --config "$PREVIEW_CONFIG" --json |
+            jq -e --arg version "$VERSION_ID" '.versions | length == 1 and .[0].version_id == $version and .[0].percentage == 100'
+          origin=https://preview.staffstrangerscoffee.com/shop/
+          headers="$RUNNER_TEMP/retail-preview-headers.txt"
+          for attempt in {1..8}; do
+            if curl --fail --silent --show-error --max-time 10 --dump-header "$headers" --output /dev/null "$origin" &&
+                tr -d '\r' < "$headers" | grep -Fxi "x-retail-preview-version: $VERSION_ID"; then
+              printf '### [Stable retail preview](%s)\n\nVersion `%s`\n' "$origin" "$VERSION_ID" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "::error::Cloudflare deployed the version, but the stable /shop/ route did not return it. Check the route in Cloudflare."
+          exit 1
