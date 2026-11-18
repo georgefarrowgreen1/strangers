@@ -4,9 +4,10 @@
 - Keep common Wholesale order shortcuts compact and keep actions visible in long order, bag, dispatch, and coffee sheets. Give packing dialogs a meaningful heading and Insights tables keyboard scrolling.
 - Keep Staff workspace focus when moving between the dock and desktop header. Allow room for the connection banner when bringing a control into view.
 - Keep the Diary inspection jump bar below the shared header, move sign-off into the page on short screens, and restore focus to the exact maintenance or site control.
-- Keep Rota account menus visible after rotation and preserve shift drafts across layouts. Restore leave, cover, and review launchers on dismissal and keep short landscape form actions reachable.
+- Keep Rota account menus visible after rotation and preserve shift drafts across layouts. Restore leave and review launchers on dismissal and keep short landscape form actions reachable.
 - Reopen Staff Wholesale dialogs at the summary, keep keyboard focus in them, and keep a dismissed order closed during background refresh. Keep long names and the delivery location field within the sheet.
+- Integrate the current Staff profile release. Clarify the profile and work-site actions, keep extra sites selected while editing, support keyboard selection and profile saving in Rota, and match Rota emails to the current shift-change guidance.
 
 ## Review
 
-Audited the Admin, Kitchen Diary, Rota and Staff Wholesale routes with local fixtures at phone, landscape, tablet and desktop sizes in light and dark mode. Reviewed the consolidated changes independently in Chromium and WebKit. Added regression coverage for the changed navigation, layout, focus and order flows.
+Audited the Admin, Kitchen Diary, Rota and Staff Wholesale routes with local fixtures at phone, landscape, tablet and desktop sizes in light and dark mode. Reviewed the consolidated changes independently in Chromium and WebKit. Repeated the profile and work-site checks after integrating production PR #191. Added regression coverage for the changed navigation, layout, focus and order flows.
