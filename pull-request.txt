@@ -1,10 +1,13 @@
-## Retail development Worker
+## Production architecture
 
-- Add the independent `strangers-dev-preview` Worker with a bundle of public retail assets, version metadata, a read-only Instagram feed and simulated checkout.
-- Add local asset watching, focused browser checks and a workflow in the existing publisher repository that publishes a version URL and promotes the selected version separately.
-- Namespace the shop's shared theme under `/shop/` so a Cloudflare path route can serve the complete retail app. Keep the shared Worker's retail routes available while the dedicated Worker is provisioned.
-- Include the reviewed mobile header, cart count and animated menu in the retail preview source.
+- Run typechecking and API tests alongside three browser shards under the same required test check. Check the live version and sign-in boundaries after Cloudflare builds the merged commit.
+- Add deployment-managed D1 migrations and a schema readiness check. Local and existing environments can initialise missing migrations during the managed rollout.
+- Maintain daily order totals transactionally and cache the weekly sales, forecasts and roast plans in D1. Invalidate snapshots when their inputs change.
+- Build versioned JavaScript and CSS as a unit, retain the preceding generation and verify the complete Admin boot path.
+- Support independent dispatch email, Slack and QuickBooks queues with the durable ledgers and the five-minute recovery sweep.
+
+Cloudflare deployment settings and queue provisioning are documented in `docs/production-architecture.md`.
 
 ## Verification
 
-Passed the focused standalone retail tests, shared Worker retail, wholesale and admin asset regressions, type checking, workflow lint, Wrangler dry run and local asset refresh.
+Passed 456 API and 399 browser tests, 48 production-style asset tests across Admin, staff, wholesale and rota, the versioned retail and Admin route checks, and a local Worker test of provider isolation and duplicate delivery protection. Verified the Workers Builds asset hook and the managed deployment configuration with Wrangler dry runs.
