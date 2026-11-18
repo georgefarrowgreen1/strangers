@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "feature/public-retail-preview"
-EXPECTED = "f518d903b2b2d7b1f986d932665f6794d80d28ec"
-PRIOR = "3f2b3010ab11055f7842f26c5a1580fce640b9c1"
+EXPECTED = "c7d8592644c3932bdc47b7fcd2aa1dda2724402d"
+PRIOR = "f518d903b2b2d7b1f986d932665f6794d80d28ec"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

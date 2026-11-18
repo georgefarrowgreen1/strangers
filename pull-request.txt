@@ -3,8 +3,8 @@
 - Use the public Strangers site as the content baseline. Rebuild its homepage, 16 products, 11 shop categories, company and policy pages, 27 blog articles and topic pages in the trade site's theme.
 - Preserve retail photos, tasting and provenance information, shopping options and prices. Add path aliases for the original public URLs. Keep the production newsletter and contact forms linked from the preview.
 - Keep the simulated basket and checkout separate from live orders and wholesale storage. Serve public preview routes only under `/shop/` on `preview.staffstrangerscoffee.com` and preserve legacy wholesale entry, sign-in and recovery.
-
 - Refresh the homepage Instagram gallery from the public homepage. Support the official Instagram API when its Worker secret is configured and retain the local gallery if the providers are unavailable.
+- Keep keyboard focus clear of the sticky header, route archived coffee links through the preview, and make all ten coffees from the original featured shelf available on the homepage.
 
 ## Review
 
