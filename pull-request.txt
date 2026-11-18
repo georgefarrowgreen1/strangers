@@ -1,13 +1,12 @@
-## Production architecture
+## Production architecture runtime release
 
-- Run typechecking and API tests alongside three browser shards under the same required test check. Check the live version and sign-in boundaries after Cloudflare builds the merged commit.
-- Add deployment-managed D1 migrations and a schema readiness check. Local and existing environments can initialise missing migrations during the managed rollout.
-- Maintain daily order totals transactionally and cache the weekly sales, forecasts and roast plans in D1. Invalidate snapshots when their inputs change.
-- Build versioned JavaScript and CSS as a unit, retain the preceding generation and verify the complete Admin boot path.
-- Support independent dispatch email, Slack and QuickBooks queues with the durable ledgers and the five-minute recovery sweep.
+- Maintain operational order totals transactionally and reuse saved weekly sales, forecasts and roast plans in Admin.
+- Publish content-addressed browser assets and retain the preceding generation. The Admin loader accepts the versioned paths.
+- Replace repeated cold-start schema setup with a read-only check when D1 already has the expected migrations.
+- Keep the durable email, Slack and QuickBooks records and run recovery jobs independently. Include the deployment command and queue consumers for the managed rollout.
 
-Cloudflare deployment settings and queue provisioning are documented in `docs/production-architecture.md`.
+The existing required Tests workflow is used for this release. Publishing the parallel workflow and activating deploy-time migrations and queue bindings require the GitHub and Cloudflare access described in `docs/production-architecture.md`.
 
 ## Verification
 
-Passed 456 API and 399 browser tests, 48 production-style asset tests across Admin, staff, wholesale and rota, the versioned retail and Admin route checks, and a local Worker test of provider isolation and duplicate delivery protection. Verified the Workers Builds asset hook and the managed deployment configuration with Wrangler dry runs.
+The runtime files match the reviewed branch that passed 456 API tests, 399 browser tests and 48 additional production-style asset checks. Local Worker tests confirmed independent provider processing and duplicate delivery protection. Wrangler dry runs confirmed the standard Workers Builds asset hook and the managed deployment configuration.
