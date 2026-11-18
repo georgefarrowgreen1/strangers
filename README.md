@@ -1,5 +1,5 @@
 # Strangers release publisher
 
-Source commit `e572b8be5632edb04f8a1f0d6a5fd5119efdb4a4` based on `e93ce08bff17d1f59c507911098d9fa5739a726e` via `feature/ui-ux-audit`.
+Source commit `42d0717917f23422b4b1a42ebb268e6b5ace6dfb` based on `38ab8c9388d0a7fb8040efed3367ae0de7b9be0f` via `feature/ui-ux-audit`.
 
 Publishes the changes from the Admin and Staff UI audit. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
