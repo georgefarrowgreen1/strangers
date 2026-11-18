@@ -59,7 +59,8 @@
   }
 
   const SITES = [["roastery", "Roastery"], ["cafe", "Cafe"], ["asg", "ASG"], ["factory", "Factory"]];
-  const siteName = (id) => (SITES.find((s) => s[0] === id) || [id, id])[1];
+  const ROTA_SITES = [...SITES, ["office", "Office"]];
+  const siteName = (id) => (ROTA_SITES.find((s) => s[0] === id) || [id, id])[1];
   const DAYS = [["mon", "Mo", "Monday"], ["tue", "Tu", "Tuesday"], ["wed", "We", "Wednesday"], ["thu", "Th", "Thursday"], ["fri", "Fr", "Friday"], ["sat", "Sa", "Saturday"], ["sun", "Su", "Sunday"]];
   const TOPIC_NAMES = { hygiene: "Hygiene", cross: "Cross-contamination", cleaning: "Cleaning", chilling: "Chilling", cooking: "Cooking", allergens: "Allergens", diary: "Opening & closing", l2: "Level 2" };
   const ROLE = { admin: "Admin", manager: "Manager", staff: "Staff" };
@@ -184,6 +185,7 @@
   const TABS = [["overview", "Overview", "grid"], ["wholesale", "Wholesale", "coffee"], ["people", "People", "people"], ["activity", "Activity", "pulse"], ["more", "More", "more"]];
   const PAGES = [...NAV_GROUPS.flatMap(([, items]) => items.map(([id]) => id)), "more"];
   const desktopNav = matchMedia("(min-width:1024px)");
+  const splitPeople = matchMedia("(min-width:1150px)");
   let wholesaleExpanded = false;
   const navMarkup = new WeakMap();
   function updateNav(root, content) {
@@ -267,7 +269,12 @@
     try {
       const view = await VIEWS[S.page]();
       if (my !== seq) return;
+      const openDetails = keepScroll ? [...main.querySelectorAll("details[open][data-preserve-open]")].map(el => el.dataset.preserveOpen) : [];
       put(main, view);
+      for (const id of openDetails) {
+        const details = main.querySelector(`details[data-preserve-open="${CSS.escape(id)}"]`);
+        if (details) details.open = true;
+      }
       if (!keepScroll) SC.reveal(main);
       if (S.page === "wholesale") wholesale.syncNavigation(desktopNav.matches);
       document.title = "Strangers Coffee - Admin";
@@ -280,15 +287,20 @@
   }
   async function reload() {
     const page = S.page, previous = document.activeElement, main = $("#main");
-    const key = previous && main.contains(previous) && previous !== main
+    const details = previous?.matches("summary") && previous.parentElement.dataset.preserveOpen;
+    const key = details && main.contains(previous) ? `details[data-preserve-open="${CSS.escape(details)}"]>summary` :
+      previous && main.contains(previous) && previous !== main
       ? ["id", "data-act", "data-id", "data-filter", "data-feed", "data-person"]
         .filter((attr) => previous.hasAttribute(attr))
         .map((attr) => `[${attr}="${CSS.escape(previous.getAttribute(attr))}"]`).join("")
       : "";
+    const selection = previous?.matches('input[type="search"]') ?
+      [previous.selectionStart, previous.selectionEnd, previous.selectionDirection] : null;
     await show(page, { keepScroll: true });
     if (key && S.page === page && !previous.isConnected && document.activeElement === document.body) {
       const target = main.querySelector(key);
       (target?.getClientRects().length ? target : main).focus({ preventScroll: true });
+      if (selection && target?.matches('input[type="search"]')) target.setSelectionRange(...selection);
     }
   }
 
@@ -328,11 +340,11 @@
     const selected = list.find(person => person.id === S.open);
     return html`
       ${head("People", "Everyone's account, rota details and training in one place.", html`<button class="btn" type="button" data-act="add">${svg("plus")}Add person</button>`)}
-      <div class="toolbar">
-        <label class="search">${svg("search")}<input id="q" type="search" placeholder="Search by name or username" aria-label="Search people" value="${S.q}"></label>
-        <div class="segwrap"><div class="seg" role="group" aria-label="Show">${filters.map(([k, t]) => html`<button type="button" aria-pressed="${S.filter === k}" data-filter="${k}">${t}</button>`)}</div></div>
+      <div class="toolbar people-tools">
+        <label class="search">${svg("search")}<input id="q" type="search" placeholder="Name or username" aria-label="Search people" value="${S.q}"></label>
+        <div class="seg admin-filters" role="group" aria-label="Show">${filters.map(([k, t]) => html`<button type="button" aria-pressed="${S.filter === k}" data-filter="${k}">${t}</button>`)}</div>
       </div>
-      <div class="label">${(filters.find((f) => f[0] === S.filter) || ["", "Everyone"])[1]} <span class="count">${plural(list.length, "person", "people")}</span></div>
+      <div class="label people-count">${(filters.find((f) => f[0] === S.filter) || ["", "Everyone"])[1]} <span class="count">${plural(list.length, "person", "people")}</span></div>
       <div class="people-workspace ${selected ? "has-profile" : ""}">
         <div class="group glass people-directory">${list.length ? list.map(personRow) : html`<div class="empty">${svg("search")}<span>No one matches.</span></div>`}</div>
         ${selected ? personDetail(selected, d.topics) : ""}
@@ -362,7 +374,7 @@
         <div class="dbar" role="group" aria-label="Account actions for ${p.name}">
           <button class="btn sm soft" type="button" data-act="edit" data-id="${p.id}">${svg("pen")}Edit</button>
           <button class="btn sm soft" type="button" data-act="order-access" data-id="${p.id}">${svg("coffee")}Wholesale orders access</button>
-          <details class="person-account-actions"><summary class="btn sm soft">Account actions</summary><div class="row">
+          <details class="person-account-actions" data-preserve-open="person-${p.id}"><summary class="btn sm soft">Account actions${svg("chev")}</summary><div class="row">
           ${p.active ? html`<button class="btn sm soft" type="button" data-act="password" data-id="${p.id}">${svg("key")}Temporary password</button>` : ""}
           ${p.locked ? html`<button class="btn sm soft" type="button" data-act="unlock" data-id="${p.id}">${svg("lock")}Unlock</button>` : ""}
           ${p.active ? html`<button class="btn sm soft" type="button" data-act="signout" data-id="${p.id}">${svg("out")}Sign out everywhere</button>` : ""}
@@ -378,12 +390,12 @@
             ${kv("Added", `${dmy(p.createdAt)}${p.createdBy ? ` by ${p.createdBy}` : ""}`)}
           </section>
           <section class="card" aria-label="Staff profile">
-            <div class="chead"><h3><span class="ic acc">${svg("user")}</span>Staff profile</h3><button class="btn sm soft" type="button" data-act="profile" data-id="${p.id}">${svg("pen")}Edit</button></div>
+            <div class="chead"><h3><span class="ic acc">${svg("user")}</span>Staff profile</h3><button class="btn sm soft" type="button" data-act="profile" data-id="${p.id}">${svg("pen")}Edit profile</button></div>
             ${kv("Start date", p.profile.startDate ? dmyIso(p.profile.startDate) : "Not set")}
             ${kv("Contact number", p.profile.phone || "Not given")}
             ${kv("Contact email", p.email || "None: no rota emails")}
             <div class="kv stack"><span>Home address</span><span class="addr">${p.profile.address || "Not given"}</span></div>
-            <p class="hint">Private to ${p.name} and admins. ${p.name.split(" ")[0]} can change their contact number, email and address on My profile in the rota; only admins set the start date.</p>
+            <p class="hint">Visible to this person and admins. Staff can update their contact details in My profile. Only admins set the start date.</p>
           </section>
           <section class="card" aria-label="Rota">
             <div class="chead"><h3><span class="ic acc">${svg("clock")}</span>Rota</h3><a class="link" href="${S.links.rota}">Open</a></div>
@@ -397,7 +409,7 @@
               <div class="week">${DAYS.map(([k, ab, full]) => { const v = pat[k]; const off = v === "off"; const t = v && typeof v === "object" ? `${v.from || ""}–${v.to || ""}` : "";
                 return html`<span class="${off ? "off" : ""}" title="${full}: ${off ? "can't work" : t || "any time"}" aria-label="${full}: ${off ? "can't work" : t || "any time"}">${ab}${t ? html`<small>${t}</small>` : ""}</span>`; })}</div></div>
             ${kv("Time off", offs)}
-            ${p.active ? html`<div class="foot"><button class="btn sm soft" type="button" data-act="avail" data-id="${p.id}">${svg("pen")}Edit availability</button></div>` : ""}
+            ${p.active ? html`<div class="foot"><button class="btn sm soft" type="button" data-act="avail" data-id="${p.id}">${svg("pen")}Edit sites and availability</button></div>` : ""}
           </section>
           <section class="card" aria-label="Kitchen Diary">
             <div class="chead"><h3><span class="ic ok">${svg("cal")}</span>Kitchen Diary</h3><a class="link" href="${S.links.diary}#staff">Open</a></div>
@@ -431,11 +443,11 @@
       ${head("Sites", "Each site's diary setup and rota hours side by side. Change them in the diary's Setup and the Rota's settings.")}
       <div class="sites">
         ${d.sites.map((s) => !s.setUp ? html`
-          <details class="site glass"><summary><div><h2><span class="dot ${s.id}"></span>${s.name}</h2><p>${s.address}</p></div><span class="pill warn">Not set up</span>${svg("chev")}</summary>
+          <details class="site glass" data-preserve-open="site-${s.id}"><summary><div><h2><span class="dot ${s.id}"></span>${s.name}</h2><p>${s.address}</p></div><span class="pill warn">Not set up</span>${svg("chev")}</summary>
             <div class="callout">${svg("warn")}<span>The ${s.name} has no diary Setup yet, so it isn't counted in the diary and can't have shifts on the Rota.</span></div>
             ${kv("People who work here", s.people ? `${s.people}${s.anywhere ? `, plus ${s.anywhere} at any site` : ""}` : s.anywhere ? `${s.anywhere} at any site` : "None yet")}
             <div class="acts">${d.sites.some((x) => x.setUp) ? html`<button class="btn sm" type="button" data-act="copy" data-id="${s.id}">${svg("copy")}Copy setup from another site</button>` : ""}<a class="btn sm soft" href="${diarySetup(s.id)}">Open Setup</a></div>${slack(s)}</details>` : html`
-          <details class="site glass"><summary><div><h2><span class="dot ${s.id}"></span>${s.name}</h2><p>${hoursText(s.rota)} · ${s.address}</p></div><span class="pill ok">${svg("ok")}Set up</span>${svg("chev")}</summary>
+          <details class="site glass" data-preserve-open="site-${s.id}"><summary><div><h2><span class="dot ${s.id}"></span>${s.name}</h2><p>${hoursText(s.rota)} · ${s.address}</p></div><span class="pill ok">${svg("ok")}Set up</span>${svg("chev")}</summary>
             <div class="sub">${svg("cal")}Kitchen Diary</div>
             ${kv("Fridges and freezers", s.diary.units)}${kv("Checks", `${s.diary.opening} opening · ${s.diary.closing} closing · ${s.diary.weekly} weekly`)}
             ${kv("Closed on", s.diary.closedDays.length ? s.diary.closedDays.join(", ") : "Open every day")}
@@ -463,13 +475,13 @@
     }
     return html`
       ${head("Activity", "Who changed what in the diary, the Rota and accounts. Newest first.")}
-      <div class="toolbar">
-        <div class="segwrap"><div class="seg" role="group" aria-label="Activity type">${[["all", "Timeline"], ["diary", "Diary"], ["rota", "Rota"], ["account", "Accounts"], ["errors", "Errors"]].map(([k, t]) => html`<button type="button" aria-pressed="${S.feed === k}" data-feed="${k}">${t}</button>`)}</div></div>
-        <label class="search">${svg("search")}<input id="fq" type="search" placeholder="${S.feed === "errors" ? "Search error reference, app or device" : "Search a name or site"}" aria-label="Search activity" maxlength="120" value="${S.fq}"></label>
+      <div class="toolbar activity-tools">
+        <div class="seg admin-filters" role="group" aria-label="Activity type">${[["all", "Timeline"], ["diary", "Diary"], ["rota", "Rota"], ["account", "Accounts"], ["errors", "Errors"]].map(([k, t]) => html`<button type="button" aria-pressed="${S.feed === k}" data-feed="${k}">${t}</button>`)}</div>
+        <label class="search">${svg("search")}<input id="fq" type="search" placeholder="${S.feed === "errors" ? "Reference, app or device" : "Search a name or site"}" aria-label="Search activity" maxlength="120" value="${S.fq}"></label>
         <div class="row activity-dates"><label class="field"><span class="fl">From</span><input id="activityFrom" type="date" aria-label="Activity from date" value="${S.activityFrom}"></label><label class="field"><span class="fl">To</span><input id="activityTo" type="date" aria-label="Activity to date" value="${S.activityTo}"></label>${S.activityFrom || S.activityTo ? html`<button class="btn sm soft" type="button" data-act="activity-clear">Clear dates</button>` : ""}</div>
       </div>
       ${groups.length ? groups.map(([label, list]) => html`<div class="day">${label}</div><div class="group glass">${list.map((i) => html`
-        <div class="item${i.report ? " haserr" : ""}"><span class="ic ${KIND[i.kind][0]}">${svg(KIND[i.kind][1])}</span><span class="tx"><b class="plain">${i.text}</b><span>${i.where}</span>${i.at_line ? html`<span class="errat">${i.at_line}</span>` : ""}</span><span class="end time">${hm(i.at)}</span>${i.report ? html`<details class="errdetail"><summary>Report</summary><pre>${i.report}</pre><div class="errfoot"><button class="btn sm soft" type="button" data-act="copyerr" data-id="${i.code}">Copy report</button><span>Screenshot this, or copy it, to get it fixed.</span></div></details>` : ""}</div>`)}</div>`)
+        <div class="item${i.report ? " haserr" : ""}"><span class="ic ${KIND[i.kind][0]}">${svg(KIND[i.kind][1])}</span><span class="tx"><b class="plain">${i.text}</b><span>${i.where}</span>${i.at_line ? html`<span class="errat">${i.at_line}</span>` : ""}</span><span class="end time">${hm(i.at)}</span>${i.report ? html`<details class="errdetail" data-preserve-open="report-${i.code}"><summary>Report</summary><pre>${i.report}</pre><div class="errfoot"><button class="btn sm soft" type="button" data-act="copyerr" data-id="${i.code}">Copy report</button><span>Screenshot this, or copy it, to get it fixed.</span></div></details>` : ""}</div>`)}</div>`)
         : html`<div class="group glass"><div class="empty">${svg("pulse")}<span>${S.fq || S.activityFrom || S.activityTo ? "No matching activity." : S.feed === "errors" ? "No errors in the last 30 days." : "Nothing yet."}</span></div></div>`}
       <p class="hint">${S.feed === "errors" ? "Errors from staff devices (a page that crashed, or a file that didn't load) and from the server. The same error on the same page is counted, not repeated, and keeps the same code (E-…), which is also what staff see on the screen when it happens: search for it here. Open Report and screenshot or copy it to get it fixed. Kept 30 days." : "Diary entries show each record's latest change. Account changes are kept for about a year."}</p>`;
   };
@@ -486,10 +498,10 @@
         <div class="stat glass"><span class="k">${svg("shield")}Admins</span><span class="v">${d.admins}</span><span class="s">${d.switchedOff ? `${plural(d.switchedOff, "account")} switched off` : "Active admin accounts"}</span></div>
       </div>
       ${d.locked.length ? html`<div class="label">Locked</div><div class="group glass">${d.locked.map((l) => html`
-        <div class="item"><span class="av" aria-hidden="true">${ini(l.name)}</span><span class="tx"><b>${l.name}</b><span>Unlocks by itself at ${hm(l.until)}.${l.pinOff ? " Their quick PIN is switched off." : ""}</span></span><span class="end"><button class="btn sm soft" type="button" data-act="unlock" data-id="${l.id}">Unlock</button></span></div>`)}</div>` : ""}
+        <div class="item has-action"><span class="av" aria-hidden="true">${ini(l.name)}</span><span class="tx"><b>${l.name}</b><span>Unlocks by itself at ${hm(l.until)}.${l.pinOff ? " Their quick PIN is switched off." : ""}</span></span><span class="end"><button class="btn sm soft" type="button" data-act="unlock" data-id="${l.id}">Unlock</button></span></div>`)}</div>` : ""}
       ${d.recentFailed.length ? html`<div class="label">Recent failed sign-ins</div><div class="group glass">${d.recentFailed.map((f) => html`
         <div class="item"><span class="ic warn">${svg("warn")}</span><span class="tx"><b class="plain">${f.text}</b></span><span class="end time">${hm(f.at)}</span></div>`)}</div>` : ""}
-      <details class="group glass system-protections"><summary class="item">Protections</summary>
+      <details class="group glass system-protections" data-preserve-open="protections"><summary class="item">Protections${svg("chev")}</summary>
       <div class="group">
         ${[["Lockouts", "5 wrong passwords or PINs lock an account for 10 minutes; wrong PINs also switch the PIN off"], ["Sign-in limits", "30 failed attempts per connection every 15 minutes"], ["Script lock-down", "Only the site's own code can run on its pages"], ["Nightly backups", "Every night at 03:17, the last 30 kept"]]
           .map(([t, s]) => html`<div class="item"><span class="ic ok">${svg("ok")}</span><span class="tx"><b>${t}</b><span>${s}</span></span><span class="end"><span class="pill ok">On</span></span></div>`)}
@@ -513,7 +525,7 @@
       <div class="group glass"><div class="item"><span class="ic ${d.backups.length ? "ok" : "warn"}">${svg("db")}</span><span class="tx"><b>${d.backups.length ? "Last completed backup" : "No completed backup"}</b><span>${d.backups.length ? cap(when(d.backups[0].at)) + " · Diary, rota, wholesale and account records" : "Use Back up now to create the first copy."}</span></span></div></div>
       <div class="label">Backups <span class="count">${d.backups.length} of ${d.keep} kept</span></div>
       <div class="group glass">
-        ${d.backups.length ? d.backups.slice(0, 10).map((b) => html`<div class="item"><span class="ic mut">${svg("db")}</span><span class="tx"><b>${cap(when(b.at))}</b><span>${b.by === "daily" ? "Nightly" : `Made by ${b.by}`} · ${Math.max(1, Math.round(b.bytes / 1024))} KB · ${b.docs.toLocaleString("en-GB")} diary records</span></span><span class="end"><a class="btn sm soft" href="/api/admin/backups/${b.id}" download>${svg("dl")}Download</a></span></div>`)
+        ${d.backups.length ? d.backups.slice(0, 10).map((b) => html`<div class="item has-action"><span class="ic mut">${svg("db")}</span><span class="tx"><b>${cap(when(b.at))}</b><span>${b.by === "daily" ? "Nightly" : `Made by ${b.by}`} · ${Math.max(1, Math.round(b.bytes / 1024))} KB · ${b.docs.toLocaleString("en-GB")} diary records</span></span><span class="end"><a class="btn sm soft" href="/api/admin/backups/${b.id}" download>${svg("dl")}Download</a></span></div>`)
           : html`<div class="empty">${svg("db")}<span>No backups yet. The first is made tonight, or tap Back up now.</span></div>`}
       </div>
       <p class="hint">A backup holds every diary record, the rota and the list of accounts (never passwords). Allergen PDFs aren't included.</p>
@@ -525,9 +537,9 @@
         <div class="item has-action"><span class="ic acc">${svg("clock")}</span><span class="tx"><b>All shifts</b><span>Rota · CSV, planned and as worked</span>
           <span class="inline"><input type="date" id="shFrom" value="${monthAgo}" aria-label="From"><span>to</span><input type="date" id="shTo" value="${today}" aria-label="To"></span></span>
           <span class="end"><button class="btn sm soft" type="button" data-act="shifts" aria-label="Download all shifts CSV">${svg("dl")}Download CSV</button></span></div>
-        <div class="item"><span class="ic warn">${svg("people")}</span><span class="tx"><b>People</b><span>Accounts · CSV of names, roles, sites and contracted hours. Never passwords.</span></span>
+        <div class="item has-action"><span class="ic warn">${svg("people")}</span><span class="tx"><b>People</b><span>Accounts · CSV of names, roles, sites and contracted hours. Never passwords.</span></span>
           <span class="end"><a class="btn sm soft" href="/api/admin/export/people.csv" aria-label="Download people CSV" download>${svg("dl")}CSV</a></span></div>
-        <div class="item"><span class="ic ok">${svg("cal")}</span><span class="tx"><b>EHO inspection pack</b><span>Kitchen Diary · a PDF for a period and a site, from EHO inspection mode</span></span>
+        <div class="item has-action"><span class="ic ok">${svg("cal")}</span><span class="tx"><b>EHO inspection pack</b><span>Kitchen Diary · a PDF for a period and a site, from EHO inspection mode</span></span>
           <span class="end"><a class="btn sm soft" href="${S.links.diary}#inspect">Open</a></span></div>
       </div>`;
   };
@@ -606,10 +618,10 @@
   }
 
   // The private staff profile (src/profile.ts): admins set the start date and can correct the rest.
-  function editProfile(p) {
+  function editProfile(p, opener) {
     const pr = p.profile;
-    openSheet(html`<form class="sheetform" novalidate><h2 id="sheetTitle">${p.name}'s profile</h2>
-      <p>Private to ${p.name} and admins.</p>
+    openSheet(html`<form class="sheetform staff-profile-edit" novalidate><h2 id="sheetTitle">Edit staff profile</h2>
+      <p>${p.name} · Visible to this person and admins</p>
       <label class="field"><span class="fl">Start date</span><input id="fStart" type="date" value="${pr.startDate || ""}"></label>
       <label class="field"><span class="fl">Contact number</span><input id="fPhone" type="tel" autocomplete="off" maxlength="30" value="${pr.phone}"></label>
       <label class="field"><span class="fl">Contact email (rota emails go here too)</span><input id="fPEmail" type="email" autocomplete="off" maxlength="254" value="${p.email || ""}"></label>
@@ -626,7 +638,7 @@
       if (!Object.keys(body).length) { closeSheet(); return; }
       try { await api("PATCH", `/api/admin/users/${p.id}`, body); closeSheet(); toast("Saved"); reload(); }
       catch (e) { $("#fErr").textContent = e.message; }
-    });
+    }, opener);
   }
 
   async function editOrderAccess(p) {
@@ -670,19 +682,24 @@
     });
   }
 
-  function editAvailability(p) {
+  function editAvailability(p, opener) {
     const pat = p.rota.pattern || {};
     const mode = (v) => (v === "off" ? "off" : v && typeof v === "object" ? "times" : "any");
-    openSheet(html`<form class="sheetform" novalidate><h2 id="sheetTitle">When ${p.name} can work</h2>
-      <p>Only admins and ${p.name} can see this information. ${p.name} sees it read-only and still asks for time off themselves.</p>
+    const siteNote = (primary) => primary
+      ? "Shifts can be assigned at the primary site and any sites selected here."
+      : "With no primary site, staff can work at the selected sites or at any site if none are selected.";
+    openSheet(html`<form class="sheetform" novalidate><h2 id="sheetTitle">Work sites and availability</h2>
+      <p>${p.name}</p>
+      <label class="field"><span class="fl">Primary site</span><select id="fPrimary"><option value="">Not set</option>${ROTA_SITES.map(([id, n]) => html`<option value="${id}" ${p.rota.primarySite === id ? raw("selected") : ""}>${n}</option>`)}</select></label>
+      <fieldset class="site-options"><legend>Can also work at</legend><div class="checks">${ROTA_SITES.map(([id, n]) => html`<label ${p.rota.primarySite === id ? raw("hidden") : ""}><input type="checkbox" value="${id}" ${p.rota.sites.includes(id) ? raw("checked") : ""}>${n}</label>`)}</div></fieldset>
+      <p class="hint" id="fSitesNote">${siteNote(p.rota.primarySite)}</p>
+      <h3 class="availability-heading">When they can work</h3>
+      <p class="hint">Only this person and admins can see their availability.</p>
       <div class="avail">${DAYS.map(([k, , full]) => { const v = pat[k], m = mode(v); return html`
         <div class="arow" data-day="${k}"><b>${full.slice(0, 3)}</b>
           <div class="seg" role="group" aria-label="${full}">${[["any", "Any time"], ["times", "Times"], ["off", "Can't work"]].map(([mk, t]) => html`<button type="button" data-sheet="mode" data-mode="${mk}" aria-pressed="${m === mk}">${t}</button>`)}</div>
           <div class="times" ${m === "times" ? "" : raw("hidden")}><input type="time" aria-label="${full} from" value="${v && v.from ? v.from : ""}"><span>to</span><input type="time" aria-label="${full} until" value="${v && v.to ? v.to : ""}"></div>
         </div>`; })}</div>
-      <label class="field"><span class="fl">Primary site</span><select id="fPrimary"><option value="">Not set</option>${SITES.map(([id, n]) => html`<option value="${id}" ${p.rota.primarySite === id ? raw("selected") : ""}>${n}</option>`)}</select></label>
-      <div class="field"><span class="fl">Can also work at</span><div class="checks">${SITES.map(([id, n]) => html`<label ${p.rota.primarySite === id ? raw("hidden") : ""}><input type="checkbox" value="${id}" ${p.rota.sites.includes(id) ? raw("checked") : ""}>${n}</label>`)}</div></div>
-      <p id="fSitesNote">${p.rota.primarySite ? "They're only put on shifts at their primary site and the sites ticked." : "With no primary site and none ticked, they can work at any site."}</p>
       <p class="err" id="fErr" role="alert"></p>
       <div class="row"><button class="btn soft" type="button" data-sheet="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`,
     async (act, el) => {
@@ -700,15 +717,15 @@
         pattern[row.dataset.day] = m === "off" ? "off" : m === "times" ? { from: a.value, to: b.value } : "any";
       });
       const primarySite = $("#fPrimary").value || null;
-      const sites = [...document.querySelectorAll("#sheet .checks input:checked")].map((i) => i.value).filter((v) => v !== primarySite);
+      const sites = [...document.querySelectorAll("#sheet .site-options input:checked")].map((i) => i.value).filter((v) => v !== primarySite);
       try { await api("PUT", `/api/rota/people/${p.id}`, { pattern, sites, primarySite }); closeSheet(); toast("Saved"); reload(); }
       catch (e) { $("#fErr").textContent = e.message; }
-    });
+    }, opener);
     // The primary site isn't offered again under "Can also work at".
     const primary = $("#fPrimary");
     if (primary) primary.onchange = () => {
-      document.querySelectorAll("#sheet .checks input").forEach((i) => { const hide = i.value === primary.value; i.closest("label").hidden = hide; if (hide) i.checked = false; });
-      $("#fSitesNote").textContent = primary.value ? "They're only put on shifts at their primary site and the sites ticked." : "With no primary site and none ticked, they can work at any site.";
+      document.querySelectorAll("#sheet .site-options input").forEach((i) => { i.closest("label").hidden = i.value === primary.value; });
+      $("#fSitesNote").textContent = siteNote(primary.value);
     };
   }
 
@@ -797,12 +814,20 @@
         catch (e) { toast("Couldn't copy here: take a screenshot of the report instead."); }
         return;
       }
-      case "person-back": { const id = S.open; S.open = null; S.local = true; await reload(); document.querySelector(`[data-person="${CSS.escape(id || "")}"]`)?.focus({ preventScroll: true }); return; }
+      case "person-back": {
+        const id = S.open;
+        S.open = null; S.local = true;
+        await reload();
+        const row = $(`[data-person="${CSS.escape(id || "")}"]`);
+        row?.scrollIntoView({ block: "nearest" });
+        row?.focus({ preventScroll: true });
+        return;
+      }
       case "add": addPerson(); return;
       case "edit": if (p) editPerson(p); return;
       case "order-access": if(p)editOrderAccess(p);return;
-      case "avail": if (p) editAvailability(p); return;
-      case "profile": if (p) editProfile(p); return;
+      case "avail": if (p) editAvailability(p, el); return;
+      case "profile": if (p) editProfile(p, el); return;
       case "copy": copySetup(id); return;
       case "slacktest": {
         const [site, slot] = String(id).split(":");
@@ -851,7 +876,7 @@
     }
   }
 
-  function accountMenu() {
+  function accountMenu(event) {
     if (!S.me) return;
     openSheet(html`<header class="account-sheet-header"><h2 id="sheetTitle">${S.me.name}</h2><button class="btn soft" type="button" data-sheet="close" aria-label="Close account menu">${svg("x")}</button></header>
       <div class="menu">
@@ -859,7 +884,7 @@
         <a href="${S.links.rota}">${svg("clock")}Rota</a>
         <a href="/signin#change">${svg("key")}Change password</a>
         <button type="button" class="danger" data-sheet="logout">${svg("out")}Sign out</button>
-      </div>`, (a) => { if (a === "logout") act("logout"); });
+      </div>`, (a) => { if (a === "logout") act("logout"); }, event.currentTarget);
   }
 
   /* ---------- events ---------- */
@@ -885,9 +910,9 @@
       S.local = S.page === "people";
       reload().then(() => {
         if (S.page !== "people") return;
-        if (S.open && !desktopNav.matches) {
+        if (S.open && !splitPeople.matches) {
           $(".person-workspace-head button")?.focus({ preventScroll: true });
-          $(".person-workspace")?.scrollIntoView({ block: "nearest" });
+          $(".person-workspace")?.scrollIntoView({ block: "start" });
         } else document.querySelector(`[data-person="${CSS.escape(pr.dataset.person)}"]`)?.focus({ preventScroll: true });
       });
       return;
@@ -904,10 +929,10 @@
     if (e.target.id === "wiSearch") { wholesale.searchInvoices(e.target.value); return; }
     if (e.target.id === "wq") { wholesale.search(e.target.value); return; }
     if (e.target.id !== "q" && e.target.id !== "fq") return;
-    const id = e.target.id;
+    const id = e.target.id, page = S.page;
     if (id === "q") S.q = e.target.value; else S.fq = e.target.value;
     clearTimeout(searchT);
-    searchT = setTimeout(async () => { S.local = S.page === "people"; await reload(); const box = $("#" + id); if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); } }, 200);
+    searchT = setTimeout(() => { if (S.page === page) { S.local = page === "people"; reload(); } }, 200);
   });
   $("#meBtn").addEventListener("click", accountMenu);
   $("#whoBtn").addEventListener("click", accountMenu);

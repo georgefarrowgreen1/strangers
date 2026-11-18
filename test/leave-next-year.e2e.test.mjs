@@ -64,8 +64,14 @@ for (const [label, viewport, scheme] of runs) test(`start next year on a ${label
     page.on('pageerror', e => errors.push(e.message));
     try {
         await page.goto(srv.base + '/rota/#leave-admin');
-        await page.getByRole('button', { name: 'Start next year for everyone', exact: true }).click();
+        const launcher = page.getByRole('button', { name: 'Start next year for everyone', exact: true });
+        await launcher.click();
         const sheet = page.locator('#sheet');
+        await sheet.locator('.ny-person').first().waitFor();
+        await page.keyboard.press('Escape');
+        await sheet.waitFor({ state: 'hidden' });
+        assert.equal(await launcher.evaluate(node => node === document.activeElement), true);
+        await launcher.click();
         await sheet.locator('.ny-person').first().waitFor();
         assert.match(await sheet.innerText(), /Dan[\s\S]*No allowance this year to start from/);
         assert.match(await sheet.innerText(), /Eve[\s\S]*Next year already set up/);
@@ -98,6 +104,12 @@ for (const [label, viewport, scheme] of runs) test(`start next year on a ${label
         }
         await sheet.getByRole('button', { name: 'Check and confirm', exact: true }).click();
         const summary = sheet.locator('.ny-summary');
+        await summary.waitFor();
+        assert.equal(await summary.evaluate(node => node === document.activeElement), true);
+        await sheet.getByRole('button', { name: 'Back to edit', exact: true }).click();
+        const confirm = sheet.getByRole('button', { name: 'Check and confirm', exact: true });
+        assert.equal(await confirm.evaluate(node => node === document.activeElement), true);
+        await confirm.click();
         await summary.waitFor();
         assert.match(await summary.innerText(), /Nothing has been saved yet/);
         if (label === 'phone') {
