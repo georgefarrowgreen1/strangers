@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "feature/ui-ux-audit"
-EXPECTED = "bbf21592dc1475495ec9fe69e9d84bbbd2d3ab91"
-PRIOR = "c3c5910d1e76d4f373428c4e603d839e8e307759"
+EXPECTED = "e572b8be5632edb04f8a1f0d6a5fd5119efdb4a4"
+PRIOR = "bbf21592dc1475495ec9fe69e9d84bbbd2d3ab91"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

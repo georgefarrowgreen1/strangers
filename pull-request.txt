@@ -10,4 +10,4 @@
 
 ## Review
 
-Audited the Admin, Kitchen Diary, Rota and Staff Wholesale routes with local fixtures at phone, landscape, tablet and desktop sizes in light and dark mode. Reviewed the consolidated changes independently in Chromium and WebKit. Repeated the profile and work-site checks after integrating production PR #191. Added regression coverage for the changed navigation, layout, focus and order flows.
+Audited the Admin, Kitchen Diary, Rota and Staff Wholesale routes with local fixtures at phone, landscape, tablet and desktop sizes in light and dark mode. Reviewed the consolidated changes independently in Chromium and WebKit. Repeated the profile and work-site checks after integrating production PR #191, and reran the holiday-review controls alongside PR #192. Added regression coverage for the changed navigation, layout, focus and order flows.
