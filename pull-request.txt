@@ -7,4 +7,4 @@
 
 ## Verification
 
-Reviewed the built navigation at mobile, tablet and desktop widths in Chromium and WebKit. The existing CI suite covers data, permissions and workflows. Added browser coverage for workspace round trips, access changes, remembered filters and direct order links.
+Reviewed the built navigation at mobile, tablet and desktop widths in Chromium and WebKit. The existing CI suite covers data, permissions and workflows. Added browser coverage for workspace round trips, the first live access change, remembered filters and direct order links.
