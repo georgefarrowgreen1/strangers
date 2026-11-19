@@ -1,9 +1,9 @@
-## Public retail preview
+## Kitchen Diary
 
-- Extend the homepage's paper tones, Instrument Serif headings and teal controls to every retail page in light and dark mode.
-- Use consistent catalogue cards, photo galleries, variant controls, basket summaries and checkout states. Fit long grind option labels at narrow widths.
-- Carry the editorial layouts through locations, brew guides, articles, the company directory and policies.
+- Keep opening, closing and weekly checkboxes on the latest tap during a slow save or a connection drop.
+- Queue checklist taps as soon as they happen. Apply them in order, and use the saved version to prevent a delayed refresh or request from reapplying an earlier value.
+- Retain the checkbox while updating its state and show the connection notice when there is an outage.
 
 ## Verification
 
-Prepared on current production main. Type checking and the retail browser suites passed for the shared and standalone Workers. Chromium and WebKit reviewed 118 preview URLs and the demo checkout, with additional checks for the mobile filters and product pickers.
+Prepared on current production main. Type checking, the staff browser suites and the diary API and live-update checks passed. Chromium and WebKit covered an older refresh, a late write and a reconnect with another device's change in flight.
