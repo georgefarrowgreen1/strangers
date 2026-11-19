@@ -1,6 +1,6 @@
 # Strangers release publisher
 
-Source commit `fb4438642fadc02f46c65d604f58f0b010e195ef` based on `d0426d770782b89ec96038234701365274219f75` via `feature/retail-orb-home`.
+Source commit `c440fcc08163d2872c21c74e334e78a14ac4b3a7` based on `cdaf0642957b1a87c684046e19d90dbcf8215fa0` via `feature/retail-editorial-theme`.
 
-Publishes the new public retail homepage at `preview.staffstrangerscoffee.com/shop/`.
+Publishes the sitewide editorial theme at `preview.staffstrangerscoffee.com/shop/`.
 The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.

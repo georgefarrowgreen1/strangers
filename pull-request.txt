@@ -1,10 +1,9 @@
 ## Public retail preview
 
-- Introduce the editorial homepage with a softly moving orb framed by the smaller lettering from the Strangers cup artwork.
-- Give featured coffees a responsive browsing rail and feature the Dove Street roastery with Strangers photography.
-- Respect Reduce Motion and provide a static orb fallback where WebGL is unavailable. Serve the retail fonts and cup lettering through the shop asset routes.
-- The preview continues to use its browser-only basket and simulated checkout.
+- Extend the homepage's paper tones, Instrument Serif headings and teal controls to every retail page in light and dark mode.
+- Use consistent catalogue cards, photo galleries, variant controls, basket summaries and checkout states. Fit long grind option labels at narrow widths.
+- Carry the editorial layouts through locations, brew guides, articles, the company directory and policies.
 
 ## Verification
 
-The release was prepared on the current production main. Type checking, standalone retail preview tests, and the shared Worker retail and versioned-asset browser checks passed.
+Prepared on current production main. Type checking and the retail browser suites passed for the shared and standalone Workers. Chromium and WebKit reviewed 118 preview URLs and the demo checkout, with additional checks for the mobile filters and product pickers.
