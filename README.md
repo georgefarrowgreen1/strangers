@@ -1,5 +1,6 @@
 # Strangers release publisher
 
-Source commit `0f5492feb9464f4ee75234d8d8da94d9317a9140` based on `4d59e54a0552c5c21f0bcab27823ab4ea3f49f1c` via `feature/production-architecture-runtime`.
+Source commit `fb4438642fadc02f46c65d604f58f0b010e195ef` based on `d0426d770782b89ec96038234701365274219f75` via `feature/retail-orb-home`.
 
-Publishes production release, database, asset, reporting and integration improvements. The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes the new public retail homepage at `preview.staffstrangerscoffee.com/shop/`.
+The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
