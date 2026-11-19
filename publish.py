@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "fix/diary-checklist-sync"
-EXPECTED = "3e9a9493ba6f36467756f33f3a0bb3206c0ab624"
-PRIOR = "a4f3c6802c20b7d30a97a1f454b10d7323acf28c"
+EXPECTED = "9402792cc5cf14a6763e79eac7c149a35cddb5ae"
+PRIOR = "3e9a9493ba6f36467756f33f3a0bb3206c0ab624"
 TIMED_OUT_TEST_RUN = 44382204718
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
