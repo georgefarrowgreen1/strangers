@@ -1,6 +1,6 @@
 # Strangers release publisher
 
-Source commit `9402792cc5cf14a6763e79eac7c149a35cddb5ae` based on `a4f3c6802c20b7d30a97a1f454b10d7323acf28c` via `fix/diary-checklist-sync`.
+Source commit `a9f6b734c52d39b22f15c262b7091df3083bcf2e` based on `74b211226393cc6dfe6a6d65e84d629dadf7ec88` via `fix/email-routing-and-delivery`.
 
-Publishes the Kitchen Diary checklist synchronisation fix at `staffstrangerscoffee.com`.
+Publishes the email routing, retry and reporting fixes for Wholesale, Rota and Admin.
 The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.

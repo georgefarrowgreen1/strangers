@@ -1,11 +1,12 @@
-## Kitchen Diary
+## Wholesale and account recovery
 
-- Keep opening, closing and weekly checkboxes on the latest tap during a slow save or a connection drop.
-- Queue checklist taps as soon as they happen. Apply them in order, and use the saved version to prevent a delayed refresh or request from reapplying an earlier value.
-- Retain the checkbox while updating its state and show the connection notice when there is an outage.
+- Resolve customer order messages against the business's current order address. Recheck order status and email settings on dispatch retries. An address change after an unconfirmed attempt requires delivery review.
+- Send password resets to the saved order address. Revoke outstanding reset links and invitations when that address changes.
 
-## Verification
+## Staff and Admin
 
-Prepared on current production main. Type checking, the staff browser suites and the diary API and live-update checks passed. Chromium and WebKit covered an older refresh, a late write and a reconnect with another device's change in flight.
+- Use working hours and actual absence times to choose open-shift recipients.
+- Queue rota publication emails, Monday summaries and holiday reminders in D1. The existing scheduled job retries temporary failures. Migration 37 creates the staff email outbox.
+- Distinguish queued, provider-accepted and delivered messages. Correct the wholesale labels in Activity, show full order references in Email health and check external DMARC authorisation.
 
-The first full browser run exposed a timing race in the Rota request retry test. The test now waits for the retry response before comparing both submissions. The targeted Rota and Diary browser tests passed.
+Verified with 464 API and unit tests, 53 browser tests and a Worker build dry run. The production DNS host for `strangerscoffee.com` needs to publish the external DMARC authorisation TXT record separately.
