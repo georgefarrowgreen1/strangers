@@ -1,12 +1,14 @@
-## Wholesale and account recovery
+## Invoicing and payments
 
-- Resolve customer order messages against the business's current order address. Recheck order status and email settings on dispatch retries. An address change after an unconfirmed attempt requires delivery review.
-- Send password resets to the saved order address. Revoke outstanding reset links and invitations when that address changes.
+- Prevent a tab and an individual invoice from billing the same order. Preserve saved delivery charges and apply the configured VAT rate.
+- Check for a Live QuickBooks link in the same write that records a manual payment. Refresh balances after payment reallocations and deletions. Show disputed balances as needing review and exclude them from overdue totals.
+- Apply the customer's price visibility setting to invoice links and documents.
 
-## Staff and Admin
+## QuickBooks
 
-- Use working hours and actual absence times to choose open-shift recipients.
-- Queue rota publication emails, Monday summaries and holiday reminders in D1. The existing scheduled job retries temporary failures. Migration 37 creates the staff email outbox.
-- Distinguish queued, provider-accepted and delivered messages. Correct the wholesale labels in Activity, show full order references in Email health and check external DMARC authorisation.
+- Keep every export in its original company and environment. Recheck readiness and automatic permissions before provider writes. Preserve existing export request IDs and payloads.
+- Run issuance, export preparation, sending and email as recoverable stages. The scheduled jobs advance the workflow where the queue is unavailable.
+- Use current, environment-specific invoice recipients. Hold unconfirmed emails for review and show payment instructions on new QuickBooks invoices.
+- Preserve bag sizes in QuickBooks item names and use a distinct request ID for duplicate-name fallbacks.
 
-Verified with 464 API and unit tests, 53 browser tests and a Worker build dry run. The production DNS host for `strangerscoffee.com` needs to publish the external DMARC authorisation TXT record separately.
+Migration 39 adds the reviewed retry setting and queue indexes. Verified with 479 API and unit tests, 25 browser checks, nine queue-enabled checks and a Cloudflare build dry run. QuickBooks tests used a simulated provider.

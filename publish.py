@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "fix/email-routing-and-delivery"
-EXPECTED = "a9f6b734c52d39b22f15c262b7091df3083bcf2e"
+BRANCH = "codex/audit-quickbooks-invoicing"
+EXPECTED = "6aea66db0ccbeb15e8d40ecafc2bb8f512766f69"
 PRIOR = None
 TIMED_OUT_TEST_RUN = None
-TITLE = "Fix email recipient routing and delivery recovery"
+TITLE = "Harden QuickBooks invoicing and payment workflows"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -228,8 +228,8 @@ def publish(env, progress, work):
         ).splitlines()[-1]
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
     print(f"Pull request: {url}", flush=True)
-    # Allow the target Tests job its full 25-minute budget before reporting a timeout.
-    deadline = time.monotonic() + 1560
+    # Allow the required Tests job its 35-minute budget and time for GitHub to report the result.
+    deadline = time.monotonic() + 2220
     merge_busy_since = None
     retried_test = None
     retried_at = 0
@@ -243,7 +243,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("Email fixes squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("QuickBooks audit fixes squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")

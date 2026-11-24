@@ -1,6 +1,6 @@
 # Strangers release publisher
 
-Source commit `a9f6b734c52d39b22f15c262b7091df3083bcf2e` based on `74b211226393cc6dfe6a6d65e84d629dadf7ec88` via `fix/email-routing-and-delivery`.
+Source commit `6aea66db0ccbeb15e8d40ecafc2bb8f512766f69` based on `bf69facb9f27d0d1d59e539e6736d3174d1992ff` via `codex/audit-quickbooks-invoicing`.
 
-Publishes the email routing, retry and reporting fixes for Wholesale, Rota and Admin.
+Publishes the QuickBooks, wholesale invoicing and payment reconciliation audit fixes.
 The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
