@@ -1,9 +1,10 @@
-## QuickBooks invoice addresses
+## QuickBooks invoice addresses and migrations
 
 - Match equivalent billing and delivery details when QuickBooks returns the address in different fields.
 - Identify genuine billing, delivery and postcode differences. Clean up doubled commas on customer imports, address saves and new invoices.
 - Recheck the existing Live address warnings with migration 43. Keep issued invoices and saved export bodies as the original records.
+- Let simultaneous requests finish the invoice balance migration after verifying that the other request added the expected column.
 
 ## Verification
 
-All 492 backend tests and the focused mobile and desktop browser tests passed. The automatic invoicing checks and Worker dry run passed. The upgrade check confirmed that the migration queues each affected Live address warning once.
+The 492 backend tests and focused mobile and desktop checks passed for the address changes. The migration regression forces a collision on both columns and verifies that each request finishes and queues the affected invoice once. The production guards, typecheck and Worker dry run passed.

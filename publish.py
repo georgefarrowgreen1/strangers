@@ -14,10 +14,10 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "codex/quickbooks-invoice-addresses"
-EXPECTED = "15fc325af6a5d3f6d1fe6503c11a710a6f108546"
-PRIOR = None
+EXPECTED = "627eb4eb7381191fbb61e10f42e5939c86850dca"
+PRIOR = "15fc325af6a5d3f6d1fe6503c11a710a6f108546"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Match equivalent QuickBooks invoice addresses"
+TITLE = "Correct QuickBooks invoice addresses and concurrent migrations"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
