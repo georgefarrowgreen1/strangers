@@ -1,10 +1,11 @@
-## QuickBooks invoice addresses and migrations
+## Wholesale invoicing workspace
 
-- Match equivalent billing and delivery details when QuickBooks returns the address in different fields.
-- Identify genuine billing, delivery and postcode differences. Clean up doubled commas on customer imports, address saves and new invoices.
-- Recheck the existing Live address warnings with migration 43. Keep issued invoices and saved export bodies as the original records.
-- Let simultaneous requests finish the invoice balance migration after verifying that the other request added the expected column.
+- Add Today, Billing accounts, Invoices, Collections and Reconciliation to Admin → Wholesale → Invoicing.
+- Preview customer statements with verified balances and download the reviewed PDF. Review billing exceptions and payment reminders against the current account and invoice.
+- Review dispatch batches and group monthly accounts. Track issuance, QuickBooks posting and optional email delivery after approval.
+- Save dated month-end checklists, figures and notes. Cover every linked order in the invoice index and retain billing records in backups.
+- Use the configured invoice number series for individual and batch issuance. Approved batches wait when their QuickBooks company is unavailable.
 
 ## Verification
 
-The 492 backend tests and focused mobile and desktop checks passed for the address changes. The migration regression forces a collision on both columns and verifies that each request finishes and queues the affected invoice once. The production guards, typecheck and Worker dry run passed.
+Checked against the current production main. Typecheck, Worker dry run, publisher safeguard tests and desktop and mobile invoice workflows passed locally. Batch issuance, QuickBooks posting and email delivery used a simulated provider. GitHub Tests must pass before the publisher squash-merges this commit.

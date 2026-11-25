@@ -1,5 +1,5 @@
 # Strangers release publisher
 
-Source commit `627eb4eb7381191fbb61e10f42e5939c86850dca` based on `c3e48bb1bdbfaf391e009d8d073e9b03f080d17a` via `codex/quickbooks-invoice-addresses`.
+Source commit `3b55cee4271a4728ff491116983841da46f68a39` based on `2f1238f734998d06f55319114ad8a80029227011` via `codex/wholesale-invoicing-workspace`.
 
-Publishes the QuickBooks address corrections and the fix for simultaneous requests adding the invoice balance columns. The workflow verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes the Admin wholesale invoicing workspace. The workflow verifies the saved deployment identity and waits for the required Tests workflow before merging.
