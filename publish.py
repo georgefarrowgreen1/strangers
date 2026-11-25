@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/wholesale-billing-signin-fixes"
-EXPECTED = "791d3e780cc920e6591f4c2798ac14faa4906bb3"
+BRANCH = "codex/quickbooks-void-status"
+EXPECTED = "03703c55254c17af0e77312f8d71d9712c3fa03f"
 PRIOR = None
 TIMED_OUT_TEST_RUN = None
-TITLE = "Fix wholesale billing and sign-in recovery"
+TITLE = "Show QuickBooks invoice and payment voids in wholesale"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

@@ -1,10 +1,10 @@
-## Wholesale billing and sign-in
+## QuickBooks void statuses
 
-- Save the reviewed payment version for QuickBooks Live. Pause an export for review if a payment changes before the send. Lock local payment edits while a Live create is in flight or its result is uncertain.
-- Hold cleared tabs with mixed payment terms for individual invoicing so every order keeps its agreed deadline.
-- Give wholesale sign-in a reload link that works when both sign-in and error reporting scripts fail.
-- Explain the fixed invoice-date deadline for orders payable before dispatch and reject conflicting due dates.
+- Show verified invoice voids in Admin and customer invoices. Show zero due, remove the amount from outstanding and overdue totals, and mark the PDF while retaining the issued details.
+- Record the links between payments and invoices so a confirmed payment void remains visible alongside the refreshed QuickBooks balance when QuickBooks clears those links.
+- Recheck earlier invoice void candidates with migration 41. Check linked payments when an invoice balance reopens and the payment notification was missed.
+- Require authoritative QuickBooks evidence and the original account link before applying the status.
 
 ## Verification
 
-All 485 backend tests and 23 targeted browser tests passed. The production asset build verified the new browser files and retained 16 releases. The existing schema migration path adds the reviewed payment version.
+All 488 backend tests, 11 browser checks and the production asset build passed. The migration check confirmed that legacy void candidates are queued for a fresh read.
