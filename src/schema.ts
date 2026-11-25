@@ -413,14 +413,31 @@ const MIGRATIONS: Migration[] = [
   } },
   { id: 42, name: "QuickBooks balance verification", run: async env => {
     const has = await columns(env, "quickbooks_observations");
-    if (!has.has("due_date")) await env.DB.prepare("ALTER TABLE quickbooks_observations ADD COLUMN due_date TEXT").run();
-    if (!has.has("invoice_issue")) await env.DB.prepare("ALTER TABLE quickbooks_observations ADD COLUMN invoice_issue TEXT NOT NULL DEFAULT ''").run();
+    for (const [column, definition] of [["due_date", "TEXT"], ["invoice_issue", "TEXT NOT NULL DEFAULT ''"]]) {
+      if (has.has(column)) continue;
+      try {
+        await env.DB.prepare(`ALTER TABLE quickbooks_observations ADD COLUMN ${column} ${definition}`).run();
+      } catch (error) {
+        // Another request may have added this column since our first read.
+        const duplicate = /\bduplicate column name:\s*(\w+)/i.exec(String(error))?.[1];
+        if (duplicate !== column || !(await columns(env, "quickbooks_observations")).has(column)) throw error;
+      }
+    }
     const at = Date.now();
     await env.DB.prepare(`INSERT INTO quickbooks_events(event_key,environment,realm_id,entity,entity_id,operation,event_at,created_at)
       SELECT 'balance-recheck:'||e.id,e.environment,e.realm_id,'Invoice',e.remote_id,'refresh',?,?
       FROM quickbooks_exports e LEFT JOIN quickbooks_observations o ON o.export_id=e.id
       WHERE e.environment='production' AND e.state='linked' AND (o.status IS NULL OR o.status='review' OR o.outstanding_pence IS NULL)
       ON CONFLICT(event_key) DO NOTHING`).bind(at,at).run();
+  } },
+  { id: 43, name: "Recheck QuickBooks invoice addresses", run: async env => {
+    const at = Date.now(), legacy = "The QuickBooks billing or delivery address differs.";
+    await env.DB.prepare(`INSERT INTO quickbooks_events(event_key,environment,realm_id,entity,entity_id,operation,event_at,created_at)
+      SELECT 'address-recheck:'||e.id,e.environment,e.realm_id,'Invoice',e.remote_id,'refresh',?,?
+      FROM quickbooks_exports e JOIN quickbooks_observations o ON o.export_id=e.id
+      WHERE e.environment='production' AND e.state='linked' AND e.remote_id<>''
+        AND (o.invoice_issue=? OR (o.status='review' AND o.reason=?))
+      ON CONFLICT(event_key) DO NOTHING`).bind(at, at, legacy, legacy).run();
   } },
 ];
 
