@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/wholesale-release-recovery"
-EXPECTED = "ea156e3f478a1a228ee5d1aeb86c400662b38593"
-PRIOR = "25724707c78930c857a315f7c302cb74f36ffee0"
+BRANCH = "codex/wholesale-billing-signin-fixes"
+EXPECTED = "791d3e780cc920e6591f4c2798ac14faa4906bb3"
+PRIOR = None
 TIMED_OUT_TEST_RUN = None
-TITLE = "Recover wholesale sign-in when older assets fail to load"
+TITLE = "Fix wholesale billing and sign-in recovery"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -243,7 +243,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("Wholesale recovery fixes squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("Verified release squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")

@@ -1,6 +1,5 @@
 # Strangers release publisher
 
-Source commit `ea156e3f478a1a228ee5d1aeb86c400662b38593` based on `008ff69a404b594a559e4fc3f22a9b8f411e1fee` via `codex/wholesale-release-recovery`.
+Source commit `791d3e780cc920e6591f4c2798ac14faa4906bb3` based on `64c72f89c032642cc1b6da616e6be6373801f93f` via `codex/wholesale-billing-signin-fixes`.
 
-Publishes browser asset recovery, error attribution and QuickBooks product number fixes.
-The publisher verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes four wholesale billing and sign-in fixes. The workflow verifies the saved deployment identity and waits for the required Tests workflow before merging.

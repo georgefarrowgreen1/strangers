@@ -1,12 +1,10 @@
-## Wholesale sign-in and Activity
+## Wholesale billing and sign-in
 
-- Retain up to 16 distinct browser releases. The build includes the older stylesheet and script versions in the reported errors.
-- Reload wholesale sign-in once when an essential asset fails before any input. Keep persistent errors visible and protect entered form values.
-- Serve the error reporter at an independent, fingerprinted URL so it stays available when an older release expires.
-- Filter the specific Safari extension message while preserving errors attributed to site code. Label asset reports whose files were available when rechecked.
+- Save the reviewed payment version for QuickBooks Live. Pause an export for review if a payment changes before the send. Lock local payment edits while a Live create is in flight or its result is uncertain.
+- Hold cleared tabs with mixed payment terms for individual invoicing so every order keeps its agreed deadline.
+- Give wholesale sign-in a reload link that works when both sign-in and error reporting scripts fail.
+- Explain the fixed invoice-date deadline for orders payable before dispatch and reject conflicting due dates.
 
-## Automatic invoicing
+## Verification
 
-- Allocate and read product numbers in a single D1 transaction. Preserve numbers already associated with coffees.
-
-Verified type checking, focused API and browser tests, the conditional HTML fingerprint regression and a Worker build dry run from a shallow checkout.
+All 485 backend tests and 23 targeted browser tests passed. The production asset build verified the new browser files and retained 16 releases. The existing schema migration path adds the reviewed payment version.
