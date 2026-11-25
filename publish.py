@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/wholesale-invoicing-workspace"
-EXPECTED = "3b55cee4271a4728ff491116983841da46f68a39"
+BRANCH = "codex/invoicing-ui-polish"
+EXPECTED = "6aba00b9af698f945b5286f80d65582342fe8769"
 PRIOR = ""
 TIMED_OUT_TEST_RUN = None
-TITLE = "Build the wholesale invoicing workspace"
+TITLE = "Refine wholesale invoicing on mobile and desktop"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

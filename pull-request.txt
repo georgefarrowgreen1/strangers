@@ -1,11 +1,11 @@
-## Wholesale invoicing workspace
+## Wholesale invoicing refinements
 
-- Add Today, Billing accounts, Invoices, Collections and Reconciliation to Admin → Wholesale → Invoicing.
-- Preview customer statements with verified balances and download the reviewed PDF. Review billing exceptions and payment reminders against the current account and invoice.
-- Review dispatch batches and group monthly accounts. Track issuance, QuickBooks posting and optional email delivery after approval.
-- Save dated month-end checklists, figures and notes. Cover every linked order in the invoice index and retain billing records in backups.
-- Use the configured invoice number series for individual and batch issuance. Approved batches wait when their QuickBooks company is unavailable.
+- Align workspace controls, invoice rows and account details across desktop, tablet and phone layouts.
+- Reflow invoice line items and VAT totals on phones. Group billing, dates, payment records and PDF actions in the invoice windows.
+- Refine customer statements, billing address review, reminders, batch selection and month-end snapshots.
+- Use Admin confirmation sheets for invoicing settings that affect automatic processing. Keep QuickBooks setup URLs readable and copyable.
+- Compact the wholesale customer invoice history and keep the last loaded balances visible during a refresh.
 
 ## Verification
 
-Checked against the current production main. Typecheck, Worker dry run, publisher safeguard tests and desktop and mobile invoice workflows passed locally. Batch issuance, QuickBooks posting and email delivery used a simulated provider. GitHub Tests must pass before the publisher squash-merges this commit.
+Verified the approved commit against production main. All 54 Chromium browser tests and 15 invoice API and PDF tests passed. Tested the UI from 320 to 1,728 px and captured the review screenshots from the running build with sample data. Typecheck and the production Worker dry run passed. GitHub Tests is required before squash merge.

@@ -1,5 +1,5 @@
 # Strangers release publisher
 
-Source commit `3b55cee4271a4728ff491116983841da46f68a39` based on `2f1238f734998d06f55319114ad8a80029227011` via `codex/wholesale-invoicing-workspace`.
+Source commit `6aba00b9af698f945b5286f80d65582342fe8769` based on `5fcd4e57d2812dd0cb764db4a9c7edfc9cf0b652` via `codex/invoicing-ui-polish`.
 
-Publishes the Admin wholesale invoicing workspace. The workflow verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes the approved wholesale invoicing refinements for Admin and customers. The workflow verifies the deployment identity and waits for GitHub Tests before merging.
