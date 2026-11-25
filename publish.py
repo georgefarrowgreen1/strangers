@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/audit-quickbooks-invoicing"
-EXPECTED = "6aea66db0ccbeb15e8d40ecafc2bb8f512766f69"
+BRANCH = "codex/wholesale-release-recovery"
+EXPECTED = "25724707c78930c857a315f7c302cb74f36ffee0"
 PRIOR = None
 TIMED_OUT_TEST_RUN = None
-TITLE = "Harden QuickBooks invoicing and payment workflows"
+TITLE = "Recover wholesale sign-in when older assets fail to load"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -243,7 +243,7 @@ def publish(env, progress, work):
         if pr["headRefOid"] != EXPECTED:
             raise RuntimeError("The PR head changed; no merge was requested by this publisher.")
         if pr["state"] == "MERGED":
-            progress.update("QuickBooks audit fixes squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
+            progress.update("Wholesale recovery fixes squash-merged", f"[{url}]({url})\n\nMerged as `{pr['mergeCommit']['oid']}`. Cloudflare can now deploy main.", conclusion="success", url=url)
             return True
         if pr["state"] != "OPEN":
             raise RuntimeError("The PR closed without merging; no merge was requested by this publisher.")

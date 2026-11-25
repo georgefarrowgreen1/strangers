@@ -1,14 +1,11 @@
-## Invoicing and payments
+## Wholesale sign-in and Activity
 
-- Prevent a tab and an individual invoice from billing the same order. Preserve saved delivery charges and apply the configured VAT rate.
-- Check for a Live QuickBooks link in the same write that records a manual payment. Refresh balances after payment reallocations and deletions. Show disputed balances as needing review and exclude them from overdue totals.
-- Apply the customer's price visibility setting to invoice links and documents.
+- Retain up to 16 distinct browser releases. The build includes the older stylesheet and script versions in the reported errors.
+- Reload wholesale sign-in once when an essential asset fails before any input. Keep persistent errors visible and protect entered form values.
+- Filter the specific Safari extension message while preserving errors attributed to site code. Label asset reports whose files were available when rechecked.
 
-## QuickBooks
+## Automatic invoicing
 
-- Keep every export in its original company and environment. Recheck readiness and automatic permissions before provider writes. Preserve existing export request IDs and payloads.
-- Run issuance, export preparation, sending and email as recoverable stages. The scheduled jobs advance the workflow where the queue is unavailable.
-- Use current, environment-specific invoice recipients. Hold unconfirmed emails for review and show payment instructions on new QuickBooks invoices.
-- Preserve bag sizes in QuickBooks item names and use a distinct request ID for duplicate-name fallbacks.
+- Allocate and read product numbers in a single D1 transaction. Preserve numbers already associated with coffees.
 
-Migration 39 adds the reviewed retry setting and queue indexes. Verified with 479 API and unit tests, 25 browser checks, nine queue-enabled checks and a Cloudflare build dry run. QuickBooks tests used a simulated provider.
+Verified type checking, 47 focused API and unit tests, 20 browser checks and a Worker build dry run from a shallow checkout.
