@@ -2,10 +2,11 @@
 
 - Retain up to 16 distinct browser releases. The build includes the older stylesheet and script versions in the reported errors.
 - Reload wholesale sign-in once when an essential asset fails before any input. Keep persistent errors visible and protect entered form values.
+- Serve the error reporter at an independent, fingerprinted URL so it stays available when an older release expires.
 - Filter the specific Safari extension message while preserving errors attributed to site code. Label asset reports whose files were available when rechecked.
 
 ## Automatic invoicing
 
 - Allocate and read product numbers in a single D1 transaction. Preserve numbers already associated with coffees.
 
-Verified type checking, 47 focused API and unit tests, 20 browser checks and a Worker build dry run from a shallow checkout.
+Verified type checking, focused API and browser tests, the conditional HTML fingerprint regression and a Worker build dry run from a shallow checkout.

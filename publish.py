@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "codex/wholesale-release-recovery"
-EXPECTED = "25724707c78930c857a315f7c302cb74f36ffee0"
-PRIOR = None
+EXPECTED = "ea156e3f478a1a228ee5d1aeb86c400662b38593"
+PRIOR = "25724707c78930c857a315f7c302cb74f36ffee0"
 TIMED_OUT_TEST_RUN = None
 TITLE = "Recover wholesale sign-in when older assets fail to load"
 EXPECTED_USER_ID = 292799750
