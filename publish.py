@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/quickbooks-void-status"
-EXPECTED = "03703c55254c17af0e77312f8d71d9712c3fa03f"
+BRANCH = "codex/quickbooks-verified-balances"
+EXPECTED = "bc8df3744e9488e82ab0ddaf5b9a3072f80cdefc"
 PRIOR = None
 TIMED_OUT_TEST_RUN = None
-TITLE = "Show QuickBooks invoice and payment voids in wholesale"
+TITLE = "Show verified QuickBooks balances on linked invoices"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

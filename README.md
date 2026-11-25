@@ -1,5 +1,5 @@
 # Strangers release publisher
 
-Source commit `03703c55254c17af0e77312f8d71d9712c3fa03f` based on `4d5d187069850241ad4ebabac5e979731c3b8a22` via `codex/quickbooks-void-status`.
+Source commit `bc8df3744e9488e82ab0ddaf5b9a3072f80cdefc` based on `b48d9234c3a20234c54978aaf0689fad20d33514` via `codex/quickbooks-verified-balances`.
 
-Publishes confirmed QuickBooks invoice and payment void statuses. The workflow verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes the verified QuickBooks balance update for linked wholesale invoices. The workflow verifies the saved deployment identity and waits for the required Tests workflow before merging.

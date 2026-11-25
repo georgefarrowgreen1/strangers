@@ -1,10 +1,9 @@
-## QuickBooks void statuses
+## QuickBooks payment status
 
-- Show verified invoice voids in Admin and customer invoices. Show zero due, remove the amount from outstanding and overdue totals, and mark the PDF while retaining the issued details.
-- Record the links between payments and invoices so a confirmed payment void remains visible alongside the refreshed QuickBooks balance when QuickBooks clears those links.
-- Recheck earlier invoice void candidates with migration 41. Check linked payments when an invoice balance reopens and the payment notification was missed.
-- Require authoritative QuickBooks evidence and the original account link before applying the status.
+- Show the balance, payment status and due date verified by QuickBooks for linked Live invoices. Show changes to the issued details as a separate Admin warning.
+- Check an unconfirmed balance when an Admin opens the invoice and provide a refresh control. Keep unconfirmed balances out of customer, Admin and staff outstanding figures.
+- Queue a fresh check of existing unconfirmed Live invoices with migration 42. Preserve the issued document, original company and customer checks, void detection, and exact Sandbox verification.
 
 ## Verification
 
-All 488 backend tests, 11 browser checks and the production asset build passed. The migration check confirmed that legacy void candidates are queued for a fresh read.
+All 490 backend tests passed. Mobile and desktop browser checks covered Admin and customer invoices. The asset build and upgrade check confirmed that the release retains prior assets and queues existing unconfirmed Live balances once.
