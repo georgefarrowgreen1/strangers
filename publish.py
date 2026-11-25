@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/quickbooks-verified-balances"
-EXPECTED = "bc8df3744e9488e82ab0ddaf5b9a3072f80cdefc"
+BRANCH = "codex/quickbooks-invoice-addresses"
+EXPECTED = "15fc325af6a5d3f6d1fe6503c11a710a6f108546"
 PRIOR = None
 TIMED_OUT_TEST_RUN = None
-TITLE = "Show verified QuickBooks balances on linked invoices"
+TITLE = "Match equivalent QuickBooks invoice addresses"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

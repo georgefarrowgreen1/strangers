@@ -1,9 +1,9 @@
-## QuickBooks payment status
+## QuickBooks invoice addresses
 
-- Show the balance, payment status and due date verified by QuickBooks for linked Live invoices. Show changes to the issued details as a separate Admin warning.
-- Check an unconfirmed balance when an Admin opens the invoice and provide a refresh control. Keep unconfirmed balances out of customer, Admin and staff outstanding figures.
-- Queue a fresh check of existing unconfirmed Live invoices with migration 42. Preserve the issued document, original company and customer checks, void detection, and exact Sandbox verification.
+- Match equivalent billing and delivery details when QuickBooks returns the address in different fields.
+- Identify genuine billing, delivery and postcode differences. Clean up doubled commas on customer imports, address saves and new invoices.
+- Recheck the existing Live address warnings with migration 43. Keep issued invoices and saved export bodies as the original records.
 
 ## Verification
 
-All 490 backend tests passed. Mobile and desktop browser checks covered Admin and customer invoices. The asset build and upgrade check confirmed that the release retains prior assets and queues existing unconfirmed Live balances once.
+All 492 backend tests and the focused mobile and desktop browser tests passed. The automatic invoicing checks and Worker dry run passed. The upgrade check confirmed that the migration queues each affected Live address warning once.

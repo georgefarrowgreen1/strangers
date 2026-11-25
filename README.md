@@ -1,5 +1,5 @@
 # Strangers release publisher
 
-Source commit `bc8df3744e9488e82ab0ddaf5b9a3072f80cdefc` based on `b48d9234c3a20234c54978aaf0689fad20d33514` via `codex/quickbooks-verified-balances`.
+Source commit `15fc325af6a5d3f6d1fe6503c11a710a6f108546` based on `c3e48bb1bdbfaf391e009d8d073e9b03f080d17a` via `codex/quickbooks-invoice-addresses`.
 
-Publishes the verified QuickBooks balance update for linked wholesale invoices. The workflow verifies the saved deployment identity and waits for the required Tests workflow before merging.
+Publishes the improved QuickBooks address comparison and import formatting for wholesale invoices. The workflow verifies the saved deployment identity and waits for the required Tests workflow before merging.
