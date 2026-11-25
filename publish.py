@@ -132,13 +132,15 @@ def transient_database_lock(log):
 
 
 def transient_schema_read_lock(log):
-    # Observed on this release: Wrangler's separate local SQL reader collided
-    # with the running migration fixture. Never retry assertions or another query.
+    # Wrangler's local SQL reader can collide with the running migration fixture.
+    reader = (
+        ("--json --command SELECT id FROM wholesale_invoice_settings" in log and "test/migration.test.mjs:85:" in log)
+        or ("--json --command SELECT v FROM meta WHERE k='seq'" in log and "test/migration.test.mjs:86:" in log)
+    )
     return ("database is locked: SQLITE_BUSY" in log
             and bool(re.search(r"not ok \d+ - migrations run once each, in order, and are recorded; the list indexes are used", log))
             and "--local --persist-to" in log
-            and "--json --command SELECT id FROM wholesale_invoice_settings" in log
-            and "test/migration.test.mjs:85:" in log
+            and reader
             and bool(re.search(r"# fail 1(?:\s|$)", log))
             and not bool(re.search(r"# fail (?:[2-9]|[1-9]\d+)(?:\s|$)", log))
             and "ERR_ASSERTION" not in log and "AssertionError" not in log)

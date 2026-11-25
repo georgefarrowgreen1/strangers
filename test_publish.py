@@ -88,6 +88,23 @@ class RetryTests(unittest.TestCase):
         for error in ["ERR_ASSERTION", "AssertionError"]:
             self.assertFalse(publish.transient_schema_read_lock(log + error))
 
+    def test_exact_migration_sequence_reader_lock_is_retryable(self):
+        log = (
+            "not ok 161 - migrations run once each, in order, and are recorded; the list indexes are used\n"
+            "Command failed: wrangler d1 execute kitchen-diary --local --persist-to /tmp/test "
+            "--json --command SELECT v FROM meta WHERE k='seq'\n"
+            "database is locked: SQLITE_BUSY\ntest/migration.test.mjs:86:20\n# fail 1\n"
+        )
+        self.assertTrue(publish.transient_schema_read_lock(log))
+        for old, new in [
+            ("SELECT v", "UPDATE meta"),
+            ("test/migration.test.mjs:86:", "test/migration.test.mjs:87:"),
+            ("# fail 1", "# fail 2"),
+            ("--local --persist-to", "--remote --persist-to"),
+        ]:
+            with self.subTest(old=old):
+                self.assertFalse(publish.transient_schema_read_lock(log.replace(old, new)))
+
     def test_only_the_observed_invoice_port_collision_is_retryable(self):
         log = "\n".join(f"not ok {i} - wholesale invoices: case {i}\n failureType: 'hookFailed'\n Address already in use (127.0.0.1:39849)" for i in range(9)) + "\n# fail 9\n"
         self.assertTrue(publish.transient_invoice_fixture_port(log))
