@@ -8,4 +8,6 @@
 
 ## Verification
 
-Verified the approved commit against production main. All 54 Chromium browser tests and 15 invoice API and PDF tests passed. Tested the UI from 320 to 1,728 px and captured the review screenshots from the running build with sample data. Typecheck and the production Worker dry run passed. GitHub Tests is required before squash merge.
+Verified the reviewed release against production main. The invoicing checks passed in 54 Chromium browser tests and 15 invoice API and PDF tests. Tested the UI from 320 to 1,728 px and captured the review screenshots from the running build with sample data. Typecheck and the production Worker dry run passed.
+
+The wholesale order settings layout test measures the header's layout dimensions to avoid fractional rounding from viewport scroll. The application files match the reviewed build. GitHub Tests is required before squash merge.
