@@ -11,7 +11,7 @@ before(async()=>{
 after(()=>srv?.stop());
 test('the entire data-free Admin dependency graph loads after session loss, with correct types and fingerprints',async()=>{
  const page=await fetch(srv.base+'/',{headers:{cookie:admin}});assert.equal(page.status,200);const html=await page.text();
- assert.match(html,/application\/x-sc-script/);assert.match(html,/src="\/admin\/boot.js\?v=/);
+ assert.match(html,/application\/x-sc-script/);assert.match(html,/src="(?:\/admin\/boot\.js\?v=[0-9a-f]+|\/_releases\/[0-9a-f]{20}\/admin\/boot\.js)"/);
  const urls=[...html.matchAll(/(?:src|href)="([^" ]+\.(?:js|css)(?:\?[^" ]*)?)"/g)].map(m=>m[1]);assert.ok(urls.length>20);
  for(const url of urls)for(const method of ['GET','HEAD']){
   const response=await fetch(srv.base+url,{method,redirect:'manual'});assert.equal(response.status,200,method+' '+url);assert.match(response.headers.get('content-type'),url.split('?')[0].endsWith('.js')?/javascript/:/text\/css/);assert.equal(response.headers.get('location'),null);

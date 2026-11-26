@@ -13,6 +13,7 @@ import { deliverStaffEmails } from "./email/staffOutbox";
 import { deliverDiaryReminders } from "./slackDiary";
 import { appForHost, appLinks, authorize, isAdminSharedFile, isPreviewFile, isPublicAsset, isPublicCode, isRotaManager, isRotaSharedFile, limitWrites, recordId, requireUser, unifiedSignin } from "./access";
 import { handleAdmin } from "./admin";
+import { handleConsumerAdmin } from "./consumerAdmin";
 import { handleStaffOrders } from "./staffOrders";
 import { requireStaffOrders } from "./staffOrdersAccess";
 import { handleAdminView } from "./adminView";
@@ -420,6 +421,13 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, url: URL): P
     if (user.role !== "admin") throw new ApiError(403, "permission_denied", "Only admins can do this.");
     const r = p.slice("/api/admin/".length);
     if (r === "backups" || r.startsWith("backups/")) return handleBackups(req, env, r.slice("backups/".length), user.name);
+    if (r === "consumer" || r.startsWith("consumer/")) {
+      if (!isGet) await limitWrites(req, env, ctx, user.id);
+      const action = r === "consumer" ? "" : r.slice("consumer/".length);
+      const response = await handleConsumerAdmin(req, env, action);
+      if (!isGet && response.ok) ctx.waitUntil(audit(env, "consumer_preview", user.name, `Updated Consumer (Preview) ${action}`));
+      return response;
+    }
     let res;
     if (r === "wholesale" || r.startsWith("wholesale/")) {
       if (!isGet) await limitWrites(req, env, ctx, user.id);
