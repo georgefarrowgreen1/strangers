@@ -1,0 +1,100 @@
+/* The retail preview uses the Admin shell's glass panels, controls and status colours. */
+.consumer-workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0}
+.consumer-actions{display:flex;align-items:center;gap:8px;min-width:0}
+.consumer-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;min-width:0}
+.consumer-toolbar .consumer-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));max-width:100%;min-width:0}
+.consumer-tabs button{min-width:0;white-space:normal;line-height:1.2;text-align:center}
+.consumer-refresh{min-height:44px}
+.consumer-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.consumer-summary .consumer-stat{background:var(--glass);border:1px solid var(--glass-edge);border-radius:18px;min-height:86px}
+.consumer-stat-text{display:grid;min-width:0;gap:3px;flex:1}
+.consumer-stat-text span{font-size:13px;color:var(--muted)}
+.consumer-stat-text b{font-size:26px;font-weight:700;line-height:1.05}
+.consumer-stat .chev{margin-inline-start:auto}
+.consumer-overview{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);align-items:start;gap:14px;margin-block-start:14px}
+.consumer-card{min-width:0}
+.consumer-panel-title{padding:16px 18px 14px;border-bottom:1px solid var(--line)}
+.consumer-panel-title h2,.consumer-unconnected h2{font-size:18px;line-height:1.25}
+.consumer-panel-title p,.consumer-unconnected p,.consumer-checkout p{color:var(--muted);font-size:14px;margin-top:3px;overflow-wrap:anywhere}
+.consumer-list{list-style:none;margin:0;padding:0}
+.consumer-list>li+li{border-top:1px solid var(--line)}
+.consumer-list .item{min-width:0;padding-inline:18px}
+.consumer-card .pill,.consumer-order-sheet .pill{white-space:normal;line-height:1.25;text-align:center}
+.consumer-checkout{display:grid;justify-items:start;gap:10px;padding:16px 18px 18px}
+.consumer-checkout p{margin:0}
+.consumer-unconnected{display:flex;align-items:center;gap:14px;padding:18px}
+.consumer-unconnected>div{flex:1;min-width:0}
+.consumer-message{padding:8px 12px;border-radius:12px;background:var(--sunk);color:var(--fg);font-size:14px;overflow-wrap:anywhere}
+.consumer-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.consumer-tools .search{flex:1 1 260px}
+.consumer-tools .field{flex:0 1 170px}
+.consumer-tools .field select{min-width:0}
+.consumer-order-columns,.consumer-list .consumer-order{
+  display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr) minmax(0,.75fr) minmax(0,1fr) 18px;
+  align-items:center;gap:12px;padding-inline:18px
+}
+.consumer-order-columns{background:var(--sunk);color:var(--muted);font-size:12.5px;font-weight:650;padding-block:7px}
+.consumer-order .tx{grid-area:auto}
+.consumer-method,.consumer-meta{font-size:13.5px;color:var(--muted)}
+.consumer-total{text-align:right;font-weight:650}
+.consumer-order-columns>span:nth-child(3){text-align:right}
+.consumer-order .consumer-status,.consumer-order-columns>span:nth-child(4){justify-self:end}
+.consumer-total,.consumer-status,.consumer-meta{overflow-wrap:anywhere}
+.consumer-order .chev svg.i{width:17px;height:17px}
+.consumer-meta{text-align:right}
+.consumer-empty{display:flex;align-items:center;gap:10px;min-height:64px;padding:14px 18px;color:var(--muted)}
+.consumer-empty .i{color:var(--accent)}
+.consumer-toggle{display:grid;place-items:center;min-width:56px;min-height:44px;cursor:pointer}
+.consumer-toggle:has(:disabled){cursor:default}
+.consumer-order-sheet{display:grid;gap:14px;min-width:0}
+.consumer-order-sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.consumer-order-sheet-head>div{min-width:0}
+.consumer-close{width:44px;padding:0;flex:none}
+.consumer-order-detail{display:grid;gap:0;margin:0;background:var(--sunk);border-radius:14px;padding:4px 12px}
+.consumer-order-detail>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0}
+.consumer-order-detail>div+div{border-top:1px solid var(--line)}
+.consumer-order-detail dt{font-size:14px;color:var(--muted)}
+.consumer-order-detail dd{margin:0;font-weight:600;text-align:right;min-width:0;overflow-wrap:anywhere}
+.consumer-order-coffees h3{font-size:16px;padding-block-end:5px}
+.consumer-order-coffees .consumer-list{border:1px solid var(--line);border-radius:14px}
+.consumer-order-coffees .item{padding-inline:12px}
+.consumer-order-sheet .err{color:var(--bad)}
+
+@media(max-width:680px){
+  .consumer-workspace .pagehead{grid-template-columns:minmax(0,1fr);gap:8px}
+  .consumer-actions{grid-row:3}
+  .consumer-toolbar .consumer-tabs{width:100%}
+  .consumer-tabs button{padding-inline:4px;font-size:13px}
+  .consumer-refresh{width:44px;padding:0}
+  .consumer-refresh span{display:none}
+  .consumer-summary{gap:7px}
+  .consumer-summary .consumer-stat{align-content:start;align-items:start;display:grid;gap:6px;padding:10px;min-height:96px}
+  .consumer-stat .ic{width:29px;height:29px;border-radius:8px}
+  .consumer-stat .ic svg.i{width:16px;height:16px}
+  .consumer-stat .chev{display:none}
+  .consumer-stat-text{display:flex;flex-direction:column-reverse}
+  .consumer-stat-text span{font-size:12px;line-height:1.2;overflow-wrap:anywhere}
+  .consumer-stat-text b{font-size:23px}
+  .consumer-overview{grid-template-columns:minmax(0,1fr);gap:10px;margin-block-start:10px}
+  .consumer-panel-title,.consumer-checkout,.consumer-tools,.consumer-list .item,.consumer-empty{padding-inline:13px}
+  .consumer-tools .field{flex:1 1 124px}
+  .consumer-order-columns{display:none}
+  .consumer-list .consumer-order{
+    grid-template-columns:minmax(0,1fr) minmax(0,auto) 16px;
+    grid-template-areas:"ref status arrow" "method total arrow";
+    gap:4px 9px;
+  }
+  .consumer-order .tx{grid-area:ref}
+  .consumer-order .consumer-method{grid-area:method}
+  .consumer-order .consumer-total{grid-area:total}
+  .consumer-order .consumer-status{grid-area:status}
+  .consumer-order .chev{grid-area:arrow}
+  .consumer-customer{flex-wrap:wrap;gap:4px 10px}
+  .consumer-customer .tx{flex-basis:160px}
+  .consumer-customer .consumer-meta{text-align:start}
+  .consumer-unconnected{align-items:flex-start;flex-wrap:wrap;padding:14px;gap:10px}
+}
+@media(max-width:360px){
+  .consumer-unconnected .btn{margin-inline-start:46px}
+  .consumer-summary .consumer-stat{padding:8px}
+}

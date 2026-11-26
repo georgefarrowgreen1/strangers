@@ -26,6 +26,9 @@
     clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
     more: '<circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/>',
     coffee: '<path d="M5 8h12v7a6 6 0 0 1-12 0V8ZM17 9h2a3 3 0 0 1 0 6h-2M3 22h17M8 2v3M13 2v3"/>',
+    bag: '<path d="M5 8h14l1 13H4L5 8Z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/>',
+    external: '<path d="M13 5h6v6m0-6-8 8M10 5H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/>',
+    refresh: '<path d="M20 11a8 8 0 0 0-14-4l-2 2m0-5v5h5m-5 4a8 8 0 0 0 14 4l2-2m0 5v-5h-5"/>',
     lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
     user: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.9-3.8 3.8-6 7-6s6.1 2.2 7 6"/>',
     warn: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
@@ -179,7 +182,7 @@
 
   /* ---------- navigation ---------- */
   const NAV_GROUPS = [
-    ["Work", [["overview", "Overview", "grid"], ["wholesale", "Wholesale", "coffee"]]],
+    ["Work", [["overview", "Overview", "grid"], ["wholesale", "Wholesale", "coffee"], ["consumer", "Consumer (Preview)", "bag"]]],
     ["Team and sites", [["people", "People", "people"], ["sites", "Sites", "house"], ["sickness", "Sickness", "heart"]]],
     ["System", [["activity", "Activity", "pulse"], ["security", "Security", "shield"], ["data", "Backups & exports", "db"]]],
   ];
@@ -311,6 +314,8 @@
   VIEWS.wholesale = wholesale.view;
   const sickness = window.AdminSickness({ api, html, raw, svg, put, head, openSheet, closeSheet, reload, toast, links: () => S.links || {} });
   VIEWS.sickness = sickness.view;
+  const consumer = window.AdminConsumer({ api, html, raw, svg, put, head, openSheet, closeSheet, toast, confirmSheet });
+  VIEWS.consumer = consumer.view;
   let cache = {};
 
   const overviewUI = window.AdminOverview({ html, raw, svg, openSheet, getData: () => cache.overview, links: () => S.links });
@@ -556,6 +561,8 @@
 
   VIEWS.more = async () => html`
     ${head("More", "")}
+    <div class="label">Work</div>
+    <div class="group glass"><button class="item" type="button" data-go="consumer"><span class="ic acc">${svg("bag")}</span><span class="tx"><b>Consumer (Preview)</b><span>Retail orders, customers and catalogue</span></span><span class="end"><span class="chev">${svg("chev")}</span></span></button></div>
     <div class="label">Team and sites</div>
     <div class="group glass">
       <button class="item" type="button" data-go="sites"><span class="ic acc">${svg("house")}</span><span class="tx"><b>Sites</b><span>Site setup, diary settings and rota hours</span></span><span class="end"><span class="chev">${svg("chev")}</span></span></button>
@@ -775,6 +782,7 @@
       wholesaleExpanded = true; await show("wholesale"); return;
     }
     if (name.startsWith("sick-")) { await sickness.act(name, id); return; }
+    if (name.startsWith("consumer-")) { await consumer.act(name, id, el); return; }
     if (name === "wh-sidebar-toggle") {
       wholesaleExpanded = !wholesaleExpanded;
       renderNav();
@@ -942,6 +950,7 @@
   // Search as you type, keeping the cursor in the box.
   let searchT;
   document.addEventListener("input", (e) => {
+    if (e.target.id === "consumerSearch") { consumer.search(e.target.value); return; }
     if (e.target.id === "sickSearch") { sickness.search(e.target.value); return; }
     if (e.target.id === "wiSearch") { wholesale.searchInvoices(e.target.value); return; }
     if (e.target.id === "iwAccountSearch") { wholesale.searchBillingAccounts(e.target.value); return; }
@@ -962,6 +971,8 @@
   window.addEventListener("popstate", routeChanged);
   window.addEventListener("hashchange", routeChanged);
   document.addEventListener("change", event => {
+    if (event.target.id === "consumerOrderFilter") { consumer.filterOrders(event.target.value); return; }
+    if (event.target.matches("[data-consumer-product]")) { consumer.setAvailability(event.target); return; }
     if (["iwView", "iwAccount", "iwClosePeriod", "iwBatchPeriod"].includes(event.target.id)) {
       wholesale.invoicingChange(event.target).catch(error => toast(error.message));
       return;
@@ -1011,7 +1022,7 @@
      Every 15 seconds while the page is in view, ask whether accounts, the rota or the diary changed elsewhere and,
      if so, redraw the page, unless a sheet is open or something is being typed. */
   const typing = () => document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);
-  SC.watchChanges(15000, (c) => `${c.accounts}.${c.rota}.${S.page === "overview" || S.page === "activity" ? c.docs : ""}`, () => $("#scrim").hidden && !typing(), () => reload());
+  SC.watchChanges(15000, (c) => `${c.accounts}.${c.rota}.${S.page === "overview" || S.page === "activity" ? c.docs : ""}`, () => S.page !== "consumer" && $("#scrim").hidden && !typing(), () => reload());
   // Deadlines and the UK date can change without a write. Never refresh over an open editor.
   setInterval(() => {
     if (S.me && S.page === "overview" && !document.hidden && $("#scrim").hidden && !typing() && $("#main").getAttribute("aria-busy") !== "true") reload();
@@ -1024,7 +1035,7 @@
   (async () => {
     try {
       const me = await SC.startSession({ clear: () => {
-        seq++; sickness.clear(); wholesale.clear(); routeSnapshots.clear(); clearTimeout(routeTimer);
+        seq++; sickness.clear(); wholesale.clear(); consumer.clear(); routeSnapshots.clear(); clearTimeout(routeTimer);
         cache = {}; S.me = null; S.open = null; S.q = ""; S.fq = ""; S.reports = {}; S.activityFrom = S.activityTo = ""; wholesaleExpanded = false;
         closeSheet(); for (const id of ["#main", "#sheet", "#sideNav", "#tabBar", "#whoName", "#whoInit"]) $(id)?.replaceChildren();
       } });

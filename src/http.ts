@@ -19,6 +19,7 @@ export interface Env {
   ROTA_HOST?: string; // the rota app's own hostname, e.g. rota.staffstrangerscoffee.com (wrangler.jsonc vars)
   PREVIEW_HOST?: string; // canonical customer ordering hostname, strangerscoffee.trade
   LEGACY_PREVIEW_HOST?: string; // keeps old-origin baskets and pending checkout recovery accessible
+  CONSUMER_ADMIN_TOKEN?: string; // shared with the separate retail preview Worker
   RETAIL_INSTAGRAM_ACCESS_TOKEN?: string; // optional Instagram Login token, held only in the Worker
   QUICKBOOKS_CLIENT_ID?: string;
   QUICKBOOKS_CLIENT_SECRET?: string;
