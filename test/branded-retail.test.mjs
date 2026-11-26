@@ -189,6 +189,7 @@ function useSitesBridge(t, fetchResponse) {
     const outgoing = new Request(input, init);
     const target = new URL(outgoing.url);
     assert.equal(target.origin, sitesOrigin, "the Worker only calls the fixed Sites origin");
+    assert.equal(outgoing.redirect, "manual", "the Worker cannot follow an upstream redirect with account credentials");
     assert.equal(outgoing.headers.get("cookie"), null, "browser cookies stay on the branded hostname");
     assert.notEqual(outgoing.redirect, "follow", "the upstream cannot redirect with attached credentials");
     return fetchResponse(outgoing, target.pathname);
@@ -345,5 +346,16 @@ test("availability exposes only valid unavailable product identifiers", async (t
   const availability = await callGateway("/consumer-auth/availability", { headers: { cookie: `${retailCookie}=${retailToken}; ${staffCookies}` } });
   assert.equal(availability.status, 200);
   assert.deepEqual(await availability.json(), { unavailable: ["bom-jesus", "rocko"] });
+  assert.equal(upstream.mock.callCount(), 1);
+});
+
+test("upstream redirects never leave the fixed preview service", async (t) => {
+  const upstream = useSitesBridge(t, () => Response.json(
+    { error: "redirect" },
+    { status: 307, headers: { location: "https://outside.example/collect" } },
+  ));
+  const response = await callGateway("/api/account", { headers: { cookie: `${retailCookie}=${retailToken}` } });
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("location"), null);
   assert.equal(upstream.mock.callCount(), 1);
 });

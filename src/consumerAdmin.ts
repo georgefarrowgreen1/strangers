@@ -53,7 +53,7 @@ export async function handleConsumerAdmin(req: Request, env: Env, route: string)
 
   try {
     const response = await fetch(PREVIEW_ORIGIN + CONTROL_PATH + (route ? "/" + route : ""), {
-      method: req.method, headers, body, redirect: "error", signal: AbortSignal.timeout(8000),
+      method: req.method, headers, body, redirect: "manual", signal: AbortSignal.timeout(8000),
     });
     if (response.ok) {
       const bytes = await readBytes(response, MAX_OVERVIEW_BYTES, "The preview response was too large.");
@@ -61,6 +61,7 @@ export async function handleConsumerAdmin(req: Request, env: Env, route: string)
       if (reading) result.previewUrl = BRANDED_RETAIL_ORIGIN + "/";
       return json(result);
     }
+    await response.body?.cancel();
     if (!reading && response.status === 404) {
       throw new ApiError(404, "not_found", "The Consumer preview record was not found.");
     }

@@ -56,8 +56,12 @@ async function accountService(path: string, method = "GET", session = "", body?:
   if (origin) headers.set("origin", origin);
   try {
     const response = await fetch(ACCOUNT_ORIGIN + path, {
-      method, headers, body, redirect: "error", signal: AbortSignal.timeout(8000),
+      method, headers, body, redirect: "manual", signal: AbortSignal.timeout(8000),
     });
+    if (response.status >= 300 && response.status < 400) {
+      await response.body?.cancel();
+      return null;
+    }
     if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type") || "")) {
       await response.body?.cancel();
       return null;
