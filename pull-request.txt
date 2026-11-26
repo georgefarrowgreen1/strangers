@@ -1,14 +1,10 @@
-## Wholesale invoicing refinements
+Adds Consumer (Preview) to the staff admin desktop sidebar and mobile More menu.
 
-- Align workspace controls, invoice rows and account details across desktop, tablet and phone layouts.
-- Reflow invoice line items and VAT totals on phones. Group billing, dates, payment records and PDF actions in the invoice windows.
-- Refine customer statements, billing address review, reminders, batch selection and month-end snapshots.
-- Use Admin confirmation sheets for invoicing settings that affect automatic processing. Keep QuickBooks setup URLs readable and copyable.
-- Compact the wholesale customer invoice history and keep the last loaded balances visible during a refresh.
-- Keep the Hide figures control in sync when the preference changes during a slow invoice refresh.
+- Review test orders and update their status.
+- Search saved customer profiles and manage coffee availability.
+- Pause signed-in test checkout and check launch readiness.
+- Limit the management API to staff admins and forward only allowed actions to the retail preview.
 
-## Verification
+The management connection uses a matching `CONSUMER_ADMIN_TOKEN` runtime secret on the staff Worker and the retail preview. Admin displays a connection status until setup is complete.
 
-Verified the reviewed release against production main. The invoicing checks passed in 54 Chromium browser tests and 15 invoice API and PDF tests. Tested the UI from 320 to 1,728 px and captured the review screenshots from the running build with sample data. After correcting the Hide figures state, all 20 relevant invoicing and Insights browser tests and the production Worker dry run passed.
-
-The wholesale order settings layout test measures the header's layout dimensions to avoid fractional rounding from viewport scroll. The inspection PDF test waits for its shortcut to be reachable at the scrolled position after the panel animates. The Hide figures test pauses the invoice response and checks that the keyboard shortcut remains effective after the refresh. GitHub Tests is required before squash merge.
+Typecheck and 16 focused admin tests passed on the release branch. The Consumer workflow was also checked in Chromium at five widths from 320 to 1440 px. GitHub Tests is required before squash merge.
