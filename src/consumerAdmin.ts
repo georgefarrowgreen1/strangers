@@ -1,7 +1,7 @@
 import { ApiError, Env, json, readJson, readBytes } from "./http";
 import { BRANDED_RETAIL_ORIGIN } from "./brandedRetail";
+import { retailServiceRequest } from "./retailService";
 
-const PREVIEW_ORIGIN = "https://strangers-coffee-retail-demo.magicloom512.chatgpt.site";
 const CONTROL_PATH = "/api/control/consumer";
 const MAX_OVERVIEW_BYTES = 2 * 1024 * 1024;
 const ORDER_STATES = new Set(["placed", "preparing", "ready", "completed", "cancelled"]);
@@ -18,7 +18,7 @@ function offline(detail: string) {
   });
 }
 
-/** Uses a server-only credential to manage the separate test storefront. */
+/** Signs requests that manage the separate test storefront. */
 export async function handleConsumerAdmin(req: Request, env: Env, route: string): Promise<Response> {
   const reading = route === "" && req.method === "GET";
   const order = /^orders\/(SC-[A-F0-9]{8})$/.exec(route);
@@ -29,13 +29,6 @@ export async function handleConsumerAdmin(req: Request, env: Env, route: string)
     throw new ApiError(404, "not_found", "Consumer preview action not found.");
   }
 
-  const token = env.CONSUMER_ADMIN_TOKEN;
-  if (!token) {
-    if (reading) return offline("Configure the Consumer preview connection on both Workers.");
-    throw new ApiError(503, "consumer_unavailable", "Connect the Consumer preview before making changes.");
-  }
-
-  const headers = new Headers({ Authorization: `Bearer ${token}`, Accept: "application/json" });
   let body: string | undefined;
   if (!reading) {
     const input = await readJson(req, 2048);
@@ -48,12 +41,11 @@ export async function handleConsumerAdmin(req: Request, env: Env, route: string)
     } else {
       throw new ApiError(400, "invalid_argument", "Check the Consumer preview change and try again.");
     }
-    headers.set("Content-Type", "application/json");
   }
 
   try {
-    const response = await fetch(PREVIEW_ORIGIN + CONTROL_PATH + (route ? "/" + route : ""), {
-      method: req.method, headers, body, redirect: "manual", signal: AbortSignal.timeout(8000),
+    const response = await retailServiceRequest(env, CONTROL_PATH + (route ? "/" + route : ""), {
+      method: req.method, body,
     });
     if (response.ok) {
       const bytes = await readBytes(response, MAX_OVERVIEW_BYTES, "The preview response was too large.");

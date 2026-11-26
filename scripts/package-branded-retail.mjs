@@ -4,6 +4,7 @@ import { lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, writeFi
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { applyConsumerAccount } from './consumer-account/package.mjs';
 
 const reviewedRevision = '65dd7832948df051a2a03a908d17b63f4b9889e9';
 const pages = new Set([
@@ -12,7 +13,6 @@ const pages = new Set([
     .map(page => `${page}/index.html`),
 ]);
 const assetPath = '/consumer-preview/assets/';
-const legacyScript = 'assets/legacy-orders.js';
 const marker = '.branded-retail-package.json';
 const isAsset = path => /^assets\/[a-zA-Z0-9_-][a-zA-Z0-9._-]*\.(css|js|svg|webp|woff2|txt)$/.test(path);
 const isPublicFile = path => pages.has(path) || isAsset(path);
@@ -62,17 +62,12 @@ for (const [path, hash] of tracked) {
   let output = buffer;
   if (/\.(html|css|js)$/.test(path)) {
     output = rewriteAssetPaths(buffer.toString('utf8'));
-    if (pages.has(path)) output = addWholesaleNavigation(output, path);
     if (path === 'assets/products.js') output = attachAvailability(output);
-    if (path === 'assets/account-store.js') output = attachOrderImageNormalisation(output);
-    if (path === 'assets/account.js' || path === 'assets/checkout.js') output = retargetOrderImages(output);
+    if (path === 'assets/checkout.js') output = retargetOrderImages(output);
   }
   files.set(path, output);
 }
-files.set(legacyScript, `if (location.pathname === '/' && location.hash === '#orders') {
-  location.replace('/wholesale/#orders');
-}
-`);
+await applyConsumerAccount(files, assetPath);
 
 const publicRoot = fileURLToPath(new URL('../public/', import.meta.url)).replace(/\/$/, '');
 if (await realpath(publicRoot) !== publicRoot) throw new Error('The public directory must not be a symlink.');
@@ -113,21 +108,6 @@ console.log(`Packaged ${pages.size} reviewed retail pages and ${files.size - pag
 function rewriteAssetPaths(contents) {
   // The reviewed pages use quoted asset URLs. Also support the unquoted CSS url() form.
   return contents.replace(/(["'\x60]|\burl\(\s*)\/assets\//g, (_match, prefix) => prefix + assetPath);
-}
-
-function addWholesaleNavigation(html, path) {
-  const footerStart = html.indexOf('<footer class="site-footer">');
-  const exploreStart = html.indexOf('<nav aria-labelledby="footer-explore">', footerStart);
-  const exploreEnd = html.indexOf('</nav>', exploreStart);
-  if (footerStart < 0 || exploreStart < 0 || exploreEnd < 0 || exploreEnd >= html.indexOf('</footer>', footerStart)) {
-    throw new Error(`Could not find the reviewed footer navigation in ${path}.`);
-  }
-  const linked = html.slice(0, exploreEnd) + '<a href="/wholesale/">Wholesale</a>' + html.slice(exploreEnd);
-  if (path !== 'index.html') return linked;
-
-  const charset = '<meta charset="utf-8">';
-  if (!linked.includes(charset)) throw new Error('Could not place the early legacy navigation script.');
-  return linked.replace(charset, `${charset}\n<script src="${assetPath}legacy-orders.js"></script>`);
 }
 
 function attachAvailability(contents) {
@@ -172,18 +152,6 @@ export const products = catalogue.map(product =>
 `;
 }
 
-
-function attachOrderImageNormalisation(contents) {
-  const reviewed = String.raw`  const image = line.product?.image;
-  if (!grind || !name || typeof image !== 'string' || !/^\/assets\/[a-z0-9][a-z0-9._-]*\.(webp|png|jpe?g|svg|avif)$/.test(image)) return null;`;
-  const name = `export function orderImagePath(value) {
-  const filename = typeof value === 'string' && value.match(${String.raw`/^\/(?:consumer-preview\/)?assets\/([a-z0-9][a-z0-9._-]*\.(?:webp|png|jpe?g|svg|avif))$/`});
-  return filename ? '${assetPath}' + filename[1] : '';
-}`;
-  if (!contents.includes(reviewed)) throw new Error('Could not find the reviewed receipt image validation.');
-  return contents.replace(reviewed, `  const image = orderImagePath(line.product?.image);
-  if (!grind || !name || !image) return null;`) + '\n' + name + '\n';
-}
 
 function retargetOrderImages(contents) {
   const reviewed = 'html(line.product.image)';

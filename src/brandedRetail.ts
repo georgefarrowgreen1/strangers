@@ -1,24 +1,20 @@
 import { type Env, ApiError, json, readBytes } from "./http";
+import { cleanEmail } from "./email/address";
+import { sendRetailAccountMail } from "./retailAccountMail";
+import { retailServicePublicKey, retailServiceRequest } from "./retailService";
 import { noStore, staticFile, withFingerprints } from "./siteAssets";
 
 export const BRANDED_RETAIL_ORIGIN = "https://preview.staffstrangerscoffee.com";
 const ACCOUNT_ORIGIN = "https://strangers-coffee-retail-demo.magicloom512.chatgpt.site";
-const LOGIN_COOKIE = "__Host-strangers_consumer_login";
 const SESSION_COOKIE = "__Host-strangers_consumer_session";
-const LOGIN_SECONDS = 600;
 const MAX_SESSION_SECONDS = 4 * 60 * 60;
 const PROOF = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;
+const AUTH_ROUTE = /^\/consumer-auth\/(register|setup|login|forgot|reset|logout)$/;
 const ASSET = /^(?:\/_releases\/[0-9a-f]{20})?\/consumer-preview\/assets\/[a-z0-9][a-z0-9_.-]{0,110}\.(?:css|js|svg|webp|woff2|txt)$/i;
 const PAGES = new Set([
   "/", "/coffee/", "/account/", "/location/", "/about/", "/brewguides/", "/contact/",
   "/shipping/", "/privacy-policy/", "/terms-conditions/",
 ]);
-const encoder = new TextEncoder();
-
-function encoded(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
 function proof(value: unknown): value is string {
   return typeof value === "string" && PROOF.test(value);
 }
@@ -33,9 +29,8 @@ function setCookie(name: string, value: string, seconds: number): string {
   return `${name}=${value}; Path=/; Max-Age=${seconds}; Secure; HttpOnly; SameSite=Lax`;
 }
 
-function redirect(destination: string, cookies: string[] = [], status = 302): Response {
+function redirect(destination: string, status = 302): Response {
   const headers = new Headers({ location: destination, "cache-control": "no-store", "referrer-policy": "no-referrer" });
-  for (const value of cookies) headers.append("set-cookie", value);
   return new Response(null, { status, headers });
 }
 
@@ -58,64 +53,87 @@ async function accountService(path: string, method = "GET", session = "", body?:
     const response = await fetch(ACCOUNT_ORIGIN + path, {
       method, headers, body, redirect: "manual", signal: AbortSignal.timeout(8000),
     });
-    if (response.status >= 300 && response.status < 400) {
-      await response.body?.cancel();
-      return null;
-    }
-    if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type") || "")) {
-      await response.body?.cancel();
-      return null;
-    }
-    const bytes = await readBytes(response, 2 * 1024 * 1024, "The preview account response was too large.");
-    const data: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes));
-    if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-    return { status: response.status, data: data as Record<string, unknown> };
+    return await serviceResult(response, 2 * 1024 * 1024);
   } catch {
     return null;
   }
 }
 
-async function startLogin(url: URL): Promise<Response> {
-  const destination = url.searchParams.get("return_to") || "/account/";
-  const page = destination === "/coffee/" ? "coffee" : "account";
-  const state = encoded(crypto.getRandomValues(new Uint8Array(32)));
-  const verifier = encoded(crypto.getRandomValues(new Uint8Array(32)));
-  const challenge = encoded(new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(verifier))));
-  const target = new URL("/consumer-bridge/connect", ACCOUNT_ORIGIN);
-  target.searchParams.set("state", state);
-  target.searchParams.set("challenge", challenge);
-  return redirect(target.href, [setCookie(LOGIN_COOKIE, [state, verifier, page].join("."), LOGIN_SECONDS)]);
+async function serviceResult(response: Response, limit: number) {
+  if ((response.status >= 300 && response.status < 400)
+      || !/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type") || "")) {
+    await response.body?.cancel();
+    return null;
+  }
+  const bytes = await readBytes(response, limit, "The preview account response was too large.");
+  const data: unknown = JSON.parse(decode(bytes));
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  return { status: response.status, data: data as Record<string, unknown>, retryAfter: response.headers.get("retry-after") };
 }
 
-async function finishLogin(req: Request, url: URL): Promise<Response> {
-  const [state, verifier, page, extra] = cookie(req, LOGIN_COOKIE).split(".");
-  const code = url.searchParams.get("code");
-  const expired = setCookie(LOGIN_COOKIE, "", 0);
-  if (!proof(state) || state !== url.searchParams.get("state") || !proof(verifier) || !proof(code)
-      || extra !== undefined || (page !== "coffee" && page !== "account")) {
-    return redirect("/account/");
-  }
-
-  const result = await accountService("/consumer-bridge/exchange", "POST", "", JSON.stringify({ code, verifier }));
-  const token = result?.data.token;
-  const seconds = result?.data.expiresIn;
-  if (result?.status !== 200 || !proof(token) || typeof seconds !== "number"
-      || !Number.isInteger(seconds) || seconds < 1 || seconds > MAX_SESSION_SECONDS) {
-    return redirect("/account/", [expired]);
-  }
-  return redirect(page === "coffee" ? "/coffee/" : "/account/", [expired, setCookie(SESSION_COOKIE, token, seconds)]);
+function decode(bytes: Uint8Array): string {
+  return new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes);
 }
 
-async function endSession(req: Request): Promise<Response> {
-  const navigation = req.headers.get("sec-fetch-site");
-  if (navigation && navigation !== "same-origin" && navigation !== "none") {
-    return json({ error: "bad_origin", message: "Open My Account to sign out." }, 403);
+async function authApi(req: Request, env: Env, action: string, ctx?: ExecutionContext): Promise<Response> {
+  if (req.method !== "POST") return methodNotAllowed("POST");
+  if (req.headers.get("origin") !== BRANDED_RETAIL_ORIGIN) {
+    return json({ error: "bad_origin", message: "Open My Account to make this change." }, 403);
   }
-  const session = cookie(req, SESSION_COOKIE);
-  if (proof(session)) await accountService("/consumer-bridge/revoke", "POST", session);
-  const target = new URL("/signout-with-chatgpt", ACCOUNT_ORIGIN);
-  target.searchParams.set("return_to", "/consumer-bridge/return");
-  return redirect(target.href, [setCookie(SESSION_COOKIE, "", 0), setCookie(LOGIN_COOKIE, "", 0)]);
+  if (!/^application\/json(?:\s*;|$)/i.test(req.headers.get("content-type") || "")) {
+    return json({ error: "unsupported_media_type", message: "Send this request as JSON." }, 415);
+  }
+  const sendingLink = action === "register" || action === "forgot";
+  if (sendingLink && !env.RESEND_API_KEY) return unavailable();
+  const bytes = await readBytes(req, 2048, "The account request was too large.");
+  let body: string;
+  try {
+    body = decode(bytes);
+  } catch {
+    return json({ error: "invalid_json", message: "This request must use UTF-8." }, 400);
+  }
+
+  const current = cookie(req, SESSION_COOKIE);
+  const signedOut = () => json({ signedIn: false }, 200, { "set-cookie": setCookie(SESSION_COOKIE, "", 0) });
+  if (action === "logout" && !proof(current)) return signedOut();
+  let result;
+  try {
+    const upstream = await retailServiceRequest(env, "/consumer-auth-service/" + action, {
+      method: "POST", body, client: req.headers.get("cf-connecting-ip"),
+      session: action === "logout" ? current : undefined,
+    });
+    result = await serviceResult(upstream, 8192);
+  } catch {
+    return action === "logout" ? signedOut() : unavailable();
+  }
+  if (action === "logout") return signedOut();
+  if (!result) return unavailable();
+  if (result.status >= 400) {
+    const code = result.data.error;
+    const message = result.data.message;
+    const headers = new Headers();
+    if (result.retryAfter && /^\d{1,6}$/.test(result.retryAfter)) headers.set("retry-after", result.retryAfter);
+    return json({
+      error: typeof code === "string" ? code : "retail_auth_unavailable",
+      message: typeof message === "string" ? message : "The account service could not complete this request.",
+    }, result.status, headers);
+  }
+  if (sendingLink && result.status === 202) {
+    const mail = result.data.mail as { kind?: unknown; email?: unknown; token?: unknown } | undefined;
+    const kind = action === "register" ? "verify" : "reset";
+    const email = typeof mail?.email === "string" ? cleanEmail(mail.email) : "";
+    if (email && mail?.kind === kind && proof(mail.token)) {
+      const delivery = sendRetailAccountMail(env, BRANDED_RETAIL_ORIGIN, kind, email, mail.token);
+      if (ctx) ctx.waitUntil(delivery);
+      else await delivery;
+    }
+    return json({ accepted: true }, 202);
+  }
+  const session = result.data.session as { token?: unknown; expiresIn?: unknown } | undefined;
+  const seconds = session?.expiresIn;
+  if (result.status !== 200 || !proof(session?.token) || typeof seconds !== "number"
+      || !Number.isInteger(seconds) || seconds < 1 || seconds > MAX_SESSION_SECONDS) return unavailable();
+  return json({ signedIn: true }, 200, { "set-cookie": setCookie(SESSION_COOKIE, session.token, seconds) });
 }
 
 async function accountApi(req: Request, path: string): Promise<Response> {
@@ -135,7 +153,7 @@ async function accountApi(req: Request, path: string): Promise<Response> {
     }
     const bytes = await readBytes(req, 24 * 1024, "The account request was too large.");
     try {
-      body = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes);
+      body = decode(bytes);
     } catch {
       throw new ApiError(400, "invalid_json", "This request must use UTF-8.");
     }
@@ -164,6 +182,7 @@ async function retailPage(req: Request, env: Env, url: URL): Promise<Response> {
     return new Response("The consumer storefront is temporarily unavailable.", { status: 503 });
   }
   let response = noStore(asset);
+  if (url.pathname === "/account/") response.headers.set("referrer-policy", "no-referrer");
   // The marker makes checkout check the saved profile before taking an order. The account API
   // verifies the actual session before returning customer data or accepting any write.
   if (proof(cookie(req, SESSION_COOKIE)) && response.body) {
@@ -174,15 +193,18 @@ async function retailPage(req: Request, env: Env, url: URL): Promise<Response> {
   return withFingerprints(response, env, url);
 }
 
-export async function handleBrandedRetail(req: Request, env: Env, url: URL): Promise<Response | undefined> {
+export async function handleBrandedRetail(req: Request, env: Env, url: URL, ctx?: ExecutionContext): Promise<Response | undefined> {
   if (url.origin !== BRANDED_RETAIL_ORIGIN) return undefined;
   const path = url.pathname;
   const reading = req.method === "GET" || req.method === "HEAD";
 
   if (path === "/api/account" || path === "/api/account/orders") return accountApi(req, path);
-  if (path === "/signin-with-chatgpt") return req.method === "GET" ? startLogin(url) : methodNotAllowed("GET");
-  if (path === "/signout-with-chatgpt") return req.method === "GET" ? endSession(req) : methodNotAllowed("GET");
-  if (path === "/consumer-auth/callback") return req.method === "GET" ? finishLogin(req, url) : methodNotAllowed("GET");
+  if (path === "/signin") return reading ? redirect("/account/") : methodNotAllowed("GET, HEAD");
+  if (path === "/consumer-auth/service-key") {
+    return req.method === "GET" ? retailServicePublicKey(env).catch(unavailable) : methodNotAllowed("GET");
+  }
+  const action = AUTH_ROUTE.exec(path)?.[1];
+  if (action) return authApi(req, env, action, ctx);
   if (path === "/consumer-auth/availability") return req.method === "GET" ? availability() : methodNotAllowed("GET");
   if (ASSET.test(path)) {
     if (!reading) return methodNotAllowed("GET, HEAD");
@@ -198,6 +220,6 @@ export async function handleBrandedRetail(req: Request, env: Env, url: URL): Pro
   }
   if (!reading) return undefined;
   if (PAGES.has(path)) return retailPage(req, env, url);
-  if (PAGES.has(path + "/")) return redirect(path + "/" + url.search, [], 308);
+  if (PAGES.has(path + "/")) return redirect(path + "/" + url.search, 308);
   return undefined;
 }

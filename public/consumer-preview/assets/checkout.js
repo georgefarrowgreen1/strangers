@@ -58,8 +58,8 @@ export function checkoutDetails({ cafes, method, lines, pricing }) {
           <div class="checkout-fields">
             <div class="checkout-step-intro">
               <h3 class="checkout-heading" tabindex="-1" data-panel-focus>Delivery and contact</h3>
-              <p>Demo checkout · No payment taken</p>
-              <button class="text-button" type="button" data-sample>Use sample details</button>
+              <p>Test checkout. No payment or delivery.</p>
+              <p>Update your saved details in <a href="/account/#details">My account</a>.</p>
             </div>
             <fieldset class="checkout-method">
               <legend>How would you like your coffee?</legend>
@@ -87,7 +87,7 @@ export function checkoutDetails({ cafes, method, lines, pricing }) {
             <fieldset class="checkout-group">
               <legend>Contact details</legend>
               ${field('name', 'Full name', 'required maxlength="120"')}
-              ${field('email', 'Email address', String.raw`type="email" required maxlength="254" autocapitalize="none" pattern="[^\s@]+@[^\s@]+\.[^\s@]+"`)}
+              ${field('email', 'Account email address', String.raw`type="email" readonly maxlength="254" autocapitalize="none" pattern="[^\s@]+@[^\s@]+\.[^\s@]+"`)}
               ${field('phone', 'Phone number (optional)', 'type="tel" maxlength="32" inputmode="tel"')}
             </fieldset>
           </div>
@@ -105,7 +105,7 @@ export function checkoutReview({ details, cafe, method, lines, pricing }) {
     <div class="checkout-stage">
       <div class="checkout-step-intro">
         <h3 class="checkout-heading" tabindex="-1" data-panel-focus>Review your order</h3>
-        <p>Check your details before placing the demo order.</p>
+        <p>Review your coffee, delivery and contact details. This order is for testing only.</p>
       </div>
       <div class="checkout-review-layout">
         <div class="checkout-fields">
@@ -132,7 +132,7 @@ export function checkoutDock(pricing, review = false) {
     <button type="button" class="text-button checkout-back" ${back}>${review ? 'Edit details' : 'Back to cart'}</button>
     <div class="checkout-dock-action">
       <span class="checkout-dock-total"><small>Total</small><strong data-checkout-total aria-live="polite">${money(pricing.total)}</strong></span>
-      <button class="button" ${action}>${review ? 'Place demo order' : 'Review order'}</button>
+      <button class="button" ${action}>${review ? 'Place test order' : 'Review order'}</button>
     </div>
   </div>`;
 }
@@ -140,8 +140,8 @@ export function checkoutDock(pricing, review = false) {
 export function processingMarkup(sending = false) {
   return `<div class="checkout-processing">
     ${tampingMarkup()}
-    <h3 class="checkout-heading" tabindex="-1" data-panel-focus>${sending ? 'Placing your demo order' : 'Preparing your receipt'}</h3>
-    <p>${sending ? 'Saving this order to your account.' : 'Your demo order has been placed.'}</p>
+    <h3 class="checkout-heading" tabindex="-1" data-panel-focus>${sending ? 'Placing your test order' : 'Preparing your receipt'}</h3>
+    <p>${sending ? 'Saving this order to your account.' : 'Your test order has been placed.'}</p>
   </div>`;
 }
 
@@ -150,8 +150,8 @@ export function receiptMarkup(order) {
   return `<div class="checkout-receipt">
     <div class="checkout-receipt-hero">
       <div class="receipt-mark" aria-hidden="true">✓</div>
-      <h3 class="checkout-heading" tabindex="-1" data-panel-focus>Demo order complete.</h3>
-      <p>This preview won’t charge you or send an order.</p>
+      <h3 class="checkout-heading" tabindex="-1" data-panel-focus>Test order complete.</h3>
+      <p>Your test order is saved in My account. No payment was taken and no coffee will be sent.</p>
       <p class="checkout-receipt-reference"><span>Reference</span><strong>${html(reference)}</strong></p>
     </div>
     <div class="checkout-receipt-meta">

@@ -1,7 +1,7 @@
 // The apps on one Worker: the diary on its own address, the rota on ROTA_HOST and the admin section on
 // ADMIN_HOST (wrangler.jsonc). Kept free of imports so test/rota.test.mjs can load it directly. Re-exported from access.ts.
 
-export type App = "diary" | "rota" | "admin" | "preview";
+export type App = "diary" | "rota" | "admin" | "preview" | "retail";
 
 /** Old cached pages and emailed links keep working without a second copy of the app. */
 export function wholesalePath(path: string): string {
@@ -15,12 +15,13 @@ export function isWholesaleCode(path: string): boolean {
     /^\/wholesale\/(?:wholesale|catalogue)\.css$/.test(path);
 }
 
-/** Which app a hostname serves: the rota on ROTA_HOST, the admin section on ADMIN_HOST, wholesale on its customer and legacy hosts, and the diary elsewhere. */
+/** Decide which separately routed app a hostname serves. */
 export function appForHost(hostname: string, rotaHost: string | undefined, adminHost?: string, previewHost?: string, legacyPreviewHost?: string): App {
   const h = hostname.toLowerCase();
+  if (legacyPreviewHost && h === legacyPreviewHost.toLowerCase()) return "retail";
   if (rotaHost && h === rotaHost.toLowerCase()) return "rota";
   if (adminHost && h === adminHost.toLowerCase()) return "admin";
-  if ((previewHost && h === previewHost.toLowerCase()) || (legacyPreviewHost && h === legacyPreviewHost.toLowerCase())) return "preview";
+  if (previewHost && h === previewHost.toLowerCase()) return "preview";
   return "diary";
 }
 
@@ -73,8 +74,7 @@ export function appLinks(url: URL, rotaHost: string | undefined, adminHost?: str
   // The diary is the rota's (or admin section's) host without its first label (rota.example.com -> example.com).
   const other = rotaHost || adminHost || previewHost || "";
   const diaryHost = other.includes(".") ? other.slice(other.indexOf(".") + 1) : url.hostname;
-  const legacyWholesaleHost = url.hostname === legacyPreviewHost?.toLowerCase();
-  const wholesaleHome = legacyWholesaleHost ? "/wholesale/" : app === "preview" ? "/" : previewHost ? `https://${previewHost}/` : null;
+  const wholesaleHome = app === "retail" ? null : app === "preview" ? "/" : previewHost ? `https://${previewHost}/` : null;
   return {
     rota: app === "rota" ? "/" : rotaHost ? `https://${rotaHost}/` : "/rota/",
     diary: app === "diary" ? "/" : `https://${diaryHost}/`,

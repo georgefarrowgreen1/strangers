@@ -40,7 +40,7 @@ import { isWholesaleCode, wholesalePath } from "./hosts";
 import { catalogueRetrievedAt } from "./wholesale/catalogue.js";
 import { catalogue } from "./wholesaleCatalogue";
 import { catalogueFor } from "./wholesaleWhiteLabel";
-import { isRetailShopPath, serveRetailShop } from "./retailPreview";
+import { isRetailShopPath } from "./retailPreview";
 import { BRANDED_RETAIL_ORIGIN, handleBrandedRetail } from "./brandedRetail";
 import { noStore, pageRequest, staticFile, withFingerprints } from "./siteAssets";
 export { LiveHub } from "./live";
@@ -88,8 +88,7 @@ export default {
     if (res.ok && req.method !== "GET" && req.method !== "HEAD" && LIVE_WRITES.test(url.pathname)) ctx.waitUntil(notifyLive(env));
     // An opened live connection (101) goes back as it is: its WebSocket can't be copied into a new response.
     if (res.status === 101) return res;
-    const brandedBrewGuide = url.origin === BRANDED_RETAIL_ORIGIN &&
-      url.hostname === env.LEGACY_PREVIEW_HOST?.toLowerCase() && url.pathname === "/brewguides/";
+    const brandedBrewGuide = url.origin === BRANDED_RETAIL_ORIGIN && url.pathname === "/brewguides/";
     return withSecurityHeaders(res, local, brandedBrewGuide);
   },
 
@@ -157,7 +156,7 @@ async function flagClock(env: Env, user: { name: string }, diffMs: number, ua: s
 }
 
 /** The writes that move a change counter (diary saves, the rota, accounts and sites, stored files). */
-const LIVE_WRITES = /^\/api\/(db\/(set|update|delete)$|rota\/|admin\/|wholesale\/|staff-orders\/|assets)/;
+const LIVE_WRITES = /^\/api\/(db\/(set|update|delete)$|rota\/|admin\/(?!consumer(?:\/|$))|wholesale\/|staff-orders\/|assets)/;
 
 /** A database error that's worth one more try: the connection dropped or D1 was busy restarting. */
 function isTransient(e: unknown): boolean {
@@ -180,6 +179,20 @@ const WHOLESALE_PAGES = new Set(["/wholesale", "/wholesale/", "/wholesale/index.
 const OLD_WHOLESALE_DASHBOARD = new Set(["/wholesale/dashboard", "/wholesale/dashboard/", "/wholesale/dashboard/index.html"]);
 async function route(req: Request, env: Env, ctx: ExecutionContext, url: URL): Promise<Response> {
   const isGet = req.method === "GET" || req.method === "HEAD";
+  const app = appForHost(url.hostname, env.ROTA_HOST, env.ADMIN_HOST, env.PREVIEW_HOST, env.LEGACY_PREVIEW_HOST);
+  if (url.origin === BRANDED_RETAIL_ORIGIN) {
+    // The retail hostname only serves its own routes. Shared-domain staff cookies cannot reach staff or
+    // wholesale handlers here, including through old paths or a release's archived assets.
+    const retail = await handleBrandedRetail(req, env, url, ctx);
+    if (retail) return retail;
+    if (isGet && url.pathname === "/robots.txt") return staticFile(req, env, url.pathname);
+    if (isGet && (url.pathname === "/index.html" || /^\/shop(?:\/[\w%+-]+)*\/?$/i.test(url.pathname))) {
+      return redirect("/" + url.search);
+    }
+    return new Response("Not found", { status: 404 });
+  }
+  if (app === "retail") return new Response("Not found", { status: 404 });
+
   const canonical = wholesalePath(url.pathname);
   if (isGet && canonical !== url.pathname) {
     const target = new URL(url); target.pathname = canonical;
@@ -189,30 +202,18 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, url: URL): P
     req = new Request(target, req); url = target;
   }
   const p = url.pathname;
-  const legacyWholesaleHost = url.hostname === env.LEGACY_PREVIEW_HOST?.toLowerCase();
-  if (legacyWholesaleHost) {
-    // Wholesale remains on this origin so existing cookies, baskets and pending submissions still work.
-    if (isGet && (p === "/signin" || p === "/signin.html")) return redirect("/wholesale/signin" + url.search);
-    if (isGet && (p === "/" || p === "/index.html") && url.searchParams.has("order")) return redirect("/wholesale/" + url.search);
-    if (isGet && p === "/index.html") return redirect("/" + url.search);
-    const retail = await handleBrandedRetail(req, env, url);
-    if (retail) return retail;
-  }
   // Assets and auth routes have a single public entry point on the retail hostname.
   // Match encoded paths too so they cannot fall through to the general Assets binding.
   let assetPath = p;
   try { assetPath = decodeURIComponent(p); } catch { /* An invalid path cannot name an asset. */ }
-  if (/^\/(?:consumer-preview|consumer-auth|signin-with-chatgpt|signout-with-chatgpt)(?:\/|$)/.test(assetPath) ||
+  if (/^\/(?:consumer-preview|consumer-auth|signin-with-chatgpt|signout-with-chatgpt|api\/account)(?:\/|$)/.test(assetPath) ||
       /^\/_releases\/[a-f0-9]{20}\/consumer-preview(?:\/|$)/.test(assetPath)) {
     return new Response("Not found", { status: 404 });
   }
   if (p.startsWith("/_releases/")) {
     const asset = /^\/_releases\/[a-f0-9]{20}(\/[-\w/]+\.(?:js|css))$/.exec(p)?.[1];
-    const app = appForHost(url.hostname, env.ROTA_HOST, env.ADMIN_HOST, env.PREVIEW_HOST, env.LEGACY_PREVIEW_HOST);
-    const publicCode = asset && (isRetailShopPath(asset)
-      ? legacyWholesaleHost
-      : isPublicAsset(asset) || isPublicCode(app, asset) ||
-        (app === "preview" && ["/theme.css", "/shared/core.js", "/shared/focus.js"].includes(asset)));
+    const publicCode = asset && !isRetailShopPath(asset) && (isPublicAsset(asset) || isPublicCode(app, asset) ||
+      (app === "preview" && ["/theme.css", "/shared/core.js", "/shared/focus.js"].includes(asset)));
     if (!isGet || !asset || !publicCode) return new Response("Not found", { status: 404 });
     const response = await staticFile(req, env, asset);
     // The standalone reporter can recover an expired page without loading a mixture of old and new app modules.
@@ -222,21 +223,16 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, url: URL): P
     }
     return response;
   }
-  if (isRetailShopPath(p)) {
-    if (!legacyWholesaleHost) return new Response("Not found", { status: 404 });
-    return serveRetailShop(req, env, ctx, url);
-  }
+  if (isRetailShopPath(p)) return new Response("Not found", { status: 404 });
   if (p === "/api/email/resend-webhook") return handleResendWebhook(req, env, () => ensureSchema(env));
   if(p.startsWith("/api/quickbooks/webhook/"))return handleWebhook(req,env,ctx,processEvents);
-  const app = appForHost(url.hostname, env.ROTA_HOST, env.ADMIN_HOST, env.PREVIEW_HOST, env.LEGACY_PREVIEW_HOST);
   const links = appLinks(url, env.ROTA_HOST, env.ADMIN_HOST, env.PREVIEW_HOST, env.LEGACY_PREVIEW_HOST);
-  // A separate customer domain must not mint staff cookies or accept them for ordering.
-  // Keep the legacy staff-domain preview working for its existing sessions and saved browser work.
+  // The wholesale customer domain must not mint staff cookies or accept them for ordering.
   const staffDomain = (env.COOKIE_DOMAIN || "").toLowerCase().replace(/^\./, "");
   const customerOnly = app === "preview" && !!staffDomain && url.hostname !== staffDomain && !url.hostname.endsWith("." + staffDomain);
   if (customerOnly && p.startsWith("/api/") && !p.startsWith("/api/wholesale/") && p !== "/api/errors") throw new ApiError(404, "not_found", "Not available on the ordering address.");
   const wholesaleHost = app === "preview" || app === "diary";
-  const wholesaleSignin = app === "preview" && !legacyWholesaleHost ? "/signin" : "/wholesale/signin";
+  const wholesaleSignin = app === "preview" ? "/signin" : "/wholesale/signin";
   if (wholesaleHost && isGet && (p === "/wholesale/signin" || p === "/wholesale/signin.html" || (app === "preview" && (p === "/signin" || p === "/signin.html")))) {
     const response = await env.ASSETS.fetch(pageRequest(req,new URL("/wholesale/signin", url)));
     return withFingerprints(noStore(response), env, url);
@@ -249,9 +245,7 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, url: URL): P
   if (wholesaleHost && isGet && p === "/wholesale/staff-signin") {
     if (app === "diary") return redirect("/signin?next=" + encodeURIComponent("/wholesale/"));
     const target = new URL("signin", new URL(links.diary, url));
-    const next = customerOnly
-      ? env.LEGACY_PREVIEW_HOST ? `https://${env.LEGACY_PREVIEW_HOST}/wholesale/` : new URL(links.admin, url).href
-      : new URL(links.preview || "/wholesale/", url).href;
+    const next = customerOnly ? `https://${staffDomain}/wholesale/` : new URL(links.preview || "/wholesale/", url).href;
     target.searchParams.set("next", next);
     return redirect(target.toString());
   }
@@ -336,7 +330,7 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, url: URL): P
     if (!user) {
       if (p.startsWith("/api/") || p.startsWith("/_blob/")) throw new ApiError(401, "unauthenticated", "Sign in to continue.");
       if (!isGet) return new Response("Method not allowed", { status: 405 });
-      return redirect(wholesaleSignin + (legacyWholesaleHost && WHOLESALE_PAGES.has(p) ? url.search : ""));
+      return redirect(wholesaleSignin);
     }
     if (p.startsWith("/api/wholesale/")) {
       if (!isGet) await limitWrites(req, env, ctx, user.id);

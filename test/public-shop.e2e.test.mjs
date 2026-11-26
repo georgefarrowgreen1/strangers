@@ -1,18 +1,18 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { startServer } from './harness.mjs';
+import { ROOT, startServer } from './harness.mjs';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
-const legacy = 'preview.staffstrangerscoffee.com';
-const standalone = process.env.RETAIL_PREVIEW_STANDALONE === '1';
 let server, browser;
 before(async () => {
-  server = standalone
-    ? await startServer({ config: 'wrangler.retail-preview.jsonc' })
-    : await startServer({ host: legacy, vars: { PREVIEW_HOST: 'strangerscoffee.trade', LEGACY_PREVIEW_HOST: legacy } });
+  if (process.env.RETAIL_PREVIEW_STANDALONE !== '1') {
+    execFileSync(process.execPath, ['scripts/retail-preview-assets.mjs'], { cwd: ROOT });
+  }
+  server = await startServer({ config: 'wrangler.retail-preview.jsonc' });
   browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   if (process.env.SHOT_DIR) await mkdir(process.env.SHOT_DIR, { recursive: true });
 });
@@ -313,19 +313,11 @@ test('public preview serves read-only retail assets within the shop', async () =
 test('retail and wholesale entry points follow the active Worker boundary', async () => {
   const request = path => fetch(server.base + path, { redirect: 'manual' });
   const entry = await request('/');
-  if (standalone) {
-    assert.equal(entry.status, 302);
-    assert.equal(entry.headers.get('location'), '/shop/');
-    for (const path of ['/signin', '/theme.css', '/wholesale/', '/api/wholesale/catalogue', '/admin/']) {
-      assert.equal((await request(path)).status, 404, path);
-    }
-    return;
+  assert.equal(entry.status, 302);
+  assert.equal(entry.headers.get('location'), '/shop/');
+  for (const path of ['/signin', '/theme.css', '/wholesale/', '/api/wholesale/catalogue', '/admin/']) {
+    assert.equal((await request(path)).status, 404, path);
   }
-  assert.equal(entry.status, 200);
-  assert.match(await entry.text(), /Strangers Coffee/);
-  assert.equal((await request('/signin')).headers.get('location'), '/wholesale/signin');
-  assert.match(await (await request('/wholesale/signin')).text(), /Wholesale sign-in/);
-  assert.equal((await request('/api/wholesale/catalogue')).status, 401);
 });
 
 test('the homepage replaces its Instagram gallery when the feed returns newer posts', async () => {

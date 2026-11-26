@@ -2,6 +2,8 @@
 
 `strangers-dev-preview` serves the public retail shop. Its bundle contains the shop pages, catalogue, photos, shared theme and Strangers logos. The basket is stored in the browser and checkout is simulated. The Instagram feed reads the public Strangers home page by default.
 
+The standalone demo stays on `workers.dev`. The route and promotion instructions below that reference `preview.staffstrangerscoffee.com/shop/*` are historical. The separate consumer storefront now serves that hostname and handles redirects for its older shop links.
+
 ## Develop locally
 
 From the repository root, run `npm ci` followed by `npm run dev:retail-preview`. Open the URL printed by Wrangler. Changes to the shop, theme and logos are copied into the preview bundle while Wrangler is running.

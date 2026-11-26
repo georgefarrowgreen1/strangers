@@ -46,17 +46,18 @@ test('versioned assets keep the previous release and keep the retail host bounda
     const file = join(dir, 'wrangler.json');
     await writeFile(file, JSON.stringify(config));
     await cp(join(ROOT, 'public'), assets, { recursive: true });
-    await writeFile(join(assets, 'shop/shop.css'), '\n/* versioned fixture */', { flag: 'a' });
+    const retailCss = 'consumer-preview/assets/style.css';
+    await writeFile(join(assets, retailCss), '\n/* versioned fixture */', { flag: 'a' });
     execFileSync(process.execPath, ['scripts/build-assets.mjs'], {
       cwd: ROOT, env: { ...process.env, STRANGERS_ASSETS_DIRECTORY: assets, STRANGERS_PRIOR_ASSETS_REF: 'HEAD' },
     });
     const { current, previous, source } = JSON.parse(await readFile(join(assets, '_releases', 'manifest.json'), 'utf8'));
     assert.notEqual(current, previous);
-    const oldCss = `/_releases/${previous}/shop/shop.css`;
-    const newCss = `/_releases/${current}/shop/shop.css`;
+    const oldCss = `/_releases/${previous}/${retailCss}`;
+    const newCss = `/_releases/${current}/${retailCss}`;
     const legacy = 'preview.staffstrangerscoffee.com';
-    server = await startServer({ config: file, host: legacy, vars: { LEGACY_PREVIEW_HOST: legacy } });
-    const home = await fetch(server.base + '/shop/');
+    server = await startServer({ config: file, host: legacy, readyPath: '/', vars: { LEGACY_PREVIEW_HOST: legacy } });
+    const home = await fetch(server.base + '/');
     const html = await home.text();
     assert.ok(html.includes(`name="sc-release" content="${source}"`));
     assert.ok(html.includes(newCss));
@@ -66,12 +67,8 @@ test('versioned assets keep the previous release and keep the retail host bounda
     assert.doesNotMatch(await old.text(), /versioned fixture/);
     assert.match(await (await fetch(server.base + newCss)).text(), /versioned fixture/);
     const expired = "/_releases/ffffffffffffffffffff";
-    const reporter = await fetch(server.base + expired + "/errors.js");
-    assert.equal(reporter.status, 200);
-    assert.match(reporter.headers.get("cache-control"), /no-store/);
-    assert.equal(await reporter.text(), await readFile(join(assets, "errors.js"), "utf8"));
-    assert.equal((await fetch(server.base + expired + "/shop/shop.js")).status, 404);
-    for (const path of [`/_releases/${current}/admin/admin.js`, `/_releases/${current}/wholesale/source-prices.js`, '/_releases/manifest.json']) {
+    assert.equal((await fetch(server.base + expired + "/consumer-preview/assets/app.js")).status, 404);
+    for (const path of [`/_releases/${current}/admin/admin.js`, `/_releases/${current}/wholesale/wholesale.js`, `/_releases/${current}/shop/shop.js`, expired + '/errors.js', '/_releases/manifest.json']) {
       assert.equal((await fetch(server.base + path)).status, 404, path);
     }
     assert.match(await readFile(join(assets, '_releases', current, 'admin/wholesale-insights.js'), 'utf8'), new RegExp('/_releases/' + current + '/shared/csv.js'));
@@ -79,14 +76,19 @@ test('versioned assets keep the previous release and keep the retail host bounda
     const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
     const errors = [];
     page.on('pageerror', error => errors.push(String(error)));
-    await page.route('**/shop/instagram.json', route => route.fulfill({ json: { posts: [] } }));
-    await page.goto(server.base + '/shop/');
-    await page.getByRole('heading', { name: 'Coffee from the heart of Norwich.' }).waitFor();
+    await page.route('**/consumer-auth/availability', route => route.fulfill({ json: { unavailable: [] } }));
+    await page.goto(server.base + '/');
+    await page.getByRole('heading', { name: /Speciality coffee/ }).waitFor();
     await page.getByRole('button', { name: 'Menu' }).click();
-    await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Shop coffee' }).waitFor();
+    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Online shop' }).waitFor();
     assert.deepEqual(errors, []);
 
     staff = await startServer({ config: file, readyPath: '/robots.txt', vars: { SETUP_CODE, ADMIN_HOST: '', PREVIEW_HOST: '' } });
+    const reporter = await fetch(staff.base + expired + "/errors.js");
+    assert.equal(reporter.status, 200);
+    assert.match(reporter.headers.get("cache-control"), /no-store/);
+    assert.equal(await reporter.text(), await readFile(join(assets, "errors.js"), "utf8"));
+    assert.equal((await fetch(staff.base + newCss)).status, 404);
     const setup = await fetch(staff.base + '/api/auth/setup', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name: 'Admin', username: 'owner', password: 'owner-password', code: SETUP_CODE }),
