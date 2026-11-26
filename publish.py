@@ -175,6 +175,21 @@ def publish(env, progress, work):
     ))
     already = next((pr for pr in merged if pr["headRefOid"] == EXPECTED), None)
     if already:
+        # Rerequest this release's Cloudflare check through GitHub without changing production source.
+        failed_merge = "2b9a9f96dbde151400c936186a7deb4d70184c60"
+        if already["mergeCommit"]["oid"] == failed_merge:
+            check_id = "140027251900"
+            endpoint = f"repos/{TARGET}/check-runs/{check_id}"
+            production = json.loads(command(["gh", "api", f"repos/{TARGET}/commits/main"], env=env))
+            check = json.loads(command(["gh", "api", endpoint], env=env))
+            if (production["sha"] != failed_merge or check["head_sha"] != failed_merge
+                    or check["app"]["slug"] != "cloudflare-workers-and-pages"
+                    or check["name"] != "Workers Builds: strangersrepo" or check["conclusion"] != "failure"):
+                raise RuntimeError("The failed production check changed. No retry was requested.")
+            command(["gh", "api", "--method", "POST", endpoint + "/rerequest"], env=env)
+            progress.update("Workers build retry requested", "GitHub accepted a retry of the verified production release.",
+                            conclusion="success", url=check["details_url"])
+            return
         duplicates = json.loads(command(
             ["gh", "pr", "list", "--repo", TARGET, "--head", BRANCH, "--base", "main",
              "--state", "open", "--json", "url,headRefOid"], env=env,
