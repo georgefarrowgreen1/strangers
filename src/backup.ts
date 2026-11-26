@@ -57,6 +57,7 @@ export async function makeBackup(env: Env, by: string): Promise<BackupInfo> {
     { key: "invoice.productNumbers", sql: "SELECT * FROM wholesale_product_numbers ORDER BY number" },
     { key: "qb.productItems", sql: "SELECT * FROM quickbooks_product_items" },
     { key: "orderEmails", sql: "SELECT * FROM wholesale_order_emails" },
+    { key: "royalMailShipments", sql: "SELECT * FROM wholesale_royal_mail_shipments ORDER BY order_id" },
     { key: "announcement", sql: "SELECT * FROM wholesale_announcement" },
     { key: "tabs", sql: "SELECT * FROM wholesale_tabs ORDER BY cleared_at" },
     { key: "history.settings", sql: "SELECT * FROM insights_settings" },

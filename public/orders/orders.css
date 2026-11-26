@@ -346,6 +346,26 @@ button.cleared-row:hover{background:var(--sunk)}
 #packingDesk,#deskBagTotals { display: none; }
 .desk-dispatch-details { display: grid; gap: 10px; overflow-wrap: anywhere; }
 .desk-dispatch-details .field { margin-block: 6px; }
+.royal-mail-panel { display: grid; gap: 14px; overflow-wrap: anywhere; }
+.royal-mail-heading { display: grid; gap: 4px; min-width: 0; }
+.royal-mail-carrier { display: grid; gap: 5px; padding: 12px 14px; border-radius: var(--r); background: var(--sunk); }
+.royal-mail-carrier > span { color: var(--muted); font-size: 14px; }
+.royal-mail-carrier > .royal-mail-number { color: var(--fg); font-weight: 650; font-variant-numeric: tabular-nums; }
+.royal-mail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.royal-mail-actions .btn { min-height: 44px; justify-content: center; text-align: center; text-decoration: none; }
+.order-shipping-actions { margin-top: 10px; }
+.dispatch-royal-mail { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 10px 12px; border-radius: var(--r); background: var(--sunk); }
+.dispatch-royal-mail:not(:has(> .btn:not([hidden]))) { grid-template-columns: minmax(0, 1fr); }
+.dispatch-royal-mail-field { display: grid; gap: 6px; min-width: 0; }
+.desk-dispatch-details .dispatch-royal-mail .field { margin: 0; }
+.dispatch-royal-mail > .btn { margin-top: 23px; }
+@media (max-width: 560px) {
+  .dispatch-royal-mail { grid-template-columns: minmax(0, 1fr); gap: 7px; }
+  .dispatch-royal-mail > .btn { justify-self: start; margin-top: 0; }
+  .royal-mail-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(155px, 100%), 1fr)); }
+  .royal-mail-actions > a:last-child { grid-column: 1 / -1; }
+}
+
 #deskDispatchForm { min-height: 0; display: flex; flex-direction: column; }
 .desk-panel-body { padding: var(--panel-padding); gap: 10px; }
 .desk-panel-body .wp-check-line { padding-block: 9px; }

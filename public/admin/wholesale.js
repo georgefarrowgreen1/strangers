@@ -638,6 +638,114 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
     try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) && !!url.hostname && !url.username && !url.password; }
     catch { return false; }
   }
+  const canShipRoyalMail = (row) => row.preview === false && !!row.customerId && /^(delivery|courier)$/i.test(row.delivery) && row.status !== "Cancelled";
+  // Labels and physical dispatch are separate: booking never confirms that a box has left the roastery.
+  async function royalMailShipping(row, returnToOrder) {
+    if (!canShipRoyalMail(row)) return;
+    const path = `/api/admin/wholesale/orders/${row.id}/shipping`, session = packingSession;
+    let shipping = null, uncertain = false, changed = false, needsReload = false, cleanup = () => {};
+    const snapshot = row.locationSnapshot || row.customerSnapshot || {};
+    let draft = { name: snapshot.contact || row.business || "", line1: "", line2: "", city: "", postcode: snapshot.postcode || "", weightGrams: "" };
+    const stateText = (shipment) => ({ booking: "Label request pending", review: "Check label request", failed: "Label request declined — review and try again", created: "Order sent to Royal Mail", labelled: "Label ready", dispatched: "Royal Mail shipment dispatched" }[shipment?.state] || (shipment ? "Royal Mail shipment recorded" : "No Royal Mail label requested"));
+    const capture = (form) => { for (const key of Object.keys(draft)) { const input = form.querySelector(`[name="${key}"]`); if (input) draft[key] = input.value; } };
+    const latestOrder = async () => {
+      const result = await api("GET", "/api/admin/wholesale/orders?q=" + encodeURIComponent(row.id));
+      const latest = result.orders?.find(order => order.id === row.id);
+      if (!latest) throw new Error("This order is no longer available. Close this window and reload orders.");
+      return latest;
+    };
+    const back = async () => {
+      const form = $("#wRoyalMailForm");
+      if (!form || form.dataset.whBusy) return;
+      await saveForm(form, async () => {
+        let latest = row, warning = "";
+        if (changed || needsReload || (shipping && shipping.orderVersion !== row.version)) {
+          try { latest = await latestOrder(); }
+          catch { warning = "Could not reload this order. Your draft keeps its earlier version; reload orders before saving or dispatching."; }
+        }
+        if (session !== packingSession || !form.isConnected) return;
+        const tracking = shipping?.orderVersion === latest.version && !shipping.shipment?.orderChanged ? shipping.shipment?.trackingUrl : null;
+        cleanup(); returnToOrder(latest, tracking && validTrackingUrl(tracking) ? tracking : null);
+        if (warning) toast(warning);
+      });
+    };
+    function draw(error = "") {
+      cleanup();
+      const shipment = shipping?.shipment, recorded = !!shipment && shipment.state !== "failed", stale = needsReload || shipping && shipping.orderVersion !== row.version;
+      openSheet(html`<form id="wRoyalMailForm" class="w-sheet w-editor w-shipping-sheet">${editorHead("Royal Mail shipping")}<div class="w-editor-body"><div><h3>${row.business || row.createdName}</h3><p class="w-id">${row.id}</p></div>
+        <p class="hint">One Great Britain parcel per order. Create and print the label here, then confirm dispatch when the parcel leaves.</p>
+        <p id="wShippingState" class="w-shipping-status" role="status">${shipping ? stateText(shipment) : "Checking Royal Mail shipping…"}</p>
+        ${shipping?.enabled === false ? html`<p class="hint">Royal Mail shipping is not configured. You can still add a tracking link and dispatch the order as usual.</p>` : ""}
+        ${shipping?.enabled && !shipping.canCreate && !recorded ? html`<p class="hint">Pack the order and mark it Ready before requesting postage.</p>` : ""}
+        ${shipping?.trackingWarning ? html`<p class="hint" role="status">${shipping.trackingWarning}</p>` : ""}
+        ${shipment?.carrierEventAt ? html`<p class="hint">Carrier update ${date(shipment.carrierEventAt)}</p>` : ""}
+        ${uncertain ? html`<p class="hint">The label request could not be confirmed. Check the existing request before trying anything else.</p>` : ""}
+        ${shipment?.orderChanged ? html`<p class="hint">The order changed after this label request. Check the saved destination, bags and label before handing over the parcel.</p>` : ""}
+        ${stale && !recorded ? html`<p class="hint">This order changed since you opened it. Return to the latest order before requesting a label.</p>` : ""}
+        ${recorded ? html`<div class="kvs">${shipment.orderId ? html`<div class="kv"><span>Royal Mail order</span><span>${shipment.orderId}</span></div>` : ""}${shipment.trackingNumber ? html`<div class="kv"><span>Tracking number</span><span>${shipment.trackingNumber}</span></div>` : ""}${shipment.carrierStatus ? html`<div class="kv"><span>Carrier status</span><span>${shipment.carrierStatus}</span></div>` : ""}</div>${shipment.orderId ? html`<button type="button" class="btn soft w-shipping-label" data-sheet="shipping-label">${svg("dl")}Download label PDF</button>` : ""}${shipment.trackingUrl && validTrackingUrl(shipment.trackingUrl) ? html`<a class="btn soft" href="${shipment.trackingUrl}" target="_blank" rel="noopener noreferrer">Track parcel</a>` : ""}` : html`
+          <div class="w-shipping-snapshot"><b>Saved delivery address</b><p class="w-address">${[snapshot.contact, snapshot.address, snapshot.postcode].filter(Boolean).join("\n") || "No delivery address recorded"}</p></div>
+          <fieldset id="wShippingFields" class="w-shipping-fields" ${!shipping?.canCreate || uncertain || stale ? raw("disabled") : ""}>
+          ${field("Addressee", html`<input name="name" maxlength="100" autocomplete="shipping name" required value="${draft.name}">`)}
+          ${field("Address line 1", html`<input name="line1" maxlength="100" autocomplete="shipping address-line1" required value="${draft.line1}">`)}
+          ${field("Address line 2 (optional)", html`<input name="line2" maxlength="100" autocomplete="shipping address-line2" value="${draft.line2}">`)}
+          ${field("Town or city", html`<input name="city" maxlength="100" autocomplete="shipping address-level2" required value="${draft.city}">`)}
+          ${field("UK postcode", html`<input name="postcode" maxlength="12" autocomplete="shipping postal-code" required value="${draft.postcode}">`)}
+          ${field("Packed weight (grams)", html`<input name="weightGrams" type="number" inputmode="numeric" min="${Math.max(1,row.grams)}" max="30000" step="1" required value="${draft.weightGrams}">`)}
+          <p class="hint">Weigh the sealed box, including packaging. The coffee alone weighs ${weight(row.grams)}. One box can weigh at most 30 kg.</p></fieldset>`}
+        </div><footer class="w-editor-footer"><p id="wErr" class="err" role="alert">${error}</p><div class="row w-actions"><button type="button" class="btn soft" data-sheet="shipping-back">Back to order</button>${recorded || uncertain || !shipping ? html`<button type="button" class="btn" data-sheet="shipping-refresh">Check label request</button>` : stale ? html`<button type="button" class="btn" data-sheet="shipping-back">Reload latest order</button>` : shipping.canCreate ? html`<button type="submit" class="btn">Request Royal Mail label</button>` : ""}</div></footer></form>`, async (action, element) => {
+        const form = element.closest("form");
+        if (!form || form.dataset.whBusy) return;
+        if (action === "shipping-back") { await back(); return; }
+        if (action === "shipping-label") {
+          await saveForm(form, async () => {
+            // Shared fetch verifies the Admin identity again before releasing private binary data.
+            const response = await fetch(path + "/label", { cache: "no-store" });
+            if (!response.ok) { const problem = await response.json().catch(() => ({})); throw new Error(problem.message || "The label is not available yet. Check the label request and try again."); }
+            const pdf = await response.blob();
+            if (pdf.type.split(";")[0] !== "application/pdf" || !pdf.size || pdf.size > 10 * 1024 * 1024 || await pdf.slice(0,5).text() !== "%PDF-") throw new Error("Royal Mail did not return a valid PDF label. Check the label request before trying again.");
+            if (session !== packingSession || !form.isConnected) return;
+            const url = URL.createObjectURL(pdf), link = document.createElement("a");
+            link.href = url; link.download = `Royal-Mail-${row.id}.pdf`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+          });
+          return;
+        }
+        if (!["submit", "shipping-refresh"].includes(action)) return;
+        capture(form);
+        if (action === "submit" && (!shipping?.canCreate || (shipping.shipment && shipping.shipment.state !== "failed") || uncertain || shipping.orderVersion !== row.version)) return;
+        if (action === "submit" && (!form.reportValidity() || !Number.isSafeInteger(Number(draft.weightGrams)) || Number(draft.weightGrams) < 1)) return;
+        await saveForm(form, async () => {
+          try {
+            // Lock before a request leaves: a lost response is recovered, never automatically rebooked.
+            if (action === "submit") uncertain = true;
+            const result = await api(action === "submit" || shipping ? "POST" : "GET", path + (action === "shipping-refresh" && shipping ? "/refresh" : ""), action === "submit" ? { ifVersion: row.version, recipient: { name: draft.name.trim(), line1: draft.line1.trim(), line2: draft.line2.trim(), city: draft.city.trim(), postcode: draft.postcode.trim() }, weightGrams: Number(draft.weightGrams) } : action === "shipping-refresh" && shipping ? {} : undefined);
+            if (session !== packingSession || !form.isConnected) return;
+            if (!Number.isSafeInteger(result.orderVersion) || typeof result.enabled !== "boolean" || !Object.hasOwn(result, "shipment")) throw new Error("The shipping result could not be confirmed. Check the existing request.");
+            shipping = result; uncertain = false; changed = true; draw();
+          } catch (error) {
+            if (session !== packingSession || !form.isConnected) return;
+            // A confirmed validation refusal has not created a job; uncertain/network failures stay recovery-only.
+            if (action === "submit" && [400, 403, 404, 409, 422].includes(error.status)) uncertain = false;
+            if (error.status === 409) needsReload = true;
+            draw(error.message);
+          }
+        });
+      });
+      const form = $("#wRoyalMailForm"), controller = new AbortController(), scrim = $("#scrim");
+      const observer = new MutationObserver(() => { if (!form.isConnected) cleanup(); });
+      cleanup = () => { controller.abort(); observer.disconnect(); };
+      observer.observe($("#sheet"), { childList: true });
+      document.addEventListener("keydown", event => { if (event.key !== "Escape" || !form.isConnected) return; event.preventDefault(); event.stopImmediatePropagation(); back(); }, { capture: true, signal: controller.signal });
+      scrim.addEventListener("click", event => { if (event.target !== scrim || !form.isConnected) return; event.preventDefault(); event.stopImmediatePropagation(); back(); }, { capture: true, signal: controller.signal });
+    }
+    draw();
+    const form = $("#wRoyalMailForm");
+    try {
+      const result = await api("GET", path);
+      if (session !== packingSession || !form.isConnected) return;
+      if (!Number.isSafeInteger(result.orderVersion) || typeof result.enabled !== "boolean" || !Object.hasOwn(result, "shipment")) throw new Error("The shipping details could not be confirmed. Check again.");
+      shipping = result; draw();
+    } catch (error) { if (session === packingSession && form.isConnected) draw(error.message); }
+  }
   function dispatchOrder(row, restoredTracking) {
     const collection = row.delivery === "Roastery collection", session = packingSession;
     const confirmation = collection ? "Confirm collection" : "Confirm dispatch";
@@ -648,10 +756,14 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
       if (target) target.focus({ preventScroll: true }); else focusOrderList(row.id);
     };
     openSheet(html`<form id="wDispatchOrderForm" class="w-sheet w-editor">${editorHead(collection ? "Confirm collection" : "Dispatch order")}<div class="w-editor-body"><div class="w-order-heading"><h3>${row.business || row.createdName}</h3>${pill(row.status)}</div><p class="w-id">${row.packs} ${row.packs === 1 ? "bag" : "bags"} · ${weight(row.grams)} · ${row.id}</p><div class="w-preview-destination"><b>${row.delivery}</b>${row.locationSnapshot?.name ? html`<span>${row.locationSnapshot.name}</span>` : ""}${!collection && row.locationSnapshot?.address ? html`<span>${[row.locationSnapshot.address,row.locationSnapshot.postcode].filter(Boolean).join(", ")}</span>` : ""}</div>
-      ${collection ? html`<p class="hint">Only confirm once the customer has collected their order.</p>` : field("Tracking link (optional)", html`<input id="wDispatchTracking" type="url" inputmode="url" maxlength="2000" placeholder="https://" autocapitalize="none" spellcheck="false" autocomplete="off" value="${restoredTracking ?? row.trackingUrl ?? ""}">`)}<p class="hint">The customer will be notified where order emails are enabled.</p></div>
+      ${collection ? html`<p class="hint">Only confirm once the customer has collected their order.</p>` : field("Tracking link (optional)", html`<input id="wDispatchTracking" type="url" inputmode="url" maxlength="2000" placeholder="https://" autocapitalize="none" spellcheck="false" autocomplete="off" value="${restoredTracking ?? row.trackingUrl ?? ""}">`)}${canShipRoyalMail(row) ? html`<button class="btn soft" type="button" data-sheet="royal-mail">Royal Mail shipping</button>` : ""}<p class="hint">The customer will be notified where order emails are enabled.</p></div>
       <footer class="w-editor-footer"><p class="err" id="wErr" role="alert"></p><button class="btn soft" type="button" data-sheet="dispatch-reload" hidden>Reload latest order</button><div class="row w-actions"><button class="btn soft" type="button" data-sheet="dispatch-cancel">Cancel</button><fieldset id="wDispatchConfirmControls" class="w-delete-confirm-controls"><button class="btn" type="submit">${confirmation}</button></fieldset></div></footer></form>`, async (action, element) => {
       const form = element.closest("form");
       if (form.dataset.whBusy) return;
+      if (action === "royal-mail") {
+        const typed = form.querySelector("#wDispatchTracking")?.value;
+        cleanup(); await royalMailShipping(row, (latest, tracking) => latest.status === "Ready" ? dispatchOrder(latest, tracking ?? ((latest.trackingUrl || "") === (row.trackingUrl || "") ? typed : undefined)) : editOrder(latest.id, tracking === null ? null : { trackingUrl: tracking }, latest)); return;
+      }
       if (action === "dispatch-cancel") { back(); return; }
       if (action === "dispatch-reload") {
         const typed = form.querySelector("#wDispatchTracking")?.value;
@@ -926,6 +1038,7 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
     const grinds = row.lines.map(grindFor), choices = [...new Map(grinds.map(grind => [grind.key, grind])).values()];
     openSheet(html`<form class="w-sheet w-order-sheet w-editor">${editorHead("Order details", "Close order details")}<div class="w-editor-body"><div class="w-order-heading"><h3>${row.business || row.createdName}</h3>${pill(row.status)}${row.preview === false ? "" : html`<span class="pill">Staff preview</span>`}</div><p class="w-id">${row.id}</p>
       ${nextStatus(row) ? html`<button class="btn sm soft w-sheet-pack" type="button" data-sheet="pack-order">${row.status === "Ready" ? "Process dispatch" : "Pack order"}</button>` : ""}
+      ${canShipRoyalMail(row) ? html`<button class="btn sm soft w-sheet-pack" type="button" data-sheet="royal-mail">Royal Mail shipping</button>` : ""}
       <div class="kvs">${row.locationSnapshot?.name ? html`<div class="kv"><span>Location</span><span>${row.locationSnapshot.name}</span></div>` : ""}<div class="kv"><span>Received</span><span>${date(row.createdAt)}</span></div><div class="kv"><span>Reference</span><span>${row.reference || "None supplied"}</span></div><div class="kv"><span>${row.takenFor ? "Taken by" : "Ordered by"}</span><span>${row.takenFor ? `${row.createdName} (${row.takenFor.source.toLowerCase()})` : row.createdName}</span></div></div>
       ${row.customerNote ? html`<section class="w-order-section w-customer-note" aria-labelledby="wCustomerNoteTitle"><h3 id="wCustomerNoteTitle">Customer comments</h3><p class="w-address">${row.customerNote}</p></section>` : ""}
       <section class="w-order-section" aria-labelledby="wPackingTitle"><div class="w-section-head"><h3 id="wPackingTitle">Packing list</h3>${row.preview === false && ["New", "Preparing"].includes(row.status) ? html`<span class="row">${row.standing ? html`<button class="btn sm soft" type="button" data-sheet="skip-run">Skip this delivery</button>` : ""}<button class="btn sm soft" type="button" data-sheet="edit-lines">Edit bags</button></span>` : ""}</div>${row.amendedAt ? html`<p class="hint w-amended">Bags changed${row.amendedBy ? ` by ${row.amendedBy}${row.amendedByCustomer ? " (the customer)" : ""}` : ""} on ${date(row.amendedAt)}${row.repeatLines ? ", for this delivery only: the next delivery goes back to the usual bags" : ""}. The customer sees the updated order.</p>` : ""}${row.skipped ? html`<p class="hint w-amended">Delivery skipped by ${row.skipped.by}${row.skipped.customer ? " (the customer)" : ""} on ${date(row.skipped.at)}.</p>` : ""}${choices.length > 1 ? html`<div class="w-grind-filters" role="group" aria-label="Filter packing list by grind"><button type="button" data-sheet="grind-filter" data-grind-key="" aria-pressed="true">All grinds</button>${choices.map(grind => html`<button type="button" class="w-grind-tone" style="--w-grind-h:${grind.hue}" data-sheet="grind-filter" data-grind-key="${grind.key}" aria-pressed="false">${svg(grind.icon)}${grind.label}</button>`)}</div><p id="wGrindCount" class="hint" role="status">${row.lines.length} packing lines · Order totals include all lines.</p>` : ""}<div class="group w-packing-list">${row.lines.map((line, index) => { const grind = grinds[index]; return html`<div class="item w-packing-line w-grind-tone w-coffee-tone" style="--w-grind-h:${grind.hue};${coffeeStyle(line, data.products)}" data-grind-line="${grind.key}"><span class="w-pack-quantity"><b>${line.quantity}</b><span>${line.quantity === 1 ? "bag" : "bags"}</span></span><span class="tx"><b class="w-pack-coffee"><span class="w-coffee-swatch" aria-hidden="true"></span>${line.title}${decafLine(line) ? html`<span class="w-decaf-label">Decaf</span>` : ""}</b>${line.recipe ? html`<span class="w-recipe">Made from ${line.recipe}</span>` : ""}<span class="w-pack-size">${line.packLabel}</span><span class="w-grind-details"><span class="w-grind-badge">${svg(grind.icon)}${grind.label}</span>${grind.hint ? html`<span class="w-grind-hint">${grind.hint}</span>` : ""}</span></span><span class="end num">${money(line.price * line.quantity)}</span></div>`; })}</div><div class="kv"><span>${row.packs} ${row.packs === 1 ? "bag" : "bags"} · ${weight(row.grams)} total</span><strong>${money(row.pence)}</strong></div>${Number.isSafeInteger(row.deliveryPence) ? html`<div class="kv"><span>${row.delivery === "Delivery" ? "Delivery (including VAT)" : "Roastery collection"}</span><strong>${row.deliveryPence ? money(row.deliveryPence) : "Free"}</strong></div><div class="kv"><span>Order total</span><strong>${money(row.totalPence ?? row.pence + row.deliveryPence)}</strong></div>` : ""}</section>
@@ -940,6 +1053,15 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
       ${field("Tracking link (optional)", html`<input id="wTrackingUrl" type="url" inputmode="url" maxlength="2000" placeholder="https://" autocapitalize="none" spellcheck="false" autocomplete="off" value="${draft?.trackingUrl ?? row.trackingUrl ?? ""}">`)}<p class="hint">Add, edit or clear the link. Customers see it on dispatched delivery orders.</p>
       ${field("Internal note", html`<textarea id="wNote" maxlength="1000">${draft?.note ?? row.note}</textarea>`)}</section>${note}<div class="w-order-danger"><button class="btn bad" type="button" data-sheet="delete-order">Delete order</button></div></div><footer class="w-editor-footer">${buttons("Save order")}</footer></form>`, async (action, element) => {
       const form = element.closest("form");
+      if (action === "royal-mail") {
+        if (form.dataset.whBusy) return;
+        const draft = draftOf(form, row);
+        if (draft.status === row.status) delete draft.status;
+        if (draft.note === (row.note || "")) delete draft.note;
+        if (draft.trackingUrl === (row.trackingUrl || "")) delete draft.trackingUrl;
+        if (draft.schedule?.dispatchDate === (row.dispatchDate || null) && draft.schedule?.every === (row.standing?.every || 0)) delete draft.schedule;
+        await royalMailShipping(row, (latest, tracking) => editOrder(row.id, { ...draft, ...(tracking === null ? {} : { trackingUrl: tracking }) }, latest)); return;
+      }
       if (action === "pack-order") {
         const draft = draftOf(form, row);
         if (draft.status === row.status) delete draft.status;

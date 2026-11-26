@@ -31,6 +31,13 @@ export interface Env {
   QUICKBOOKS_PRODUCTION_WEBHOOK_TOKEN?: string;
   QUICKBOOKS_TEST_ORIGIN?: string; // local harness only; ignored on deployed hosts
   RESEND_API_KEY?: string; // rota emails (src/email/): a secret the host adds in Cloudflare; without it nothing is sent
+  WHOLESALE_ROYAL_MAIL_CLICK_DROP_KEY?: string;
+  WHOLESALE_ROYAL_MAIL_SERVICE_CODE?: string;
+  WHOLESALE_ROYAL_MAIL_SERVICE_REGISTER_CODE?: string;
+  WHOLESALE_ROYAL_MAIL_SHIPPING_ACCOUNT?: string;
+  WHOLESALE_ROYAL_MAIL_TRACKING_CLIENT_ID?: string;
+  WHOLESALE_ROYAL_MAIL_TRACKING_CLIENT_SECRET?: string;
+  WHOLESALE_ROYAL_MAIL_TRACKING_TERMS_ACCEPTED?: string;
   EMAIL_DMARC_REPORT_TO?: string; // non-secret monitored aggregate-report inbox
   RESEND_WEBHOOK_SECRET?: string; // Svix signing secret; never sent to the browser or stored in backups
   RESEND_API_URL?: string; // for tests only: where to send instead of Resend

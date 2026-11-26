@@ -335,6 +335,10 @@ html:has(#scrim:not([hidden])){overflow:hidden}
 .w-editor-body>.w-duplicate{justify-self:start;margin:0}
 .w-editor-footer{display:grid;gap:8px;padding-block:12px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
 .w-editor-footer .w-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:0}
+.w-shipping-fields{display:grid;gap:14px;border:0;padding:0;margin:0;min-width:0}
+.w-shipping-status{font-weight:650;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--sunk)}
+.w-shipping-snapshot{display:grid;gap:6px;padding:12px;border:1px solid var(--line);border-radius:12px}
+.w-shipping-label{justify-self:start}
 @media(min-width:700px){
   #sheet:has(>.w-editor){width:min(640px,calc(100vw - 48px))}
   .w-sheet.w-editor{max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px)}

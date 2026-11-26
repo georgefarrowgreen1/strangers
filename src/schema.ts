@@ -507,6 +507,20 @@ const MIGRATIONS: Migration[] = [
         SELECT order_id FROM wholesale_invoice_coverage UNION ALL SELECT order_id FROM wholesale_invoiced_elsewhere`),
     ]);
   } },
+  { id: 47, name: "Royal Mail wholesale shipments", run: async env => {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS wholesale_royal_mail_shipments (
+      order_id TEXT PRIMARY KEY,
+      state TEXT NOT NULL CHECK (state IN ('booking','review','created','labelled','dispatched','failed')),
+      operation TEXT NOT NULL,
+      order_version INTEGER NOT NULL,
+      provider_id INTEGER,
+      tracking_number TEXT,
+      carrier_status TEXT,
+      carrier_event_at TEXT,
+      weight_grams INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`).run();
+  } },
 ];
 
 async function migrate(env: Env): Promise<void> {
