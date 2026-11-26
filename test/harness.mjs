@@ -1,6 +1,6 @@
 // Starts `wrangler dev` on a fresh local D1/R2 (in a temp dir) for the tests.
 import { spawn, execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { globSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -70,11 +70,29 @@ export async function startServer({ writeLimit, preSql, scheduled, vars = {}, ho
       rmSync(state, { recursive: true, force: true });
       throw error;
     }
+    let localDatabase;
     return {
       base,
       log: () => log,
       /** Runs SQL on this server's local database and returns the rows (for checking schema and query plans). */
       sql(command) {
+        // Read the fixture's own SQLite database without starting another Wrangler process per query.
+        // Writes and other commands still use Wrangler, as do unfamiliar local storage layouts.
+        const sqlite = process.getBuiltinModule?.("node:sqlite");
+        if (sqlite && /^\s*(?:SELECT|EXPLAIN QUERY PLAN)\b/i.test(command) && !/;\s*\S/.test(command)) {
+          if (!localDatabase) {
+            const files = globSync("v*/d1/miniflare-D1DatabaseObject/*.sqlite", { cwd: state })
+              .filter(file => /\/[a-f0-9]{64}\.sqlite$/.test(file));
+            if (files.length === 1) localDatabase = join(state, files[0]);
+          }
+          if (localDatabase) {
+            const db = new sqlite.DatabaseSync(localDatabase, { readOnly: true });
+            try {
+              db.exec("PRAGMA busy_timeout = 5000");
+              return db.prepare(command).all().map(row => ({ ...row }));
+            } finally { db.close(); }
+          }
+        }
         const out = execFileSync(WRANGLER, ["d1", "execute", "kitchen-diary", "--local", "--persist-to", state, "--json", "--command", command], {
           cwd: ROOT, stdio: "pipe", env: { ...process.env, CI: "1" },
         }).toString();

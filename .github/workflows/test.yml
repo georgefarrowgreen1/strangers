@@ -1,5 +1,4 @@
-# Runs every test on each pull request and after each merge to main, so a change that breaks the diary
-# shows a red cross on GitHub before it reaches main (which Cloudflare deploys).
+# The required `test` check succeeds only after both complete suites pass.
 name: Tests
 
 # Pull requests are tested once (their own run); main is tested again after each merge.
@@ -12,31 +11,103 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  test:
+  api:
+    name: API ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      # On failure, the failing test's message is also posted as an annotation on the check, so it can be read
-      # without opening the full log.
-      - name: Typecheck and API tests
+      - run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        if: matrix.shard == 1
+        run: npm run typecheck
+      - name: API tests
         run: |
           set -o pipefail
-          npm test 2>&1 | tee test.log || { node .github/annotate.mjs "API tests failed" test.log; exit 1; }
-      # If the runner can't reach Ubuntu's package servers (it happens), use the system libraries the runner image
-      # already has: the browser tests below still have to pass, so a missing library still fails the run. The
-      # attempt is capped at 3 minutes, as apt otherwise retries for about 10.
-      - name: Install a browser for the site test
+          npm run test:api -- --shard ${{ matrix.shard }}/${{ strategy.job-total }} 2>&1 | tee test.log || { node .github/annotate.mjs "API tests failed" test.log; exit 1; }
+
+  browser:
+    name: Browser ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install test dependencies
+        id: dependencies
         run: |
-          npm install --no-save playwright@1.63.0
-          timeout 180 npx playwright install --with-deps chromium || { echo "::warning::Couldn't install system packages; using the runner's own"; npx playwright install chromium; }
-      - name: Site test in a browser
+          npm ci --no-audit --no-fund
+          printf 'playwright=%s\n' "$(node -p 'require("playwright/package.json").version')" >> "$GITHUB_OUTPUT"
+      - name: Restore Chromium shell
+        id: chromium-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-shell-${{ runner.os }}-${{ runner.arch }}-${{ steps.dependencies.outputs.playwright }}
+      - name: Prepare Chromium
+        id: chromium
+        run: |
+          node_modules/.bin/playwright install chromium --only-shell
+          # Ubuntu runners normally ship the system libraries Chromium needs.
+          if ! node --input-type=module -e 'import { chromium } from "playwright"; await (await chromium.launch()).close()'; then
+            timeout 180 node_modules/.bin/playwright install-deps chromium
+          fi
+      - name: Browser tests
+        id: browser-tests
+        env:
+          STRANGERS_BROWSER_TRACES: test-results/traces
         run: |
           set -o pipefail
-          npm run test:e2e 2>&1 | tee e2e.log || { node .github/annotate.mjs "Browser test failed" e2e.log; exit 1; }
+          npm run test:e2e -- --shard ${{ matrix.shard }}/${{ strategy.job-total }} 2>&1 | tee e2e.log || { node .github/annotate.mjs "Browser test failed" e2e.log; exit 1; }
+      - name: Save failed browser traces
+        if: failure() && steps.browser-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-traces-${{ matrix.shard }}
+          path: test-results/traces/**/*.zip
+          if-no-files-found: ignore
+          retention-days: 7
+          compression-level: 0
+      - name: Cache Chromium shell
+        if: ${{ !cancelled() && matrix.shard == 1 && steps.chromium.outcome == 'success' && steps.chromium-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.chromium-cache.outputs.cache-primary-key }}
+
+  test:
+    needs: [api, browser]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every test shard to pass
+        env:
+          API_RESULT: ${{ needs.api.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        run: |
+          printf 'API: %s\nBrowser: %s\n' "$API_RESULT" "$BROWSER_RESULT"
+          test "$API_RESULT" = success && test "$BROWSER_RESULT" = success
