@@ -1,10 +1,8 @@
-Adds Consumer (Preview) to the staff admin desktop sidebar and mobile More menu.
+Serve the reviewed consumer storefront at `preview.staffstrangerscoffee.com` through the existing Wrangler deployment.
 
-- Review test orders and update their status.
-- Search saved customer profiles and manage coffee availability.
-- Pause signed-in test checkout and check launch readiness.
-- Limit the management API to staff admins and forward only allowed actions to the retail preview.
+- Publish the reviewed retail pages and namespaced assets from the pinned preview source.
+- Keep retail account data and test orders on the existing backend. Native sign-in returns to the branded hostname through a single-use code bound to the browser.
+- Keep legacy wholesale sign-in, order links, browser storage, and checkout recovery at the same origin under `/wholesale/`. The older `/shop/` preview remains available.
+- Route the Consumer admin storefront link to the branded preview.
 
-The management connection uses a matching `CONSUMER_ADMIN_TOKEN` runtime secret on the staff Worker and the retail preview. Admin displays a connection status until setup is complete.
-
-Typecheck and 16 focused admin tests passed on the release branch. The Consumer workflow was also checked in Chromium at five widths from 320 to 1440 px. GitHub Tests is required before squash merge.
+Local checks cover all retail pages, the account exchange, write origins and cookie isolation, wholesale sign-in and idempotent checkout replay, and the previous retail preview. Full GitHub Tests are required before this release merges.

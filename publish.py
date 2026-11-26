@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/consumer-preview"
-EXPECTED = "810c4a4bc56c4b42efa5df754083b3c23d902978"
+BRANCH = "codex/branded-retail-preview"
+EXPECTED = "a33ba0e6157e86c0160f4a1a9380d1958c4d1336"
 PRIOR = ""
 TIMED_OUT_TEST_RUN = None
-TITLE = "Add Consumer (Preview) to staff admin"
+TITLE = "Publish the consumer storefront at the preview address"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
