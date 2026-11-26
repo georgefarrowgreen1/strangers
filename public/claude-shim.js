@@ -363,7 +363,8 @@
       }
     }
     subs.set(key, { spec, deliver, onError, ver: undefined, last: undefined, raw, confirmed });
-    schedule(0);
+    // Keep the next poll pending even if a response is already in flight.
+    refresh();
     return () => { subs.delete(key); };
   }
 
