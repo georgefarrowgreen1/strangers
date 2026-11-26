@@ -1,7 +1,7 @@
 // The staff admin workspace for the separate consumer storefront.
 window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet, toast, confirmSheet }) => {
   const endpoint = "/api/admin/consumer";
-  const previewUrl = "https://strangers-coffee-retail-demo.magicloom512.chatgpt.site/";
+  const previewUrl = "https://preview.staffstrangerscoffee.com/";
   const tabs = [
     ["overview", "Overview"], ["orders", "Orders"], ["customers", "Customers"], ["catalogue", "Catalogue"],
   ];

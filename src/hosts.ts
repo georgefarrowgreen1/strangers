@@ -73,11 +73,13 @@ export function appLinks(url: URL, rotaHost: string | undefined, adminHost?: str
   // The diary is the rota's (or admin section's) host without its first label (rota.example.com -> example.com).
   const other = rotaHost || adminHost || previewHost || "";
   const diaryHost = other.includes(".") ? other.slice(other.indexOf(".") + 1) : url.hostname;
+  const legacyWholesaleHost = url.hostname === legacyPreviewHost?.toLowerCase();
+  const wholesaleHome = legacyWholesaleHost ? "/wholesale/" : app === "preview" ? "/" : previewHost ? `https://${previewHost}/` : null;
   return {
     rota: app === "rota" ? "/" : rotaHost ? `https://${rotaHost}/` : "/rota/",
     diary: app === "diary" ? "/" : `https://${diaryHost}/`,
     admin: app === "admin" ? "/" : adminHost ? `https://${adminHost}/` : "/admin",
-    ...(previewHost ? { preview: app === "preview" ? "/" : `https://${previewHost}/` } : {}),
+    ...(wholesaleHome ? { preview: wholesaleHome } : {}),
   };
 }
 

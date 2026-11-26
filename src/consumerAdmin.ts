@@ -1,4 +1,5 @@
 import { ApiError, Env, json, readJson, readBytes } from "./http";
+import { BRANDED_RETAIL_ORIGIN } from "./brandedRetail";
 
 const PREVIEW_ORIGIN = "https://strangers-coffee-retail-demo.magicloom512.chatgpt.site";
 const CONTROL_PATH = "/api/control/consumer";
@@ -8,7 +9,7 @@ const ORDER_STATES = new Set(["placed", "preparing", "ready", "completed", "canc
 function offline(detail: string) {
   return json({
     connected: false,
-    previewUrl: PREVIEW_ORIGIN + "/",
+    previewUrl: BRANDED_RETAIL_ORIGIN + "/",
     readiness: [{ label: "Consumer preview connection", state: "blocked", detail }],
     orders: [],
     customers: [],
@@ -56,7 +57,9 @@ export async function handleConsumerAdmin(req: Request, env: Env, route: string)
     });
     if (response.ok) {
       const bytes = await readBytes(response, MAX_OVERVIEW_BYTES, "The preview response was too large.");
-      return json(JSON.parse(new TextDecoder().decode(bytes)));
+      const result = JSON.parse(new TextDecoder().decode(bytes));
+      if (reading) result.previewUrl = BRANDED_RETAIL_ORIGIN + "/";
+      return json(result);
     }
     if (!reading && response.status === 404) {
       throw new ApiError(404, "not_found", "The Consumer preview record was not found.");
