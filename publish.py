@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "codex/admin-workspace-redesign"
-EXPECTED = "ca475c1ed5642797454af64655b9c2c8f9cd84c7"
-PRIOR = ""
+EXPECTED = "13b829ff2913698b316d0ab1c011817447c56b97"
+PRIOR = "ca475c1ed5642797454af64655b9c2c8f9cd84c7"
 TIMED_OUT_TEST_RUN = None
 TITLE = "Refine the Strangers Admin workspace"
 EXPECTED_USER_ID = 292799750

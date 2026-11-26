@@ -1,3 +1,3 @@
 # Strangers release publisher
 
-Publishes the reviewed Admin workspace redesign from commit `ca475c1ed5642797454af64655b9c2c8f9cd84c7`. The GitHub workflow opens a production pull request and waits for Tests before squash merging.
+Publishes the reviewed Admin workspace redesign as of commit `13b829ff2913698b316d0ab1c011817447c56b97`. The GitHub workflow opens a production pull request and waits for Tests before squash merging.

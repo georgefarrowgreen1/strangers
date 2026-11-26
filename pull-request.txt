@@ -5,3 +5,5 @@ Rebuilds the Admin shell and Today dashboard using the Strangers theme. It refin
 The change is in the Admin browser interface. The current order, billing, and customer APIs, database schema, and access controls continue to apply. Consumer Preview uses its existing separate gateway.
 
 The approved review includes desktop and mobile browser screenshots. Local verification includes layout checks on all 17 routes at five widths, targeted Admin and QuickBooks browser tests, automatic-invoicing checks, and asset builds. GitHub's full Tests workflow gates the production merge.
+
+The rota email browser test verifies the same email and active-account counts using the revised Overview wording.
