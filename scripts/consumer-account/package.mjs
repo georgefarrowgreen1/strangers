@@ -3,14 +3,23 @@ import { readFile } from 'node:fs/promises';
 const readOverlay = name => readFile(new URL(name, import.meta.url), 'utf8');
 
 export async function applyConsumerAccount(files, assetPath) {
-  const [access, head, styles, account] = await Promise.all([
+  const [access, head, styles, account, overview] = await Promise.all([
     readOverlay('access.html'), readOverlay('account-head.js'),
-    readOverlay('account-auth.css'), readOverlay('account.js'),
+    readOverlay('account-auth.css'), readOverlay('account.js'), readOverlay('overview.html'),
   ]);
   let accountPage = replaceSection(requiredFile(files, 'account/index.html'), '  <section class="account-access"', '  <div id="account-dashboard"', access);
   accountPage = replaceRequired(accountPage, '<meta charset="utf-8">', `<meta charset="utf-8">\n<script src="${assetPath}account-head.js"></script>`);
   accountPage = replaceSection(accountPage, '      <a id="account-sign-out"', '    </div>\n  </header>', '      <button type="button" class="text-button" id="account-sign-out">Sign out</button>\n');
   accountPage = replaceRequired(accountPage, 'Managed by your ChatGPT account.', 'Verified email for your Strangers account.');
+  accountPage = replaceRequired(accountPage, '    <div class="account-title-block">\n      <h1>My account</h1>\n      <p>Track your beta orders and save your details for your next checkout.</p>', `    <div class="account-avatar" id="account-avatar" hidden aria-hidden="true"></div>
+    <div class="account-title-block">
+      <p class="account-eyebrow" id="account-hero-label" hidden>My account</p>
+      <h1 id="account-title">My account</h1>
+      <p>Track an order, find a receipt or buy a favourite again.</p>`);
+  accountPage = replaceRequired(accountPage, '      <span id="account-session-name"></span>\n', '');
+  accountPage = replaceRequired(accountPage, 'aria-controls="account-orders"', 'aria-controls="account-overview"');
+  accountPage = replaceSection(accountPage, '    <section class="account-panel" id="account-orders"', '    <section class="account-panel" id="account-details"', overview);
+  accountPage = replaceRequired(accountPage, 'Save your contact and delivery preferences for beta checkout.', 'Use these contact and delivery details at checkout.');
   files.set('account/index.html', accountPage);
   files.set('assets/account-head.js', head);
   files.set('assets/account.css', requiredFile(files, 'assets/account.css') + styles);

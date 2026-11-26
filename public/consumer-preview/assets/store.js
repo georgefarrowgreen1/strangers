@@ -4,7 +4,7 @@ export const FREE_SHIPPING = 4500;
 const CART_KEY = 'strangers-coffee-proposal.cart.v1';
 const MAX_QUANTITY = 99;
 const LIGHT_SHIPPING = 300;
-const BAG_GRAMS = { '250g': 250, '500g': 500, '1kg': 1000 };
+const BAG_GRAMS = { '250g': 250, '300g': 300, '500g': 500, '1kg': 1000 };
 const currency = new Intl.NumberFormat('en-GB', {
   style: 'currency',
   currency: 'GBP',
@@ -38,19 +38,22 @@ export function createStore(products, storage = browserStorage()) {
     try {
       storage?.setItem(CART_KEY, JSON.stringify(selectedVariants));
     } catch {
-      // The proposal remains functional when browser storage is unavailable.
+      // Keep the current page's cart if browser storage becomes unavailable.
+      storage = null;
     }
   }
 
-  function restore() {
+  function refresh() {
+    if (!storage) return;
     let saved;
     try {
-      saved = JSON.parse(storage?.getItem(CART_KEY) ?? '[]');
+      saved = JSON.parse(storage.getItem(CART_KEY) ?? '[]');
     } catch {
       return;
     }
     if (!Array.isArray(saved)) return;
 
+    lines.clear();
     for (const selection of saved) {
       if (!selection || !validQuantity(selection.qty)) continue;
       const line = variant(selection.id, selection.size, selection.grind);
@@ -63,6 +66,7 @@ export function createStore(products, storage = browserStorage()) {
   function add(id, size, grind, qty = 1) {
     const line = variant(id, size, grind);
     if (!line || line.product.available === false || !validQuantity(qty)) return false;
+    refresh();
     const nextQuantity = (lines.get(line.key)?.qty ?? 0) + qty;
     if (!validQuantity(nextQuantity)) return false;
 
@@ -93,14 +97,28 @@ export function createStore(products, storage = browserStorage()) {
     persist();
   }
 
+  function consume(purchased) {
+    refresh();
+    for (const { id, size, grind, qty } of purchased) {
+      if (!validQuantity(qty)) continue;
+      const line = lines.get(JSON.stringify([id, size, grind]));
+      if (!line) continue;
+      if (line.qty > qty) line.qty -= qty;
+      else lines.delete(line.key);
+    }
+    persist();
+  }
+
   function totals(method = 'delivery') {
     let subtotal = 0;
     let count = 0;
     let grams = 0;
-    for (const { qty, unitPrice, size } of lines.values()) {
+    for (const { qty, unitPrice, size, product } of lines.values()) {
       subtotal += qty * unitPrice;
       count += qty;
-      grams += qty * (BAG_GRAMS[size] ?? 500);
+      const customWeight = product.shippingWeightGrams;
+      const weight = Number.isSafeInteger(customWeight) && customWeight > 0 ? customWeight : BAG_GRAMS[size] ?? 500;
+      grams += qty * weight;
     }
 
     let shipping = 0;
@@ -110,8 +128,8 @@ export function createStore(products, storage = browserStorage()) {
     return { subtotal, shipping, total: subtotal + shipping, count };
   }
 
-  restore();
-  return { cart, add, setQty, remove, clear, totals };
+  refresh();
+  return { cart, add, setQty, remove, clear, totals, refresh, consume };
 }
 
 function browserStorage() {

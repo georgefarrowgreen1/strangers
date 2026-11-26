@@ -52,7 +52,7 @@ describe("branded retail routes on the Worker", () => {
 
   test("the branded hostname serves the new retail pages and their same-origin assets", async () => {
     let appPath;
-    for (const path of ["/", "/account/", "/coffee/", "/location/", "/about/", "/brewguides/", "/contact/", "/shipping/", "/privacy-policy/", "/terms-conditions/"]) {
+    for (const path of ["/", "/account/", "/coffee/", "/coffee/p/ethiopia-rocko-mountain-natural/", "/checkout/", "/location/", "/about/", "/brewguides/", "/contact/", "/shipping/", "/privacy-policy/", "/terms-conditions/"]) {
       const page = await request(branded.base, path);
       assert.equal(page.status, 200, path);
       assert.match(page.headers.get("content-type"), /text\/html/, path);
@@ -81,6 +81,20 @@ describe("branded retail routes on the Worker", () => {
       assert.doesNotMatch(await script.text(), /<!doctype html>/i, path);
       assert.equal((await request(wholesale.base, path)).status, 404, path);
       assert.equal((await request(diary.base, path)).status, 404, path);
+    }
+  });
+
+  test("retail product links and write routes stay confined to the branded host", async () => {
+    const redirect = await request(branded.base, "/coffee/p/ethiopia-rocko-mountain-natural?grind=filter");
+    assert.equal(redirect.status, 308);
+    assert.equal(redirect.headers.get("location"), "/coffee/p/ethiopia-rocko-mountain-natural/?grind=filter");
+    assert.equal((await request(branded.base, "/coffee/p/no-such-coffee/")).status, 404);
+    for (const path of ["/api/retail/orders", "/api/retail/orders/SC-0123ABCD", "/api/retail/support"]) {
+      assert.equal((await request(branded.base, path)).status, 405);
+      const init = { method: "POST", headers: { origin: `https://${wholesaleHost}`, "content-type": "application/json" }, body: "{}" };
+      assert.equal((await request(branded.base, path, init)).status, 403);
+      assert.equal((await request(wholesale.base, path, init)).status, 404);
+      assert.equal((await request(diary.base, path, init)).status, 404);
     }
   });
 

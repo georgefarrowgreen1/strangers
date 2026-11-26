@@ -7,8 +7,10 @@ const KEY_NAME = "retail_service_v1";
 const SERVICE_VERSION = "STRANGERS-RETAIL-SERVICE-V1";
 const MAX_BODY_BYTES = 32 * 1024;
 const ACCOUNT_API = /^\/api\/account(?:\/orders)?$/;
-const ADMIN_API = /^\/api\/control\/consumer(?:\/settings|\/orders\/SC-[A-F0-9]{8}|\/products\/[a-z0-9][a-z0-9-]{0,99})?$/;
+const ADMIN_API = /^\/api\/control\/consumer(?:\/settings|\/orders(?:\/SC-[A-F0-9]{8})?|\/products\/[a-z0-9][a-z0-9-]{0,99}|\/support(?:\/HELP-[A-F0-9]{8})?)?$/;
 const AUTH_API = /^\/consumer-auth-service\/(?:register|setup|login|forgot|reset|logout)$/;
+const ORDER_API = /^\/consumer-orders-service\/orders(?:\/SC-[A-F0-9]{8})?$/;
+const SUPPORT_API = /^\/consumer-support-service\/message$/;
 const BRIDGE_API = /^\/consumer-bridge\/(?:exchange|revoke|session|availability)$/;
 const ENCODED_SECRET = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;
 const encoder = new TextEncoder();
@@ -84,7 +86,7 @@ export async function retailServicePublicKey(env: Env): Promise<Response> {
 function retailServiceUrl(path: string): URL {
   const url = new URL(path, RETAIL_SITES_ORIGIN);
   if (url.origin !== RETAIL_SITES_ORIGIN || path !== url.pathname + url.search
-      || ![ACCOUNT_API, ADMIN_API, AUTH_API, BRIDGE_API].some(pattern => pattern.test(url.pathname))) {
+      || ![ACCOUNT_API, ADMIN_API, AUTH_API, ORDER_API, SUPPORT_API, BRIDGE_API].some(pattern => pattern.test(url.pathname))) {
     throw new Error("Invalid retail service destination.");
   }
   return url;

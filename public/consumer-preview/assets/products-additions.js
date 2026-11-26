@@ -1,0 +1,27 @@
+export const catalogueAdditions = [
+  {
+    id: 'roasters-tasting-flight',
+    name: 'Roaster’s Tasting Flight',
+    category: 'flight',
+    notes: ['Chocolate', 'Blueberry', 'Cherry'],
+    shortCopy: 'Three coffees · Three 100 g bags',
+    story: 'Taste the rounded chocolate and hazelnut of Brazil Fazenda Bom Jesus, the blueberry and strawberry of Ethiopia Rocko Mountain and the cherry and chocolate of Colombia Anserma side by side.',
+    prices: { '300g': 1650 },
+    shippingWeightGrams: 300,
+    country: 'Brazil, Ethiopia and Colombia',
+    image: '/consumer-preview/assets/roastery.webp',
+    grinds: ['Whole bean'],
+    contents: ['bom-jesus', 'rocko', 'anserma'],
+  },
+  {
+    id: 'strangers-coffee-tea-towel',
+    name: 'Strangers Coffee Tea Towel',
+    category: 'accessory',
+    notes: [],
+    shortCopy: 'A mash up of new and old designs used through the history of Strangers Coffee.',
+    prices: { one: 1000 },
+    shippingWeightGrams: 150,
+    image: '/consumer-preview/assets/strangers-coffee-tea-towel.webp',
+    grinds: ['N/A'],
+  },
+];
