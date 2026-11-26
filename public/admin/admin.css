@@ -386,6 +386,10 @@ html:has(#scrim:not([hidden])){overflow:hidden}
 .w-rm-steps li{padding-left:4px;font-size:14px}
 .w-rm-steps li b{display:block;margin-bottom:5px}
 .w-rm-steps li span{display:block;color:var(--muted);line-height:1.5}
+.w-rm-storage{border-color:color-mix(in srgb,var(--warn) 35%,var(--line))}
+.w-rm-credential-fields{display:grid;gap:16px;border:0;padding:0;margin:0;min-width:0}
+.w-rm-credentials #wErr:empty{display:none}
+.w-rm-credentials #wErr:not(:empty){padding:12px;border-radius:12px;background:var(--bad-bg);font-size:13.5px;line-height:1.45}
 @media(min-width:900px){.w-rm-setup-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.w-rm-card{padding:16px}.w-rm-switch-row{align-items:flex-start;gap:12px}.w-rm-switch-row h2{font-size:16px}}
 @media(max-width:420px){.w-shipping-sheet .w-editor-body{gap:12px}.w-shipping-sheet .w-editor-footer .btn{font-size:14px}.w-shipping-fields .fl{font-size:13px}}

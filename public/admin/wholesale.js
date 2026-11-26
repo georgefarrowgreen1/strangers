@@ -237,6 +237,10 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
     if (!value || typeof value.enabled !== "boolean" || !Number.isSafeInteger(value.version) || value.version < 0 ||
       typeof value.bookingConfigured !== "boolean" || typeof value.trackingConfigured !== "boolean" ||
       !(value.serviceCode === null || typeof value.serviceCode === "string")) throw new Error("Royal Mail settings could not be confirmed. Reload settings before changing them.");
+    const setup = value.credentialSetup;
+    if (setup && (typeof setup.storageReady !== "boolean" || typeof setup.bookingReadable !== "boolean" || typeof setup.trackingReadable !== "boolean" ||
+      !["admin", "worker", null].includes(setup.bookingSource) || !["admin", "worker", null].includes(setup.trackingSource) ||
+      !(setup.serviceRegisterCode === null || typeof setup.serviceRegisterCode === "string") || !(setup.shippingAccountName === null || typeof setup.shippingAccountName === "string"))) throw new Error("Royal Mail credential setup could not be confirmed. Reload settings before changing it.");
     return value;
   }
   function royalMailSettings() {
@@ -245,13 +249,16 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
   function royalMailSettingsContent() {
     const config = royalMailConfig;
     if (!config) return html`<section class="group glass w-rm-card"><h2>Royal Mail setup</h2><p id="wRoyalMailSettingsError" class="err" role="alert">${royalMailIssue || "Royal Mail settings are unavailable."}</p><button class="btn soft" type="button" data-act="wh-royal-mail-reload" ${royalMailBusy ? raw("disabled") : ""}>Reload settings</button></section>`;
-    const available = config.enabled && config.bookingConfigured;
+    const available = config.enabled && config.bookingConfigured, setup = config.credentialSetup;
+    const sourceText = (kind) => setup?.[kind + "Source"] === "admin" ? setup[kind + "Readable"] ? "Credentials saved in Admin." : "Saved Admin credentials need to be replaced." : setup?.[kind + "Source"] === "worker" ? "Using the existing server connection. Save credentials here to manage this connection in Admin." : "Add this connection securely in Admin.";
+    const locked = royalMailBusy || royalMailNeedsReload || !setup?.storageReady;
     return html`<section class="group glass w-rm-card w-rm-booking"><div class="w-rm-switch-row"><div><h2 id="wRoyalMailBookingsTitle">New Royal Mail bookings</h2><p id="wRoyalMailBookingsHint">${available ? "Ready delivery orders can request new Royal Mail postage." : config.enabled ? "Complete the connection setup before requesting new postage." : "New postage requests are paused."}</p></div>
       <button class="wi-switch w-rm-switch" type="button" role="switch" aria-checked="${String(config.enabled)}" aria-labelledby="wRoyalMailBookingsTitle" aria-describedby="wRoyalMailBookingsHint" data-act="wh-royal-mail-toggle" ${royalMailBusy || royalMailNeedsReload || (!config.enabled && !config.bookingConfigured) ? raw("disabled") : ""}><span class="wi-switch-track" aria-hidden="true"><span class="wi-switch-thumb"></span></span><span class="w-rm-switch-state">${config.enabled ? "On" : "Off"}</span></button></div>
       <p class="w-rm-preserved">Existing shipments, label downloads and tracking stay available when new bookings are off.</p>
       ${royalMailNeedsReload ? html`<p class="err" id="wRoyalMailSettingsError" role="alert">${royalMailIssue}</p><button class="btn soft" type="button" data-act="wh-royal-mail-reload" ${royalMailBusy ? raw("disabled") : ""}>Reload settings</button>` : html`<p id="wRoyalMailSettingsError" class="err" role="alert"></p>`}<p class="hint w-rm-feedback" role="status">${royalMailBusy ? "Saving settings…" : royalMailFeedback}</p></section>
-      <div class="w-rm-setup-grid"><section class="group glass w-rm-card"><div class="w-rm-card-head"><h2>Click &amp; Drop</h2><span class="pill ${config.bookingConfigured ? "ok" : "warn"}">${config.bookingConfigured ? "Configured" : "Needs setup"}</span></div><p>${config.bookingConfigured ? "The postage connection and booking service are configured." : "A Click & Drop connection and a booking service are required before new bookings can be enabled."}</p><div class="kv"><span>Booking service</span><strong>${config.serviceCode || "Not set"}</strong></div><p class="hint">The API key and service code are managed in the Worker’s deployment settings. Credentials are never shown here.</p></section>
-      <section class="group glass w-rm-card"><div class="w-rm-card-head"><h2>Carrier tracking</h2><span class="pill ${config.trackingConfigured ? "ok" : ""}">${config.trackingConfigured ? "Configured" : "Optional"}</span></div><p>${config.trackingConfigured ? "Refresh a shipment to show its latest Royal Mail scan in Admin and the wholesale orders page." : "Connect Royal Mail tracking to show carrier scans here. Existing tracking links still open on Royal Mail."}</p><p class="hint">Tracking is separate from the switch for new postage requests.</p></section></div>
+      ${setup?.storageReady ? "" : html`<section class="group glass w-rm-card w-rm-storage"><h2>Secure storage needs setup</h2><p>Before credentials can be saved in Admin, configure the site’s existing encryption key, QUICKBOOKS_TOKEN_KEY, once in the deployment settings. Existing server connections remain available.</p></section>`}
+      <div class="w-rm-setup-grid"><section class="group glass w-rm-card"><div class="w-rm-card-head"><h2>Click &amp; Drop</h2><span class="pill ${config.bookingConfigured ? "ok" : "warn"}">${config.bookingConfigured ? "Configured" : "Needs setup"}</span></div><p>${config.bookingConfigured ? "The postage connection and booking service are configured." : "A Click & Drop connection and a booking service are required before new bookings can be enabled."}</p><div class="kv"><span>Booking service</span><strong>${config.serviceCode || "Not set"}</strong></div><p class="hint">${sourceText("booking")} Saved keys are never displayed.</p><button class="btn soft" type="button" data-act="wh-royal-mail-credentials" data-id="booking" ${locked ? raw("disabled") : ""}>${setup?.bookingSource === "admin" ? "Edit Click & Drop" : "Set up Click & Drop"}</button></section>
+      <section class="group glass w-rm-card"><div class="w-rm-card-head"><h2>Carrier tracking</h2><span class="pill ${config.trackingConfigured ? "ok" : ""}">${config.trackingConfigured ? "Configured" : "Optional"}</span></div><p>${config.trackingConfigured ? "Refresh a shipment to show its latest Royal Mail scan in Admin and the wholesale orders page." : "Connect Royal Mail tracking to show carrier scans here. Existing tracking links still open on Royal Mail."}</p><p class="hint">${sourceText("tracking")}</p><button class="btn soft" type="button" data-act="wh-royal-mail-credentials" data-id="tracking" ${locked ? raw("disabled") : ""}>${setup?.trackingSource === "admin" ? "Edit tracking" : "Set up tracking"}</button><p class="hint">Tracking is separate from the switch for new postage requests.</p></section></div>
       <section class="group glass w-rm-card"><h2>From packing to dispatch</h2><ol class="w-rm-steps"><li><b>Pack and review</b><span>Mark a delivery order Ready, open Royal Mail shipping and check its address and packed weight.</span></li><li><b>Check the label</b><span>Download the confirmed label when available. If postage is still pending, finish it in Click &amp; Drop and check the shipment again.</span></li><li><b>Confirm dispatch</b><span>Attach the label and confirm dispatch from the order when the parcel leaves the roastery.</span></li></ol><button class="btn soft" type="button" data-act="wh-royal-mail-orders">Open orders</button></section>`;
   }
   async function changeRoyalMailSettings(reloadOnly = false) {
@@ -276,6 +283,73 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
         if (restore) $(royalMailNeedsReload ? '#wRoyalMailSettings [data-act="wh-royal-mail-reload"]' : '#wRoyalMailSettings [data-act="wh-royal-mail-toggle"]:enabled')?.focus({ preventScroll: true });
       }
     }
+  }
+  async function openRoyalMailCredentials(kind) {
+    if (!["booking", "tracking"].includes(kind) || royalMailBusy || royalMailNeedsReload || !royalMailConfig?.credentialSetup?.storageReady) return;
+    const origin = $("#wRoyalMailSettings"), session = packingSession;
+    await changeRoyalMailSettings(true);
+    if (session !== packingSession || !origin?.isConnected || royalMailNeedsReload || !royalMailConfig?.credentialSetup?.storageReady) return;
+    const reviewed = royalMailConfig, setup = reviewed.credentialSetup, booking = kind === "booking";
+    const keeping = setup[kind + "Source"] === "admin" && setup[kind + "Readable"];
+    const title = booking ? "Click & Drop credentials" : "Royal Mail tracking credentials";
+    let cleanup = () => {};
+    const back = () => {
+      const form = $("#wRoyalMailCredentials"); if (!form || form.dataset.whBusy) return;
+      cleanup(); closeSheet(); $(`[data-act="wh-royal-mail-credentials"][data-id="${kind}"]`)?.focus({ preventScroll: true });
+    };
+    const secret = (name, label) => field(label, html`<input type="password" name="${name}" maxlength="512" autocomplete="new-password" autocapitalize="none" spellcheck="false" placeholder="${keeping ? "Saved · leave blank to keep" : "Enter credential"}" ${keeping ? "" : raw("required")}>`);
+    openSheet(html`<form id="wRoyalMailCredentials" class="w-sheet w-editor w-rm-credentials" method="post" autocomplete="off"><header class="w-editor-head"><h2 id="sheetTitle" tabindex="-1">${title}</h2><button class="btn soft" type="button" data-sheet="rm-credentials-back" aria-label="Close credentials">${svg("x")}</button></header><div class="w-editor-body">
+      <p class="hint">${keeping ? "Credentials are saved securely. Leave a password field blank to keep its saved value." : "Enter the Royal Mail credentials once to save this connection securely in Admin."} Keys are never displayed after saving.</p>
+      ${setup[kind + "Source"] === "admin" && !setup[kind + "Readable"] ? html`<p class="w-shipping-notice">The saved credentials cannot be read. Enter replacement credentials before saving.</p>` : ""}
+      <fieldset id="wRoyalMailCredentialFields" class="w-rm-credential-fields">${booking ? html`${secret("key", "Click & Drop API key")}
+        ${field("Booking service code", html`<input name="serviceCode" value="${reviewed.serviceCode || ""}" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" required>`)}
+        ${field("Service register code (optional)", html`<input name="serviceRegisterCode" value="${setup.serviceRegisterCode || ""}" maxlength="2" inputmode="numeric" autocomplete="off">`)}
+        ${field("Shipping account name (optional)", html`<input name="shippingAccountName" value="${setup.shippingAccountName || ""}" maxlength="50" autocomplete="off">`)}<p class="hint">Use the service and account details supplied by Royal Mail. Clear an optional field to remove its saved value.</p>` : html`${secret("clientId", "Tracking API client ID")}${secret("clientSecret", "Tracking API client secret")}<label class="w-shipping-confirm"><input type="checkbox" name="acceptTerms" required><span>I am authorised to use these credentials and accept Royal Mail’s Tracking API terms.</span></label><p class="hint">Use the credentials Royal Mail issued for the Tracking API. If you change the client ID, enter its new secret too.</p>`}</fieldset>
+      <p class="hint">Saving credentials keeps the new bookings switch ${reviewed.enabled ? "on" : "off"}. It does not request postage or contact Royal Mail.</p></div><footer class="w-editor-footer"><p id="wErr" class="err" role="alert"></p><button class="btn soft" type="button" data-sheet="rm-credentials-reload" hidden>Reload saved setup</button><div class="row w-actions"><button class="btn soft" type="button" data-sheet="rm-credentials-back">Cancel</button><button class="btn" type="submit">Save credentials</button></div></footer></form>`, async (action, element) => {
+      const form = element.closest("form"); if (!form || form.dataset.whBusy) return;
+      if (action === "rm-credentials-back") { back(); return; }
+      if (action === "rm-credentials-reload") {
+        cleanup(); closeSheet(); await changeRoyalMailSettings(true);
+        if (session === packingSession && !royalMailNeedsReload) await openRoyalMailCredentials(kind);
+        return;
+      }
+      if (action !== "submit" || form.dataset.needsReload || !form.reportValidity()) return;
+      await saveForm(form, async () => {
+        royalMailBusy = true; royalMailGeneration++;
+        form.querySelector("#wRoyalMailCredentialFields").disabled = true;
+        try {
+          const read = name => form.elements.namedItem(name).value.trim();
+          const result = checkedRoyalMailConfig(await api("PUT", "/api/admin/wholesale/royal-mail/credentials", booking
+            ? { ifVersion: reviewed.version, kind, key: read("key"), serviceCode: read("serviceCode").toUpperCase(), serviceRegisterCode: read("serviceRegisterCode"), shippingAccountName: read("shippingAccountName") }
+            : { ifVersion: reviewed.version, kind, clientId: read("clientId"), clientSecret: read("clientSecret"), acceptTerms: form.elements.namedItem("acceptTerms").checked }));
+          if (session !== packingSession || !form.isConnected) return;
+          if (result.version <= reviewed.version || result.enabled !== reviewed.enabled || result.credentialSetup?.[kind + "Source"] !== "admin" || !result.credentialSetup[kind + "Readable"]) throw new Error("The saved credentials could not be confirmed. Reload saved setup before trying again.");
+          royalMailConfig = result; royalMailNeedsReload = false; royalMailIssue = ""; royalMailFeedback = booking ? "Click & Drop credentials saved securely." : "Tracking credentials saved securely.";
+          cleanup(); closeSheet(); toast(royalMailFeedback);
+        } catch (error) {
+          if (session === packingSession && form.isConnected && ![400, 422].includes(error.status)) {
+            form.dataset.needsReload = "1"; form.querySelector("#wRoyalMailCredentialFields").disabled = true;
+            form.querySelector('[data-sheet="rm-credentials-reload"]').hidden = false;
+            royalMailNeedsReload = true; royalMailIssue = "Reload settings to check the saved credentials before changing this connection again.";
+          }
+          throw error;
+        } finally {
+          if (session === packingSession) {
+            royalMailBusy = false; const host = $("#wRoyalMailSettings"); if (host) put(host, royalMailSettingsContent());
+            if (form.isConnected && !form.dataset.needsReload) form.querySelector("#wRoyalMailCredentialFields").disabled = false;
+            if (!form.isConnected) $(`[data-act="wh-royal-mail-credentials"][data-id="${kind}"]`)?.focus({ preventScroll: true });
+          }
+        }
+      });
+      if (form.isConnected && form.dataset.needsReload) form.querySelector('button[type="submit"]').disabled = true;
+    }, $(`[data-act="wh-royal-mail-credentials"][data-id="${kind}"]`));
+    const form = $("#wRoyalMailCredentials"), controller = new AbortController(), scrim = $("#scrim");
+    const observer = new MutationObserver(() => { if (!form.isConnected) cleanup(); });
+    cleanup = () => { for (const input of form.querySelectorAll('input[type="password"]')) input.value = ""; controller.abort(); observer.disconnect(); };
+    observer.observe($("#sheet"), { childList: true });
+    window.addEventListener("pagehide", () => { if (form.isConnected) { cleanup(); closeSheet(); } }, { signal: controller.signal });
+    document.addEventListener("keydown", event => { if (event.key !== "Escape" || !form.isConnected) return; event.preventDefault(); event.stopImmediatePropagation(); back(); }, { capture: true, signal: controller.signal });
+    scrim.addEventListener("click", event => { if (event.target !== scrim || !form.isConnected) return; event.preventDefault(); event.stopImmediatePropagation(); back(); }, { capture: true, signal: controller.signal });
   }
 
   function more(kind) {
@@ -1662,6 +1736,7 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
     searchBillingAccounts: invoiceUI.accountsSearch,
     invoicingChange: invoiceUI.workspaceChange,
     async act(name, id) {
+      if (name === "wh-royal-mail-credentials") { await openRoyalMailCredentials(id); return; }
       if (name === "wh-royal-mail-toggle" || name === "wh-royal-mail-reload") { await changeRoyalMailSettings(name === "wh-royal-mail-reload"); return; }
       if (name === "wh-royal-mail-orders") { selectSection("orders"); await reload(); return; }
       if (name.startsWith("wh-invoice-")) { await invoiceUI.act(name, id); return; }

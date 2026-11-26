@@ -138,6 +138,8 @@ test("wholesale shipping keeps booking, label validity and dispatch consistent a
     await seed(id);
     assert.deepEqual(await settings(), {
       enabled: false, version: 0, bookingConfigured: true, trackingConfigured: true, serviceCode: "TPS48",
+      credentialSetup: { storageReady: false, bookingSource: "worker", trackingSource: "worker", bookingReadable: true,
+        trackingReadable: true, serviceRegisterCode: null, shippingAccountName: null },
     });
     const view = await (await call(shipPath(id))).json();
     assert.equal(view.bookingEnabled, false);

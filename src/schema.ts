@@ -558,6 +558,14 @@ const MIGRATIONS: Migration[] = [
       env.DB.prepare("INSERT OR IGNORE INTO wholesale_royal_mail_settings (id, enabled, version, updated_at) VALUES (1,0,0,0)"),
     ]);
   } },
+  { id: 52, name: "Encrypted Royal Mail credentials", run: async env => {
+    const table = "wholesale_royal_mail_settings";
+    for (const column of ["booking_config", "tracking_config"]) {
+      if ((await columns(env, table)).has(column)) continue;
+      try { await env.DB.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`).run(); }
+      catch (error) { if (!(await columns(env, table)).has(column)) throw error; }
+    }
+  } },
 ];
 
 async function migrate(env: Env): Promise<void> {
