@@ -12,7 +12,7 @@ chromium.launch = async options => {
   const saveTraces = new Map();
   browser.on("context", context => {
     const path = join(directory, `context-${++traceNumber}.zip`);
-    const recording = context.tracing.start({ screenshots: true, snapshots: true, sources: false });
+    const recording = context.tracing.start({ snapshots: true, sources: false });
     recording.catch(warn);
 
     let saved;

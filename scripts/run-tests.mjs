@@ -20,7 +20,7 @@ const allFiles = readdirSync(testDirectory).filter(file => file.endsWith(".test.
 
 function shardFiles(files, index, count) {
   const shards = Array.from({ length: count }, () => ({ seconds: 0, files: [] }));
-  const estimate = file => timings[suite][file] ?? (suite === "browser" ? 20 : 8);
+  const estimate = file => timings[suite][file] ?? (suite === "browser" ? 32 : 8);
   // Put the longest files first, then fill the shard with the least work assigned so far.
   for (const file of [...files].sort((a, b) => estimate(b) - estimate(a))) {
     const shard = shards.reduce((lightest, next) => next.seconds < lightest.seconds ? next : lightest);
