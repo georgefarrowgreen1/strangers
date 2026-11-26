@@ -1,5 +1,3 @@
 # Strangers release publisher
 
-Source commit `f3cfb6a40a14a43a50a8cfea7a6825ee54e5211a` based on `7e084bb8d817d454802f87d3fb41a5bfb66c8dc0` via `codex/consumer-account-login`.
-
-Publishes the verified consumer storefront and fulfilment workflow via GitHub and Cloudflare Workers Builds after GitHub Tests.
+Publishes the reviewed wholesale Royal Mail shipping, tracking and Admin setup from source commit `e760bbd42cbdc3c736e871c73147cfe453bd89f4`, based on `1bfdb9c6fa91d39cb13b28ad08a84581aabc7e65`. The existing GitHub workflow opens the production pull request and waits for Tests before squash merging.

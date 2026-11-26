@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/consumer-storefront-beta"
-EXPECTED = "ed9af716468f2d24fe45f4e5a3816f860e61459a"
+BRANCH = "codex/wholesale-royal-mail"
+EXPECTED = "e760bbd42cbdc3c736e871c73147cfe453bd89f4"
 PRIOR = ""
 TIMED_OUT_TEST_RUN = None
-TITLE = "Deploy the consumer storefront and test fulfilment"
+TITLE = "Add Royal Mail shipping and tracking to wholesale"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

@@ -1,7 +1,7 @@
-## Consumer preview
+## Wholesale Royal Mail
 
-Ships the approved retail homepage and stock-aware finder, 18 shareable product and gift pages, standalone guest and account checkout, private order tracking and improved My account. Consumer (Preview) gains a paginated packing and dispatch queue and a support inbox.
+Adds Royal Mail Click & Drop booking, label downloads, carrier scans and dispatch review to wholesale fulfilment. The Royal Mail page under Admin → Wholesale includes an admin-only switch for new bookings and encrypted, write-only fields for booking and tracking credentials. New bookings start off. Existing order, dispatch email and invoicing rules apply at handover.
 
-Retail service version 15 is deployed with additive migrations, immutable checkout records, authenticated fulfilment and a separate contact inbox. Payments and dispatch remain in the preview test flow. Retail routes cannot reach wholesale or QuickBooks.
+Additive D1 migrations preserve existing orders and keep credentials out of JSON backups. The existing hosting encryption key enables credential entry in Admin. Royal Mail Worker settings remain available for connections without an Admin override.
 
-Verified desktop and mobile Chromium, checkout retry and isolation through both Workers and D1, Admin packing, tracking and support, catalogue consistency, and a Wrangler deployment dry run.
+Verified mobile and desktop Admin and packing flows, Node 22 carrier and credential tests, and a local upgrade from production’s current schema using simulated carrier responses.
