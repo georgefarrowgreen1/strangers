@@ -634,19 +634,35 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
   }
   function validTrackingUrl(value) {
     if (!value) return true;
-    if (value.length > 2000 || /[\u0000-\u001f\u007f]/.test(value)) return false;
+    if (value.length > 2000 || !/^https?:\/\//i.test(value) || /[\u0000-\u001f\u007f]|%(?:0[0-9a-f]|1[0-9a-f]|7f)/i.test(value)) return false;
     try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) && !!url.hostname && !url.username && !url.password; }
     catch { return false; }
   }
   const canShipRoyalMail = (row) => row.preview === false && !!row.customerId && /^(delivery|courier)$/i.test(row.delivery) && row.status !== "Cancelled";
+  function royalMailAddress(snapshot) {
+    // Customer addresses are free text. Keep ambiguous towns/counties for the operator to enter.
+    const parts = String(snapshot.address || "").split(/\r\n?|\n/).map(value => value.trim()).filter(Boolean);
+    const postcode = String(snapshot.postcode || "").trim();
+    if (parts.at(-1)?.replace(/\s/g, "").toUpperCase() === postcode.replace(/\s/g, "").toUpperCase()) parts.pop();
+    if (/^(?:UK|United Kingdom|Great Britain|England|Scotland|Wales)$/i.test(parts.at(-1) || "")) parts.pop();
+    const town = parts.at(-1) || "";
+    const county = /(?:shire$|^(?:(?:East|West|North|South) )?(?:Norfolk|Suffolk|Essex|Kent|Surrey|Sussex|Somerset|Dorset|Devon|Cornwall|Cumbria|Rutland|Middlesex|Durham|Glamorgan|Gwent|Powys|Clwyd|Gwynedd|Dyfed|Antrim|Down|Armagh|Tyrone|Fermanagh|Londonderry)$)/i;
+    const clearTown = parts.length >= 2 && parts.length <= 3 && /\d/.test(parts.slice(0,-1).join(" ")) && /^[\p{L}][\p{L} .’'-]{1,99}$/u.test(town) && !county.test(town);
+    const line1 = parts[0] || "";
+    return { line1: line1.length <= 100 ? line1 : "", line2: clearTown && parts.length === 3 && parts[1].length <= 100 ? parts[1] : "", city: clearTown ? town : "", postcode };
+  }
   // Labels and physical dispatch are separate: booking never confirms that a box has left the roastery.
   async function royalMailShipping(row, returnToOrder) {
     if (!canShipRoyalMail(row)) return;
     const path = `/api/admin/wholesale/orders/${row.id}/shipping`, session = packingSession;
-    let shipping = null, uncertain = false, changed = false, needsReload = false, cleanup = () => {};
+    let shipping = null, uncertain = false, changed = false, needsReload = false, reviewing = false, reviewReadyAt = 0, cleanup = () => {};
     const snapshot = row.locationSnapshot || row.customerSnapshot || {};
-    let draft = { name: snapshot.contact || row.business || "", line1: "", line2: "", city: "", postcode: snapshot.postcode || "", weightGrams: "" };
-    const stateText = (shipment) => ({ booking: "Label request pending", review: "Check label request", failed: "Label request declined — review and try again", created: "Order sent to Royal Mail", labelled: "Label ready", dispatched: "Royal Mail shipment dispatched" }[shipment?.state] || (shipment ? "Royal Mail shipment recorded" : "No Royal Mail label requested"));
+    let draft = { name: snapshot.contact || row.business || "", ...royalMailAddress(snapshot), weightGrams: "" };
+    const stateText = (shipment) => ({ booking: "Label request pending", review: "Check label request", failed: "Label request needs attention", created: "Postage request recorded", labelled: "Label ready", dispatched: "Royal Mail shipment dispatched" }[shipment?.state] || (shipment ? "Royal Mail shipment recorded" : "Review parcel details"));
+    const carrierDate = (value) => {
+      const at = new Date(value);
+      return Number.isFinite(at.getTime()) ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }).format(at) + " (UK time)" : "Update time unavailable";
+    };
     const capture = (form) => { for (const key of Object.keys(draft)) { const input = form.querySelector(`[name="${key}"]`); if (input) draft[key] = input.value; } };
     const latestOrder = async () => {
       const result = await api("GET", "/api/admin/wholesale/orders?q=" + encodeURIComponent(row.id));
@@ -664,7 +680,7 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
           catch { warning = "Could not reload this order. Your draft keeps its earlier version; reload orders before saving or dispatching."; }
         }
         if (session !== packingSession || !form.isConnected) return;
-        const tracking = shipping?.orderVersion === latest.version && !shipping.shipment?.orderChanged ? shipping.shipment?.trackingUrl : null;
+        const tracking = shipping?.orderVersion === latest.version && !shipping.shipment?.orderChanged && !shipping.shipment?.reviewRequired ? shipping.shipment?.trackingUrl : null;
         cleanup(); returnToOrder(latest, tracking && validTrackingUrl(tracking) ? tracking : null);
         if (warning) toast(warning);
       });
@@ -672,30 +688,82 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
     function draw(error = "") {
       cleanup();
       const shipment = shipping?.shipment, recorded = !!shipment && shipment.state !== "failed", stale = needsReload || shipping && shipping.orderVersion !== row.version;
-      openSheet(html`<form id="wRoyalMailForm" class="w-sheet w-editor w-shipping-sheet">${editorHead("Royal Mail shipping")}<div class="w-editor-body"><div><h3>${row.business || row.createdName}</h3><p class="w-id">${row.id}</p></div>
-        <p class="hint">One Great Britain parcel per order. Create and print the label here, then confirm dispatch when the parcel leaves.</p>
-        <p id="wShippingState" class="w-shipping-status" role="status">${shipping ? stateText(shipment) : "Checking Royal Mail shipping…"}</p>
-        ${shipping?.enabled === false ? html`<p class="hint">Royal Mail shipping is not configured. You can still add a tracking link and dispatch the order as usual.</p>` : ""}
-        ${shipping?.enabled && !shipping.canCreate && !recorded ? html`<p class="hint">Pack the order and mark it Ready before requesting postage.</p>` : ""}
-        ${shipping?.trackingWarning ? html`<p class="hint" role="status">${shipping.trackingWarning}</p>` : ""}
-        ${shipment?.carrierEventAt ? html`<p class="hint">Carrier update ${date(shipment.carrierEventAt)}</p>` : ""}
-        ${uncertain ? html`<p class="hint">The label request could not be confirmed. Check the existing request before trying anything else.</p>` : ""}
-        ${shipment?.orderChanged ? html`<p class="hint">The order changed after this label request. Check the saved destination, bags and label before handing over the parcel.</p>` : ""}
-        ${stale && !recorded ? html`<p class="hint">This order changed since you opened it. Return to the latest order before requesting a label.</p>` : ""}
-        ${recorded ? html`<div class="kvs">${shipment.orderId ? html`<div class="kv"><span>Royal Mail order</span><span>${shipment.orderId}</span></div>` : ""}${shipment.trackingNumber ? html`<div class="kv"><span>Tracking number</span><span>${shipment.trackingNumber}</span></div>` : ""}${shipment.carrierStatus ? html`<div class="kv"><span>Carrier status</span><span>${shipment.carrierStatus}</span></div>` : ""}</div>${shipment.orderId ? html`<button type="button" class="btn soft w-shipping-label" data-sheet="shipping-label">${svg("dl")}Download label PDF</button>` : ""}${shipment.trackingUrl && validTrackingUrl(shipment.trackingUrl) ? html`<a class="btn soft" href="${shipment.trackingUrl}" target="_blank" rel="noopener noreferrer">Track parcel</a>` : ""}` : html`
-          <div class="w-shipping-snapshot"><b>Saved delivery address</b><p class="w-address">${[snapshot.contact, snapshot.address, snapshot.postcode].filter(Boolean).join("\n") || "No delivery address recorded"}</p></div>
+      const safeShipment = !stale && !shipment?.orderChanged && !shipment?.reviewRequired;
+      const labelReady = ["labelled", "dispatched"].includes(shipment?.state);
+      const canVerify = shipment?.reviewRequired && !shipment.orderChanged && !stale && shipment.orderId;
+      const refreshText = shipment?.orderId && safeShipment ? labelReady && shipping?.trackingEnabled !== false ? "Refresh tracking" : "Check shipment" : "Check label request";
+      const needsLabelReview = recorded && !safeShipment;
+      const status = needsLabelReview ? "Label needs review" : reviewing && !recorded && !uncertain ? "Ready to request a label" : stateText(shipment);
+      const tone = shipment?.state === "failed" ? "bad" : needsLabelReview || ["booking", "review"].includes(shipment?.state) || uncertain ? "warn" : labelReady ? "ok" : "";
+      openSheet(html`<form id="wRoyalMailForm" class="w-sheet w-editor w-shipping-sheet">${editorHead("Royal Mail shipping")}<div class="w-editor-body"><div class="w-shipping-heading"><h3>${row.business || row.createdName}</h3><p class="w-id" title="${row.id}">${row.reference ? "Reference " + row.reference + " · " : ""}${shortId(row.id)}…</p><p class="hint">Order placed ${carrierDate(row.createdAt)}</p></div>
+        <div id="wShippingState" class="w-shipping-status" role="status"><span class="pill ${tone}">${shipping ? status : "Checking Royal Mail shipping…"}</span><span>${recorded ? "Confirm dispatch separately when the parcel leaves." : reviewing ? "Check this parcel summary before requesting postage." : "Review the saved address and enter the sealed parcel weight."}</span>${shipment?.requestedAt ? html`<small>Requested ${carrierDate(shipment.requestedAt)}</small>` : ""}${shipment?.checkedAt ? html`<small>Last checked ${carrierDate(shipment.checkedAt)}</small>` : ""}</div>
+        ${shipping?.enabled === false ? html`<p class="w-shipping-notice">Royal Mail shipping is not configured. You can still add a tracking link and dispatch the order as usual.</p>` : ""}
+        ${shipping?.enabled && !shipping.canCreate && !recorded ? html`<p class="w-shipping-notice">Pack the order and mark it Ready before requesting postage.</p>` : ""}
+        ${shipping?.trackingWarning ? html`<p class="w-shipping-notice" role="status">${shipping.trackingWarning}</p>` : ""}
+        ${recorded && shipping?.trackingEnabled === false ? html`<p class="w-shipping-notice">Carrier scans are not connected. You can check the label request and follow the tracking link on Royal Mail.</p>` : ""}
+        ${shipment?.problem ? html`<p class="w-shipping-notice" role="status">${shipment.problem}</p>` : ""}
+        ${uncertain ? html`<p class="w-shipping-notice">The label request could not be confirmed. Check the existing request before trying anything else.</p>` : ""}
+        ${shipment?.orderChanged ? html`<p class="w-shipping-notice">The order changed after this label request. Check the saved destination, bags and label before handing over the parcel.</p>` : ""}
+        ${shipment?.reviewRequired ? html`<p class="w-shipping-notice">This Royal Mail record needs verification in Click &amp; Drop before using its label or tracking link.</p>` : ""}
+        ${stale ? html`<p class="w-shipping-notice">This order changed since you opened it. Return to the latest order before requesting a label or confirming dispatch.</p>` : ""}
+        ${recorded ? html`
+          <section class="w-shipping-scan" aria-label="Latest Royal Mail scan"><h3>Latest Royal Mail scan</h3><strong>${shipment.carrierStatus || (shipping?.trackingEnabled === false ? "Carrier scans not connected" : "No carrier scan yet")}</strong><p>${shipment.carrierEventAt ? carrierDate(shipment.carrierEventAt) : shipping?.trackingEnabled === false ? "Use the Royal Mail tracking page for updates." : "Tracking updates appear after Royal Mail scans the parcel."}</p></section>
+          ${shipment.trackingNumber ? html`<div class="w-shipping-tracking"><span><b>Tracking number</b><code>${shipment.trackingNumber}</code></span>${safeShipment ? html`<button class="btn sm soft" type="button" data-sheet="shipping-copy" aria-label="Copy tracking number">${svg("copy")}Copy</button>` : ""}</div>` : ""}
+          ${safeShipment ? html`<div class="w-shipping-tools">${shipment.orderId && labelReady ? html`<button type="button" class="btn w-shipping-label" data-sheet="shipping-label">${svg("dl")}Download label PDF</button>` : ""}${shipment.trackingUrl && validTrackingUrl(shipment.trackingUrl) ? html`<a class="btn soft" href="${shipment.trackingUrl}" target="_blank" rel="noopener noreferrer">Track on Royal Mail</a>` : ""}</div>` : ""}
+          <section class="w-shipping-next"><h3>Next step</h3><b>${stale ? "Return to the latest order" : !safeShipment ? "Review the shipment in Click & Drop" : row.status === "Dispatched" ? "Dispatch is recorded" : shipment.orderId && !labelReady ? "Finish postage in Click & Drop" : shipment.orderId ? "Print, attach, then dispatch" : "Check the label request"}</b><p>${stale ? "The order has changed. Return to the order to review its latest status before continuing." : !safeShipment ? "Verify the destination and parcel details before using this shipment. Label download and automatic tracking reuse are paused." : row.status === "Dispatched" ? "Follow the parcel using its tracking number. Refresh tracking to check for a newer carrier scan." : shipment.orderId && !labelReady ? "Finish postage and generate the label in Click & Drop, then use Check shipment. This order stays Ready until you confirm dispatch." : shipment.orderId ? "Attach the label to your sealed parcel. Return to the order and confirm dispatch when it leaves the roastery." : "Use Check label request to recover the existing request. A new postage request will not be sent."}</p></section>
+          ${shipment.orderId ? html`<p class="w-id">Royal Mail order ${shipment.orderId}${shipment.weightGrams ? " · Packed weight " + weight(shipment.weightGrams) : ""}</p>` : ""}
+          ${!shipment.orderId || !safeShipment || !labelReady ? html`<section class="w-shipping-recovery"><h3>Find this request in Click &amp; Drop</h3><p>Search using the full order reference below. Compare the recipient, address and parcel weight with this order. Keep the existing request while its outcome is checked.</p><code>${row.id}</code></section>` : ""}
+          ${canVerify ? html`<section class="w-shipping-verify"><h3>Verify the existing shipment</h3><p>After checking Click &amp; Drop, enter the tracking number from the matching label.</p>${field("Tracking number on the checked label", html`<input id="wShippingVerifyTracking" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30">`)}<label class="w-shipping-confirm"><input id="wShippingVerifyConfirmed" type="checkbox"><span>I checked the label recipient, address and parcel weight against this order.</span></label><button type="button" class="btn" data-sheet="shipping-verify">Verify existing shipment</button></section>` : ""}` : reviewing ? html`
+          <section class="w-shipping-review" aria-labelledby="wShippingReviewTitle"><div class="w-section-head"><h3 id="wShippingReviewTitle">Parcel review</h3><button type="button" class="btn sm soft" data-sheet="shipping-edit">Edit details</button></div><p class="w-address">${[draft.name, row.business, draft.line1, draft.line2, draft.city, draft.postcode.toUpperCase()].filter(Boolean).join("\n")}</p><div class="kv"><span>Packed parcel</span><strong>${weight(Number(draft.weightGrams))} · ${Number(draft.weightGrams).toLocaleString("en-GB")} g</strong></div><p class="hint">One parcel · Great Britain · up to 30 kg</p></section><p class="hint">Requesting the label sends this parcel to your Royal Mail account. Confirm dispatch from the order after handover.</p>` : html`
+          <details class="w-shipping-snapshot" ${!draft.city ? raw("open") : ""}><summary>Saved order address</summary><p class="w-address">${[snapshot.contact, snapshot.address, snapshot.postcode].filter(Boolean).join("\n") || "No delivery address recorded"}</p></details>
           <fieldset id="wShippingFields" class="w-shipping-fields" ${!shipping?.canCreate || uncertain || stale ? raw("disabled") : ""}>
+          <legend>Delivery address</legend>
+          <p class="hint">${draft.line1 ? "Filled from this order’s saved address. Check every line before continuing." : "Enter the address exactly as it should appear on the label."}</p>
           ${field("Addressee", html`<input name="name" maxlength="100" autocomplete="shipping name" required value="${draft.name}">`)}
           ${field("Address line 1", html`<input name="line1" maxlength="100" autocomplete="shipping address-line1" required value="${draft.line1}">`)}
           ${field("Address line 2 (optional)", html`<input name="line2" maxlength="100" autocomplete="shipping address-line2" value="${draft.line2}">`)}
           ${field("Town or city", html`<input name="city" maxlength="100" autocomplete="shipping address-level2" required value="${draft.city}">`)}
           ${field("UK postcode", html`<input name="postcode" maxlength="12" autocomplete="shipping postal-code" required value="${draft.postcode}">`)}
           ${field("Packed weight (grams)", html`<input name="weightGrams" type="number" inputmode="numeric" min="${Math.max(1,row.grams)}" max="30000" step="1" required value="${draft.weightGrams}">`)}
-          <p class="hint">Weigh the sealed box, including packaging. The coffee alone weighs ${weight(row.grams)}. One box can weigh at most 30 kg.</p></fieldset>`}
-        </div><footer class="w-editor-footer"><p id="wErr" class="err" role="alert">${error}</p><div class="row w-actions"><button type="button" class="btn soft" data-sheet="shipping-back">Back to order</button>${recorded || uncertain || !shipping ? html`<button type="button" class="btn" data-sheet="shipping-refresh">Check label request</button>` : stale ? html`<button type="button" class="btn" data-sheet="shipping-back">Reload latest order</button>` : shipping.canCreate ? html`<button type="submit" class="btn">Request Royal Mail label</button>` : ""}</div></footer></form>`, async (action, element) => {
+          <p class="hint">Include the box and packaging. Coffee alone: ${weight(row.grams)}.</p></fieldset>`}
+        </div><footer class="w-editor-footer"><p id="wErr" class="err" role="alert">${error}</p><div class="row w-actions"><button type="button" class="btn soft" data-sheet="shipping-back">Back to order</button>${recorded || uncertain || !shipping ? html`<button type="button" class="btn soft" data-sheet="shipping-refresh">${refreshText}</button>` : stale ? html`<button type="button" class="btn" data-sheet="shipping-back">Reload latest order</button>` : shipping.canCreate ? html`<button type="submit" class="btn" ${reviewing && performance.now() < reviewReadyAt ? raw("disabled") : ""}>${reviewing ? "Request Royal Mail label" : "Review label request"}</button>` : ""}</div></footer></form>`, async (action, element) => {
         const form = element.closest("form");
         if (!form || form.dataset.whBusy) return;
         if (action === "shipping-back") { await back(); return; }
+        if (action === "shipping-edit") { reviewing = false; draw(); return; }
+        if (action === "shipping-verify") {
+          if (!canVerify) return;
+          const trackingNumber = form.querySelector("#wShippingVerifyTracking").value.trim().toUpperCase().replace(/[\s-]+/g, "");
+          if (!form.querySelector("#wShippingVerifyConfirmed").checked || !/^(?:[A-Z]{2}\d{9}[A-Z]{2}|[0-9A-F]{21})$/.test(trackingNumber)) {
+            form.querySelector("#wErr").textContent = "Check the recipient, address and parcel weight in Click & Drop, then enter the matching tracking number and tick the confirmation."; return;
+          }
+          await saveForm(form, async () => {
+            const result = await api("POST", path + "/verify", { ifVersion: shipping.orderVersion, trackingNumber, confirmed: true });
+            if (session !== packingSession || !form.isConnected) return;
+            if (!Number.isSafeInteger(result.orderVersion) || typeof result.enabled !== "boolean" || !Object.hasOwn(result, "shipment")) throw new Error("The verification could not be confirmed. Check the shipment again before using its label.");
+            shipping = result; changed = true; draw();
+          });
+          return;
+        }
+        if (action === "shipping-copy") {
+          await saveForm(form, async () => {
+            if (!navigator.clipboard?.writeText) throw new Error("Copy is unavailable on this browser. Select the tracking number to copy it.");
+            const verifiedNumber = async () => {
+              if (!(await window.SC.ensureSession({ force: true })) || session !== packingSession || !form.isConnected) throw new Error("Sign-in changed.");
+              return shipping.shipment.trackingNumber;
+            };
+            try {
+              // Starting the clipboard operation within the tap also supports Safari's user-gesture requirement.
+              if (navigator.clipboard.write && window.ClipboardItem) await navigator.clipboard.write([new ClipboardItem({ "text/plain": verifiedNumber().then(value => new Blob([value], { type: "text/plain" })) })]);
+              else await navigator.clipboard.writeText(await verifiedNumber());
+            }
+            catch { throw new Error("Could not copy the tracking number. Select the number to copy it manually."); }
+            if (session !== packingSession || !form.isConnected) return;
+            element.textContent = "Copied"; element.setAttribute("aria-label", "Tracking number copied");
+            setTimeout(() => { if (element.isConnected) { put(element, html`${svg("copy")}Copy`); element.setAttribute("aria-label", "Copy tracking number"); } }, 2500);
+          });
+          return;
+        }
         if (action === "shipping-label") {
           await saveForm(form, async () => {
             // Shared fetch verifies the Admin identity again before releasing private binary data.
@@ -713,8 +781,12 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
         capture(form);
         if (action === "submit" && (!shipping?.canCreate || (shipping.shipment && shipping.shipment.state !== "failed") || uncertain || shipping.orderVersion !== row.version)) return;
         if (action === "submit" && (!form.reportValidity() || !Number.isSafeInteger(Number(draft.weightGrams)) || Number(draft.weightGrams) < 1)) return;
+        if (action === "submit" && !reviewing) { reviewing = true; reviewReadyAt = performance.now() + 450; draw(); return; }
+        if (action === "submit" && performance.now() < reviewReadyAt) return;
         await saveForm(form, async () => {
           try {
+            const button = form.querySelector(action === "submit" ? 'button[type="submit"]' : '[data-sheet="shipping-refresh"]');
+            if (button) button.textContent = action === "submit" ? "Requesting label…" : shipment?.orderId ? "Refreshing tracking…" : "Checking request…";
             // Lock before a request leaves: a lost response is recovered, never automatically rebooked.
             if (action === "submit") uncertain = true;
             const result = await api(action === "submit" || shipping ? "POST" : "GET", path + (action === "shipping-refresh" && shipping ? "/refresh" : ""), action === "submit" ? { ifVersion: row.version, recipient: { name: draft.name.trim(), line1: draft.line1.trim(), line2: draft.line2.trim(), city: draft.city.trim(), postcode: draft.postcode.trim() }, weightGrams: Number(draft.weightGrams) } : action === "shipping-refresh" && shipping ? {} : undefined);
@@ -725,12 +797,16 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
             if (session !== packingSession || !form.isConnected) return;
             // A confirmed validation refusal has not created a job; uncertain/network failures stay recovery-only.
             if (action === "submit" && [400, 403, 404, 409, 422].includes(error.status)) uncertain = false;
+            if (action === "submit" && [400, 422].includes(error.status)) reviewing = false;
             if (error.status === 409) needsReload = true;
             draw(error.message);
           }
         });
       });
       const form = $("#wRoyalMailForm"), controller = new AbortController(), scrim = $("#scrim");
+      if (reviewing && performance.now() < reviewReadyAt) setTimeout(() => {
+        if (form.isConnected && !form.dataset.whBusy) form.querySelector('button[type="submit"]')?.removeAttribute("disabled");
+      }, reviewReadyAt - performance.now());
       const observer = new MutationObserver(() => { if (!form.isConnected) cleanup(); });
       cleanup = () => { controller.abort(); observer.disconnect(); };
       observer.observe($("#sheet"), { childList: true });
@@ -756,13 +832,14 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
       if (target) target.focus({ preventScroll: true }); else focusOrderList(row.id);
     };
     openSheet(html`<form id="wDispatchOrderForm" class="w-sheet w-editor">${editorHead(collection ? "Confirm collection" : "Dispatch order")}<div class="w-editor-body"><div class="w-order-heading"><h3>${row.business || row.createdName}</h3>${pill(row.status)}</div><p class="w-id">${row.packs} ${row.packs === 1 ? "bag" : "bags"} · ${weight(row.grams)} · ${row.id}</p><div class="w-preview-destination"><b>${row.delivery}</b>${row.locationSnapshot?.name ? html`<span>${row.locationSnapshot.name}</span>` : ""}${!collection && row.locationSnapshot?.address ? html`<span>${[row.locationSnapshot.address,row.locationSnapshot.postcode].filter(Boolean).join(", ")}</span>` : ""}</div>
-      ${collection ? html`<p class="hint">Only confirm once the customer has collected their order.</p>` : field("Tracking link (optional)", html`<input id="wDispatchTracking" type="url" inputmode="url" maxlength="2000" placeholder="https://" autocapitalize="none" spellcheck="false" autocomplete="off" value="${restoredTracking ?? row.trackingUrl ?? ""}">`)}${canShipRoyalMail(row) ? html`<button class="btn soft" type="button" data-sheet="royal-mail">Royal Mail shipping</button>` : ""}<p class="hint">The customer will be notified where order emails are enabled.</p></div>
+      ${collection ? html`<p class="hint">Only confirm once the customer has collected their order.</p>` : field("Tracking link (optional)", html`<input id="wDispatchTracking" type="url" inputmode="url" maxlength="2000" placeholder="https://" autocapitalize="none" spellcheck="false" autocomplete="off" value="${restoredTracking ?? row.trackingUrl ?? ""}">`)}${canShipRoyalMail(row) ? html`<button class="btn soft" type="button" data-sheet="royal-mail">Royal Mail shipping</button><p class="hint">Any linked Royal Mail shipment is checked again when you confirm dispatch. If it needs review, open Royal Mail shipping before continuing.</p>` : ""}<p class="hint">The customer will be notified where order emails are enabled.</p></div>
       <footer class="w-editor-footer"><p class="err" id="wErr" role="alert"></p><button class="btn soft" type="button" data-sheet="dispatch-reload" hidden>Reload latest order</button><div class="row w-actions"><button class="btn soft" type="button" data-sheet="dispatch-cancel">Cancel</button><fieldset id="wDispatchConfirmControls" class="w-delete-confirm-controls"><button class="btn" type="submit">${confirmation}</button></fieldset></div></footer></form>`, async (action, element) => {
       const form = element.closest("form");
       if (form.dataset.whBusy) return;
       if (action === "royal-mail") {
         const typed = form.querySelector("#wDispatchTracking")?.value;
-        cleanup(); await royalMailShipping(row, (latest, tracking) => latest.status === "Ready" ? dispatchOrder(latest, tracking ?? ((latest.trackingUrl || "") === (row.trackingUrl || "") ? typed : undefined)) : editOrder(latest.id, tracking === null ? null : { trackingUrl: tracking }, latest)); return;
+        const edited = typed !== (row.trackingUrl || "");
+        cleanup(); await royalMailShipping(row, (latest, tracking) => latest.status === "Ready" ? dispatchOrder(latest, edited ? typed : tracking ?? ((latest.trackingUrl || "") === (row.trackingUrl || "") ? typed : undefined)) : editOrder(latest.id, edited ? { trackingUrl: typed } : tracking === null ? null : { trackingUrl: tracking }, latest)); return;
       }
       if (action === "dispatch-cancel") { back(); return; }
       if (action === "dispatch-reload") {
@@ -1060,7 +1137,7 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
         if (draft.note === (row.note || "")) delete draft.note;
         if (draft.trackingUrl === (row.trackingUrl || "")) delete draft.trackingUrl;
         if (draft.schedule?.dispatchDate === (row.dispatchDate || null) && draft.schedule?.every === (row.standing?.every || 0)) delete draft.schedule;
-        await royalMailShipping(row, (latest, tracking) => editOrder(row.id, { ...draft, ...(tracking === null ? {} : { trackingUrl: tracking }) }, latest)); return;
+        await royalMailShipping(row, (latest, tracking) => editOrder(row.id, { ...draft, ...(tracking === null || Object.hasOwn(draft, "trackingUrl") ? {} : { trackingUrl: tracking }) }, latest)); return;
       }
       if (action === "pack-order") {
         const draft = draftOf(form, row);

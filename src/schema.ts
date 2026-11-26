@@ -521,6 +521,32 @@ const MIGRATIONS: Migration[] = [
       updated_at INTEGER NOT NULL
     )`).run();
   } },
+  { id: 48, name: "Royal Mail label review details", run: async env => {
+    const table = "wholesale_royal_mail_shipments";
+    for (const [column, definition] of [
+      ["shipping_fingerprint", "TEXT"], ["review_required", "INTEGER NOT NULL DEFAULT 0"], ["problem", "TEXT"],
+    ]) {
+      if ((await columns(env, table)).has(column)) continue;
+      try { await env.DB.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run(); }
+      catch (error) { if (!(await columns(env, table)).has(column)) throw error; }
+    }
+  } },
+  { id: 49, name: "Royal Mail request and check times", run: async env => {
+    const table = "wholesale_royal_mail_shipments";
+    for (const column of ["requested_at", "checked_at", "refresh_after"]) {
+      if ((await columns(env, table)).has(column)) continue;
+      try { await env.DB.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} INTEGER`).run(); }
+      catch (error) { if (!(await columns(env, table)).has(column)) throw error; }
+    }
+  } },
+  { id: 50, name: "Royal Mail confirmed delivery address", run: async env => {
+    const table = "wholesale_royal_mail_shipments";
+    for (const column of ["destination_address", "destination_postcode"]) {
+      if ((await columns(env, table)).has(column)) continue;
+      try { await env.DB.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`).run(); }
+      catch (error) { if (!(await columns(env, table)).has(column)) throw error; }
+    }
+  } },
 ];
 
 async function migrate(env: Env): Promise<void> {

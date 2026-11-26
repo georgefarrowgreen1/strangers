@@ -1,7 +1,7 @@
 import { handleQuickBooks } from "./quickbooks/index";
 // Wholesale beta: real customer orders and isolated staff test orders. Payments and fulfilment are managed by the team.
 import { validGrindId } from "../public/wholesale/grinds.js";
-import { shippingFor } from "../public/wholesale/shipping.js";
+import { isWholesaleDelivery, shippingFor } from "../public/wholesale/shipping.js";
 import { MAX_QUANTITY, MINIMUM_ORDER_GRAMS } from "../public/wholesale/limits.js";
 import { catalogueRetrievedAt } from "./wholesale/catalogue.js";
 import type { User } from "./auth";
@@ -31,7 +31,7 @@ import { handleBillingAccounts } from "./invoicing/accounts";
 import { handleBatches } from "./invoicing/batches";
 import { handleReconciliation } from "./invoicing/reconciliation";
 import { handleQuickBooksMatches } from "./invoicing/quickbooksMatches";
-import { handleWholesaleRoyalMail, ROYAL_MAIL_ORDER_ROUTE } from "./wholesaleRoyalMail";
+import { handleWholesaleRoyalMail, resolveWholesaleHandover, ROYAL_MAIL_ORDER_ROUTE } from "./wholesaleRoyalMail";
 
 type Pack = "quarter" | "half" | "kilo";
 /** The minimum this business must order, in grams of coffee (0 when Admin has exempted it). */
@@ -425,26 +425,37 @@ export async function updateOrderStatus(env: Env, id: string, body: Record<strin
   const firstDispatch = body.status === "Dispatched" && order.status !== "Dispatched" && order.preview === false && !order.dispatchEmailedAt;
   // A collection order marked Ready: the customer is told it's ready to collect from the Roastery (the owner's request,
   // 23 Nov 2026). Never for delivery orders; once per order ("ready:<id>"), however often it goes back and forth.
-  const firstReady = body.status === "Ready" && order.status !== "Ready" && order.preview === false && order.delivery !== "Delivery";
-  const data: Order = { ...current, ...(schedule || {}), status: body.status, customerId, note, trackingUrl: body.trackingUrl === undefined ? order.trackingUrl || "" : trackingUrl(body.trackingUrl) };
+  const firstReady = body.status === "Ready" && order.status !== "Ready" && order.preview === false && !isWholesaleDelivery(order.delivery);
+  const suppliedTracking = body.trackingUrl === undefined ? order.trackingUrl || "" : trackingUrl(body.trackingUrl);
+  const handover = body.status === "Dispatched" && order.status !== "Dispatched" && order.preview === false &&
+    customerId && isWholesaleDelivery(order.delivery) ? await resolveWholesaleHandover(env, order, suppliedTracking) : null;
+  const guard = handover?.guard;
+  const data: Order = { ...current, ...(schedule || {}), status: body.status, customerId, note, trackingUrl: handover?.trackingUrl ?? suppliedTracking };
   if (data.status === "New" || data.status === "Cancelled") delete data.packedLines;
   if (data.status === "Dispatched") { if (order.status !== "Dispatched" || !data.dispatchedAt) data.dispatchedAt = Date.now(); }
   else delete data.dispatchedAt;
   for (const key of ["dispatchDate", "standing"] as const) if (data[key] === undefined) delete data[key];
   if (!data.standing) { delete data.standingIssue; delete data.standingRetryAt; }
   const emailKind = firstDispatch ? "dispatch" : firstReady ? "ready" : null;
-  const outgoing = emailKind && notify ? await (emailKind === "ready" ? prepareReadyEmail : prepareDispatchEmail)(env, { ...data, id }, notify.ordersUrl) : null;
+  const outgoing = emailKind && notify ? await (emailKind === "ready" ? prepareReadyEmail : prepareDispatchEmail)(
+    env, { ...data, id, shippingDestination: handover?.destination }, notify.ordersUrl,
+  ) : null;
   let updated: Order & Versioned;
   let emailQueued = false;
-  if (outgoing) {
+  if (outgoing || guard) {
     const at = Date.now();
-    // Insert only at the reviewed version, then update that same row in one transaction.
-    const results = await env.DB.batch([
-      dispatchEvent(env, id, expected, outgoing, emailKind!),
-      env.DB.prepare("UPDATE wholesale_preview SET data=?,version=version+1,updated_at=? WHERE kind='order' AND id=? AND version=?").bind(JSON.stringify(data), at, id, expected),
-    ]);
-    if (!results[1].meta.changes) throw new ApiError(409, "conflict", "This order changed on another device. Reload it before saving.");
-    emailQueued = !!results[0].meta.changes;
+    // The dispatch event and order update use the same order and shipment conditions in one transaction.
+    const write = env.DB.prepare(`UPDATE wholesale_preview SET data=?,version=version+1,updated_at=?
+      WHERE kind='order' AND id=? AND version=? AND json_extract(data,'$.deletedAt') IS NULL${guard?.sql ?? ""}`)
+      .bind(JSON.stringify(data), at, id, expected, ...(guard?.args ?? []));
+    const writes = outgoing ? await env.DB.batch([dispatchEvent(env, id, expected, outgoing, emailKind!, guard), write]) : [await write.run()];
+    if (!writes[writes.length - 1].meta.changes) {
+      if (guard && (await get<Order>(env, "order", id))?.version === expected) {
+        throw new ApiError(409, "royal_mail_handover_review", "Royal Mail shipping changed while confirming dispatch. Review the shipment and try again.");
+      }
+      throw new ApiError(409, "conflict", "This order changed on another device. Reload it before saving.");
+    }
+    emailQueued = !!outgoing && !!writes[0].meta.changes;
     updated = { ...data, id, version: expected + 1, updatedAt: at };
   } else updated = await save(env, "order", id, data, expected);
   await audit(env, order.preview === false ? "wholesale_order_status" : "wholesale_preview_status", actor,

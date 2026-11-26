@@ -9,7 +9,8 @@ const PDF_LIMIT = 4 * 1024 * 1024;
 const MISSING_ORDER = Symbol("missing-order");
 const REFERENCE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$/;
 const UK_POSTCODE = /^(?:GIR0AA|[A-Z]{1,2}\d[\dA-Z]?\d[A-Z]{2})$/;
-const TRACKING_NUMBER = /^(?:[A-Z]{2}\d{9}GB|[0-9A-F]{21})$/;
+const TRACKING_NUMBER = /^(?:[A-Z]{2}\d{9}[A-Z]{2}|[0-9A-F]{21})$/;
+const PROVIDER_DATE = /^(20\d{2}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/i;
 
 type RoyalMailCode =
   | "royal_mail_configuration"
@@ -89,8 +90,12 @@ function addressPart(value: string | undefined, limit: number, required = false)
   return undefined;
 }
 
-function dateValue(value: unknown): boolean {
-  return typeof value === "string" && /^20\d{2}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value));
+function dateValue(value: unknown): value is string {
+  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) return false;
+  const date = PROVIDER_DATE.exec(value)?.[1];
+  if (!date) return false;
+  const calendarDay = new Date(date + "T00:00:00Z");
+  return Number.isFinite(calendarDay.getTime()) && calendarDay.toISOString().startsWith(date + "T");
 }
 
 function orderBody(input: RoyalMailOrderInput) {
@@ -106,7 +111,8 @@ function orderBody(input: RoyalMailOrderInput) {
       !Number.isSafeInteger(weightInGrams) || weightInGrams < 1 || weightInGrams > 30000) {
     invalidShipment("Choose a parcel format and enter its packed weight in grams.");
   }
-  if (!/^[A-Z0-9]{1,10}$/.test(serviceCode) || (serviceRegisterCode !== undefined && !/^\d{2}$/.test(serviceRegisterCode)) ||
+  if (!/^[A-Z0-9]{1,10}$/.test(serviceCode) ||
+      (serviceRegisterCode !== undefined && !/^(?!00)\d{2}$/.test(serviceRegisterCode)) ||
       (shippingAccountName !== undefined && (typeof shippingAccountName !== "string" || !shippingAccountName.trim()
         || shippingAccountName.length > 50 || /[\u0000-\u001f\u007f]/.test(shippingAccountName)))) {
     invalidShipment("Choose a Royal Mail service configured for this account.");
@@ -153,6 +159,8 @@ function responseError(status: number, posting: boolean, label = false): RoyalMa
     : "This Click & Drop account does not have access to this operation.", status);
   if (status === 429) return new RoyalMailError("royal_mail_rate_limited", "Royal Mail is rate limiting requests. Try again shortly.", status, posting);
   if (label && status === 404) return new RoyalMailError("royal_mail_label_unavailable", "Royal Mail does not have a label ready for this order.", status);
+  if (label && (status === 400 || status === 422)) return new RoyalMailError("royal_mail_label_unavailable",
+    "Royal Mail could not generate this label. Check the order in Click & Drop.", status);
   if (status === 400 || status === 422) {
     return new RoyalMailError("royal_mail_rejected", "Royal Mail rejected the shipment details. Check the address, parcel and service.", status);
   }
@@ -198,7 +206,10 @@ async function readProviderResponse(response: Response, label = false, posting =
   try {
     const bytes = await readBytes(response, label ? PDF_LIMIT : posting ? CREATE_LIMIT : JSON_LIMIT, "Royal Mail response exceeded its limit.");
     if (label) {
-      if (bytes.length >= 5 && new TextDecoder().decode(bytes.subarray(0, 5)) === "%PDF-") return bytes;
+      const decoder = new TextDecoder();
+      const header = decoder.decode(bytes.subarray(0, 9));
+      const trailer = decoder.decode(bytes.subarray(Math.max(0, bytes.length - 1024)));
+      if (pdfEdges(header, trailer)) return bytes;
       throw invalidResponse();
     }
     return JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes));
@@ -210,6 +221,20 @@ async function readProviderResponse(response: Response, label = false, posting =
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function pdfEdges(header: string, trailer: string): boolean {
+  return /^%PDF-\d\.\d[\r\n]/.test(header) && /%%EOF\s*$/.test(trailer);
+}
+
+function inlineLabel(value: unknown): boolean {
+  if (typeof value !== "string" || !value.startsWith("JVBERi0")) return false;
+  try {
+    const pdf = atob(value);
+    return pdfEdges(pdf.slice(0, 9), pdf.slice(-1024));
+  } catch {
+    return false;
+  }
 }
 
 export function royalMailTrackingNumber(value: unknown): string | null {
@@ -224,13 +249,19 @@ function publicOrder(value: unknown, reference: string, posting = false): RoyalM
       !Number.isSafeInteger(item.orderIdentifier) || item.orderIdentifier <= 0) {
     throw invalidResponse(posting);
   }
-  const packageItem = Array.isArray(item.packages) && item.packages.length === 1 ? record(item.packages[0]) : null;
-  const labelled = dateValue(item.printedOn) || dateValue(item.manifestedOn) ||
-    (posting && typeof item.label === "string" && item.label.startsWith("JVBERi0"));
+  const packages = Array.isArray(item.packages) ? item.packages : [];
+  if (packages.length > 1 || (packages.length === 1 && !record(packages[0]))) throw invalidResponse(posting);
+  const packageItem = record(packages[0]);
+  const orderTracking = royalMailTrackingNumber(item.trackingNumber);
+  const packageTracking = royalMailTrackingNumber(packageItem?.trackingNumber);
+  if (orderTracking && packageTracking && orderTracking.length === packageTracking.length && orderTracking !== packageTracking) {
+    throw invalidResponse(posting);
+  }
+  const labelled = dateValue(item.printedOn) || dateValue(item.manifestedOn) || (posting && inlineLabel(item.label));
   return {
     orderId: item.orderIdentifier,
     reference,
-    trackingNumber: royalMailTrackingNumber(item.trackingNumber) ?? royalMailTrackingNumber(packageItem?.trackingNumber),
+    trackingNumber: orderTracking ?? packageTracking,
     providerState: dateValue(item.shippedOn) ? "dispatched" : labelled ? "labelled" : "created",
   };
 }
@@ -302,7 +333,7 @@ function trackingSummary(value: unknown): RoyalMailTrackingSummary {
     statusCategory: trackingText(summary?.statusCategory, 80),
     lastEventCode: trackingText(summary?.lastEventCode, 20),
     lastEventName: trackingText(summary?.lastEventName, 120),
-    lastEventAt: typeof eventAt === "string" && dateValue(eventAt) ? new Date(eventAt).toISOString() : null,
+    lastEventAt: dateValue(eventAt) ? new Date(eventAt).toISOString() : null,
   };
 }
 
@@ -338,19 +369,23 @@ export async function fetchRoyalMailTracking(
   } catch {
     throw new RoyalMailError("royal_mail_unavailable", "Royal Mail Tracking is temporarily unavailable.");
   }
-  if (!response.ok) {
+  const noScans = response.status === 404;
+  if (!response.ok && !noScans) {
     void response.body?.cancel().catch(() => {});
     if (response.status === 401 || response.status === 403) {
       throw new RoyalMailError("royal_mail_auth", "Royal Mail did not accept the Tracking API credentials.", response.status);
     }
     throw responseError(response.status, false);
   }
-  const pieces = record(await readProviderResponse(response))?.mailPieces;
+  const data = record(await readProviderResponse(response));
+  if (noScans && data?.httpCode !== "404") throw invalidResponse();
+  const pieces = data?.mailPieces;
   if (!Array.isArray(pieces) || pieces.length !== numbers.size) throw invalidResponse();
   const results = new Map<string, RoyalMailTrackingSummary>();
   for (const piece of pieces) {
     const summary = trackingSummary(piece);
-    if (!numbers.has(summary.trackingNumber) || results.has(summary.trackingNumber)) throw invalidResponse();
+    if (!numbers.has(summary.trackingNumber) || results.has(summary.trackingNumber) ||
+        (noScans && summary.status !== "not-found")) throw invalidResponse();
     results.set(summary.trackingNumber, summary);
   }
   return [...numbers].map(number => results.get(number)!);

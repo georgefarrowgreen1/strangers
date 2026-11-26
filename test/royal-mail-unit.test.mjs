@@ -14,6 +14,7 @@ const {
 
 const key = 'fixture-private-click-and-drop-key';
 const origin = 'https://api.parcel.royalmail.com/api/v1';
+const pdf = '%PDF-1.7\nfixture\n%%EOF\n';
 const input = {
   reference: 'WS-001-01',
   orderDate: '2026-11-26T13:15:00Z',
@@ -92,16 +93,21 @@ test('sends one GB parcel with the documented contract and returns only safe ord
 });
 
 test('recognises an inline OBA label without returning it in the order DTO', async () => {
-  const label = Buffer.from('%PDF-1.7\nfixture').toString('base64');
+  const label = Buffer.from(pdf).toString('base64');
   assert.deepEqual(await createRoyalMailOrder(key, input, async () => Response.json({
     successCount: 1, errorsCount: 0, createdOrders: [{ ...providerOrder, label }],
   })), { ...expected, providerState: 'labelled' });
+  assert.deepEqual(await createRoyalMailOrder(key, input, async () => Response.json({
+    successCount: 1, errorsCount: 0, createdOrders: [{ ...providerOrder, label: Buffer.from('%PDF-1.7\ntruncated').toString('base64') }],
+  })), expected);
 });
 
 test('checks service, parcel, dates, totals and GB address before sending', async () => {
   const noNetwork = async () => { assert.fail('invalid order sent to Royal Mail'); };
   for (const patch of [
     { reference: '../other' }, { orderDate: '2026-11-26' }, { serviceCode: '..' },
+    { orderDate: '2026-02-30T12:00:00Z' }, { orderDate: '2026-11-26T13:15:00' },
+    { serviceRegisterCode: '00' }, { serviceRegisterCode: 'st' },
     { parcel: { format: 'letter', weightInGrams: 50 } }, { parcel: { ...input.parcel, weightInGrams: 30001 } },
     { totalPence: 3999 }, { recipient: { ...input.recipient, postcode: 'BT1 5GS' } },
     { recipient: { ...input.recipient, addressLine1: '' } },
@@ -121,6 +127,9 @@ test('uncertain creates are never repeated or confirmed by malformed or mismatch
     [() => Response.json({ successCount: 0, errorsCount: 1, createdOrders: [] }), 'royal_mail_invalid_response'],
     [() => Response.json({ successCount: 1, errorsCount: 0, createdOrders: [
       { ...providerOrder, orderReference: 'other-order-identifier' },
+    ] }), 'royal_mail_invalid_response'],
+    [() => Response.json({ successCount: 1, errorsCount: 0, createdOrders: [
+      { ...providerOrder, packages: [...providerOrder.packages, { packageNumber: 2, trackingNumber: 'ZZ123456789GB' }] },
     ] }), 'royal_mail_invalid_response'],
   ];
   for (const [reply, code] of attempts) {
@@ -151,10 +160,15 @@ test('only a confirmed missing or exact unique lookup can be used for reconcilia
     { ...expected, providerState: 'dispatched' });
   assert.equal(await findRoyalMailOrder(key, input.reference, reply([])), null);
   assert.equal(await findRoyalMailOrder(key, input.reference, async () => new Response(null, { status: 404 })), null);
-  for (const data of [null, [providerOrder, providerOrder], [{ ...providerOrder, orderReference: 'other-order-identifier' }]]) {
+  assert.deepEqual(await findRoyalMailOrder(key, input.reference, reply([{ ...providerOrder, shippedOn: '2026-02-30T12:00:00Z' }])), expected);
+  for (const data of [
+    null, [providerOrder, providerOrder], [{ ...providerOrder, orderReference: 'other-order-identifier' }],
+    [{ ...providerOrder, trackingNumber: 'ZZ123456789GB' }],
+  ]) {
     await assert.rejects(findRoyalMailOrder(key, input.reference, reply(data)), outcome('royal_mail_invalid_response', false));
   }
   assert.equal(royalMailTrackingNumber('AB123456789GB'), 'AB123456789GB');
+  assert.equal(royalMailTrackingNumber('ur041761424qi'), 'UR041761424QI');
   assert.equal(royalMailTrackingNumber('AB123456789GB_CON'), null);
   assert.equal(royalMailTrackingNumber('https://example.com'), null);
 });
@@ -165,17 +179,40 @@ test('retrieves a bounded, recognisable PDF by ID without sending another shipme
     assert.equal(init.method, 'GET');
     assert.equal(init.headers.get('accept'), 'application/pdf');
     assert.equal(init.headers.get('authorization'), 'Bearer ' + key);
-    return new Response('%PDF-1.7\nfixture', { headers: { 'content-type': 'application/pdf' } });
+    return new Response(pdf, { headers: { 'content-type': 'application/pdf' } });
   });
-  assert.equal(new TextDecoder().decode(bytes), '%PDF-1.7\nfixture');
+  assert.equal(new TextDecoder().decode(bytes), pdf);
   await assert.rejects(fetchRoyalMailLabel(key, 892, async () => new Response(null, { status: 403 })),
     outcome('royal_mail_denied', false, 403));
   await assert.rejects(fetchRoyalMailLabel(key, 892, async () => new Response('not a PDF', {
     headers: { 'content-type': 'application/pdf' },
   })), outcome('royal_mail_invalid_response', false));
+  await assert.rejects(fetchRoyalMailLabel(key, 892, async () => new Response('%PDF-1.7\ntruncated', {
+    headers: { 'content-type': 'application/pdf' },
+  })), outcome('royal_mail_invalid_response', false));
+  for (const status of [400, 404, 422]) {
+    await assert.rejects(fetchRoyalMailLabel(key, 892, async () => new Response('Example Street', { status })),
+      outcome('royal_mail_label_unavailable', false, status));
+  }
   await assert.rejects(fetchRoyalMailLabel(key, 892, async () => new Response('%PDF-1.7', {
     headers: { 'content-type': 'application/pdf', 'content-length': String(4 * 1024 * 1024 + 1) },
   })), outcome('royal_mail_invalid_response', false));
+});
+
+test('interprets an exact Tracking V2 not-found envelope without hiding a mismatched or gateway error', async () => {
+  const credentials = { clientId: 'fixture-tracking-id', clientSecret: 'fixture-tracking-secret', acceptTerms: true };
+  const number = 'UR041761424QI';
+  const missing = { mailPieceId: number, status: '404' };
+  assert.deepEqual(await fetchRoyalMailTracking(credentials, [number], async () => Response.json({
+    httpCode: '404', httpMessage: 'Not Found', mailPieces: [missing],
+  }, { status: 404 })), [
+    { trackingNumber: number, status: 'not-found', statusCategory: null, lastEventCode: null, lastEventName: null, lastEventAt: null },
+  ]);
+  for (const mailPieces of [[], [{ ...missing, mailPieceId: 'ZZ123456789GB' }], [{ ...missing, status: '200' }]]) {
+    await assert.rejects(fetchRoyalMailTracking(credentials, [number], async () => Response.json({
+      httpCode: '404', httpMessage: 'Not Found', mailPieces,
+    }, { status: 404 })), outcome('royal_mail_invalid_response', false));
+  }
 });
 
 test('limits streamed provider responses without content length', async () => {

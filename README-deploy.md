@@ -95,11 +95,11 @@ Managers and admins with an address can receive a summary every Monday at 07:30 
 
 ## Royal Mail for wholesale dispatch
 
-In **Admin → Wholesale → Order details**, the **Royal Mail shipping** panel prepares postage for one packed parcel within Great Britain. Confirm the recipient, delivery address and actual packed weight. Staff with wholesale orders access can refresh tracking and download a recorded label from the packing desk. The normal **Mark dispatched** action still confirms the physical handover and triggers the existing dispatch email and invoicing rules.
+In **Admin → Wholesale → Order details**, the **Royal Mail shipping** panel prepares postage for one packed parcel within Great Britain. Review the recipient, delivery address and sealed parcel weight before booking. The packing desk shows label readiness and the latest carrier scan. **Mark dispatched** confirms physical handover and uses the verified Royal Mail tracking link and label address in the dispatch email when available. Existing invoicing rules apply at handover.
 
 - Configure the wholesale Click & Drop integration with `WHOLESALE_ROYAL_MAIL_CLICK_DROP_KEY` as a Worker secret and `WHOLESALE_ROYAL_MAIL_SERVICE_CODE` as the service code verified for that account. Use the account's service register code or shipping account name via `WHOLESALE_ROYAL_MAIL_SERVICE_REGISTER_CODE` and `WHOLESALE_ROYAL_MAIL_SHIPPING_ACCOUNT` when required. Integrated label download requires an Online Business Account. [Click & Drop API](https://help.parcel.royalmail.com/hc/en-gb/articles/360011462338-Integrating-with-the-Click-Drop-API)
 - For carrier scans, enrol a separate app in Royal Mail Tracking V2. Add `WHOLESALE_ROYAL_MAIL_TRACKING_CLIENT_ID` and `WHOLESALE_ROYAL_MAIL_TRACKING_CLIENT_SECRET` as Worker secrets. Set `WHOLESALE_ROYAL_MAIL_TRACKING_TERMS_ACCEPTED=yes` after the account holder accepts the Tracking API terms. The dashboard fetches the latest event when a staff member refreshes an attached shipment. [Tracking API](https://developer.royalmail.net/product/175625/api/76888)
-- An uncertain postage request is held for review. Refresh the recorded shipment to reconcile the reference with Click & Drop. The dashboard can also save a Royal Mail number or a courier link in the existing dispatch form for postage arranged separately.
+- Use **Check label request** after an unconfirmed booking. If a recorded shipment needs verification, compare the reference, destination and parcel details in Click & Drop before entering its tracking number and verifying the existing shipment. Use Click & Drop to finish, cancel or reset postage. The dispatch form also accepts a link from a different courier for a parcel sent separately.
 
 ## New wholesale orders in Slack
 

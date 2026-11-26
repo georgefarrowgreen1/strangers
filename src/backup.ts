@@ -128,6 +128,7 @@ export async function makeBackup(env: Env, by: string): Promise<BackupInfo> {
       productNumbers: rows("invoice.productNumbers"),
     },
     wholesaleOrderEmails: rows("orderEmails"),
+    royalMailShipments: rows("royalMailShipments"),
     wholesaleAnnouncement: rows("announcement"),
     wholesaleTabs: rows("tabs"),
     wholesaleEmailOutbox: rows("dispatchOutbox"),
