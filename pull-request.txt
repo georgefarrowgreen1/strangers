@@ -1,8 +1,7 @@
-Fixes the retail account and Consumer Admin issues on the branded preview.
+## Consumer preview
 
-- Adds Strangers email/password sign-in, email-verified account creation and password reset. Checkout requires a retail account and records test orders.
-- Connects Consumer Admin to retail orders and catalogue controls through signed service requests. Retail has a separate payment gateway readiness state.
-- Keeps the retail preview on its own route allowlist. Wholesale ordering stays on the wholesale hostname and staff wholesale access stays on the staff site. Retail auth ignores existing staff and wholesale cookies.
-- Adds focused tests for account endpoint Origin and cookie handling, delivery to a mock mailbox, service signature verification, and the retail/wholesale boundary.
+Ships the approved retail homepage and stock-aware finder, 18 shareable product and gift pages, standalone guest and account checkout, private order tracking and improved My account. Consumer (Preview) gains a paginated packing and dispatch queue and a support inbox.
 
-Local typecheck, Workers/API tests and mobile/desktop account checks passed. GitHub Tests gates the production release.
+Retail service version 15 is deployed with additive migrations, immutable checkout records, authenticated fulfilment and a separate contact inbox. Payments and dispatch remain in the preview test flow. Retail routes cannot reach wholesale or QuickBooks.
+
+Verified desktop and mobile Chromium, checkout retry and isolation through both Workers and D1, Admin packing, tracking and support, catalogue consistency, and a Wrangler deployment dry run.
