@@ -4,7 +4,7 @@ name: Tests
 # Pull requests are tested once (their own run); main is tested again after each merge.
 on:
   push:
-    branches: [main]
+    branches: [main, ci/parallel-tests-benchmark]
   pull_request:
 
 concurrency:
