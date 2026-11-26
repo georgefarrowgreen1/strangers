@@ -17,6 +17,7 @@ import {audit} from "./audit";
 import {clearTab,listTabs,setOnTab} from "./wholesaleTabs";
 import {amendLines,skipRun} from "./wholesaleStanding";
 import {requireStaffOrders} from "./staffOrdersAccess";
+import {handleWholesaleRoyalMail,ROYAL_MAIL_ORDER_ROUTE} from "./wholesaleRoyalMail";
 import {LIVE_ACCOUNTING_JOIN,UNCONFIRMED_BALANCE_SQL,PAYMENT_DUE_SQL,OUTSTANDING_BALANCE_SQL} from "./quickbooks/observations";
 
 const today=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/London",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
@@ -64,6 +65,12 @@ async function customers(req:Request,env:Env){
 }
 export async function handleStaffOrders(req:Request,env:Env,route:string,user:User,links:{preview?:string;diary?:string}={},ctx?:ExecutionContext):Promise<Response>{
   await requireStaffOrders(env,user);
+  const shipping=ROYAL_MAIL_ORDER_ROUTE.exec(route);
+  if(shipping){
+    const response=await handleWholesaleRoyalMail(req,env,shipping[1],shipping[2],user);
+    await requireStaffOrders(env,user);
+    return response;
+  }
   const closeAttempt=/^attempts\/(WS-[A-F0-9]{32})\/close$/.exec(route);
   if(closeAttempt&&req.method==="POST"){
     const body=object(await readJson(req,2048));

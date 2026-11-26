@@ -93,6 +93,17 @@ Managers and admins with an address can receive a summary every Monday at 07:30 
 
 **New wholesale order emails.** With the same Resend key, every new customer order is emailed to sales@strangerscoffee.com from orders@staffstrangerscoffee.com (no mailbox needed: Resend sends for any address on the verified domain). Change who gets them, switch them off or send a test in Admin → Wholesale → Orders → **Order alerts**. Replies go to the customer. The email's **Open the order** button opens it on the staff Wholesale orders page, so anyone with wholesale orders access can use it.
 
+## Royal Mail for wholesale dispatch
+
+**Admin → Wholesale → Royal Mail** shows which carrier settings are configured and controls new bookings. Bookings start off. Once the Click & Drop key and service are configured, an admin can turn them on. Switching off stops new requests before they are sent. Existing labels, tracking and manual dispatch stay available, and requests already sent to Royal Mail can finish.
+
+In **Admin → Wholesale → Order details**, the **Royal Mail shipping** panel prepares postage for one packed parcel within Great Britain. Review the recipient, delivery address and sealed parcel weight before booking. The packing desk shows label readiness and the latest carrier scan. **Mark dispatched** confirms physical handover and uses the verified Royal Mail tracking link and label address in the dispatch email when available. Existing invoicing rules apply at handover.
+
+- In **Click & Drop**, save the API key and verified booking service for your account. Add the service register code and shipping account name if your account requires them. Integrated label download requires an Online Business Account. [Click & Drop API](https://help.parcel.royalmail.com/hc/en-gb/articles/360011462338-Integrating-with-the-Click-Drop-API)
+- In **Carrier tracking**, enter credentials for a Royal Mail Tracking V2 app and confirm the account holder's acceptance of the Tracking API terms. Staff can then refresh an attached shipment to fetch its latest event. [Tracking API](https://developer.royalmail.net/product/175625/api/76888)
+- Admin credential entry derives a separate Royal Mail encryption key from the existing Worker secret `QUICKBOOKS_TOKEN_KEY`. Existing Royal Mail Worker settings are used for each connection until an admin saves credentials for it. Saved secrets are write-only and excluded from JSON backups. Replacing the hosting key means re-entering credentials encrypted with the previous key for both integrations.
+- Use **Check label request** after an unconfirmed booking. If a recorded shipment needs verification, compare the reference, destination and parcel details in Click & Drop before entering its tracking number and verifying the existing shipment. Use Click & Drop to finish, cancel or reset postage. The dispatch form also accepts a link from a different courier for a parcel sent separately.
+
 ## New wholesale orders in Slack
 
 Every new customer order can be posted to a Slack channel (Strangers uses #C0CH4KT2BS6): the business name, the bags by coffee, size and grind, collection or delivery, any customer comments, and a link to the staff Wholesale orders page. No prices or contact details. Orders placed between 07:45 and 16:45 UK time (Sunday 10:00 to 15:30) are posted straight away; anything earlier or later is held and posted when those hours next start: 07:50, or 10:00 on a Sunday (the 5-minute cron sends it). Nothing is posted until this is set up, once:

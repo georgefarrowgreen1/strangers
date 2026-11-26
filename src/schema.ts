@@ -507,6 +507,65 @@ const MIGRATIONS: Migration[] = [
         SELECT order_id FROM wholesale_invoice_coverage UNION ALL SELECT order_id FROM wholesale_invoiced_elsewhere`),
     ]);
   } },
+  { id: 47, name: "Royal Mail wholesale shipments", run: async env => {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS wholesale_royal_mail_shipments (
+      order_id TEXT PRIMARY KEY,
+      state TEXT NOT NULL CHECK (state IN ('booking','review','created','labelled','dispatched','failed')),
+      operation TEXT NOT NULL,
+      order_version INTEGER NOT NULL,
+      provider_id INTEGER,
+      tracking_number TEXT,
+      carrier_status TEXT,
+      carrier_event_at TEXT,
+      weight_grams INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`).run();
+  } },
+  { id: 48, name: "Royal Mail label review details", run: async env => {
+    const table = "wholesale_royal_mail_shipments";
+    for (const [column, definition] of [
+      ["shipping_fingerprint", "TEXT"], ["review_required", "INTEGER NOT NULL DEFAULT 0"], ["problem", "TEXT"],
+    ]) {
+      if ((await columns(env, table)).has(column)) continue;
+      try { await env.DB.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run(); }
+      catch (error) { if (!(await columns(env, table)).has(column)) throw error; }
+    }
+  } },
+  { id: 49, name: "Royal Mail request and check times", run: async env => {
+    const table = "wholesale_royal_mail_shipments";
+    for (const column of ["requested_at", "checked_at", "refresh_after"]) {
+      if ((await columns(env, table)).has(column)) continue;
+      try { await env.DB.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} INTEGER`).run(); }
+      catch (error) { if (!(await columns(env, table)).has(column)) throw error; }
+    }
+  } },
+  { id: 50, name: "Royal Mail confirmed delivery address", run: async env => {
+    const table = "wholesale_royal_mail_shipments";
+    for (const column of ["destination_address", "destination_postcode"]) {
+      if ((await columns(env, table)).has(column)) continue;
+      try { await env.DB.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`).run(); }
+      catch (error) { if (!(await columns(env, table)).has(column)) throw error; }
+    }
+  } },
+  { id: 51, name: "Wholesale Royal Mail booking settings", run: async env => {
+    await env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS wholesale_royal_mail_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        enabled INTEGER NOT NULL CHECK (enabled IN (0,1)),
+        version INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )`),
+      env.DB.prepare("INSERT OR IGNORE INTO wholesale_royal_mail_settings (id, enabled, version, updated_at) VALUES (1,0,0,0)"),
+    ]);
+  } },
+  { id: 52, name: "Encrypted Royal Mail credentials", run: async env => {
+    const table = "wholesale_royal_mail_settings";
+    for (const column of ["booking_config", "tracking_config"]) {
+      if ((await columns(env, table)).has(column)) continue;
+      try { await env.DB.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`).run(); }
+      catch (error) { if (!(await columns(env, table)).has(column)) throw error; }
+    }
+  } },
 ];
 
 async function migrate(env: Env): Promise<void> {

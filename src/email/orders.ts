@@ -3,6 +3,7 @@
 // is saved, so it never slows or blocks checkout. Staff previews, retries of an order already placed and orders
 // with no RESEND_API_KEY send nothing.
 import { audit } from "../audit";
+import { isWholesaleDelivery } from "../../public/wholesale/shipping.js";
 import { ApiError, Env, invalid, json, readJson } from "../http";
 import { object, get } from "../wholesaleStore";
 import { emailSetup, emailDns } from "./health";
@@ -31,6 +32,7 @@ interface MailOrder {
   paymentTerms?: { label?: string; note?: string } | null;
   trackingUrl?: string;
   locationSnapshot?: { name?: string; contact?: string; phone?: string; address?: string; postcode?: string; deliveryNotes?: string } | null;
+  shippingDestination?: { address: string; postcode: string };
 }
 
 const money = (pence: number) => `£${(pence / 100).toFixed(2)}`;
@@ -47,7 +49,8 @@ export function buildOrderEmail(order: MailOrder, orderUrl: string) {
   for (const line of order.lines) { if (line.pack === "quarter" || line.pack === "kilo") bags[line.pack] += line.quantity; bags.all += line.quantity; }
   const total = order.totalPence ?? order.pence + (order.deliveryPence || 0);
   const business = order.business || "A customer";
-  const where = order.delivery === "Delivery" ? [place.name && place.name !== "Main location" ? place.name : "", place.address, place.postcode].filter(Boolean).join(", ") || "No address saved" : "Roastery collection";
+  const shipped = isWholesaleDelivery(order.delivery);
+  const where = shipped ? [place.name && place.name !== "Main location" ? place.name : "", place.address, place.postcode].filter(Boolean).join(", ") || "No address saved" : "Roastery collection";
   const contact = [place.contact || customer.contact, place.phone || customer.phone, customer.email].filter(Boolean).join(" · ");
   // An order Strangers entered for the customer (email, phone, at the door) says so, and who took it.
   // A standing order's next delivery, made when the last one was dispatched or skipped, says so (not "entered by staff").
@@ -62,7 +65,7 @@ export function buildOrderEmail(order: MailOrder, orderUrl: string) {
     ...order.lines.map(lineText), "",
     `${bags.quarter} × 250 g · ${bags.kilo} × 1 kg · ${bags.all} bags · ${kg(order.grams)}`,
     `Coffee ${money(order.pence)} · Delivery ${order.deliveryPence ? money(order.deliveryPence) : "free"} · Total ${money(total)}`, "",
-    `${order.delivery === "Delivery" ? "Deliver to" : "Collection"}: ${where}`, ...(place.deliveryNotes ? [`Delivery notes: ${place.deliveryNotes}`] : []),
+    `${shipped ? "Deliver to" : "Collection"}: ${where}`, ...(place.deliveryNotes ? [`Delivery notes: ${place.deliveryNotes}`] : []),
     ...(contact ? [`Contact: ${contact}`] : []), ...(order.reference ? [`Reference: ${order.reference}`] : []), ...(taken ? [`Entered by: ${taken}`] : []),
     ...(order.customerNote ? ["", "Customer comments:", order.customerNote] : []), "", `Open the order: ${orderUrl}`,
   ].join("\n");
@@ -79,7 +82,7 @@ ${order.lines.map((l) => `<tr><td style="${cell}font-weight:700;">${l.quantity}<
 </table></td></tr>
 <tr><td style="padding:12px 24px 0;font-size:14px;"><b>${bags.quarter}</b> × 250 g · <b>${bags.kilo}</b> × 1 kg · <b>${bags.all} bags</b> · ${esc(kg(order.grams))}<br>Coffee ${esc(money(order.pence))} · Delivery ${esc(order.deliveryPence ? money(order.deliveryPence) : "free")} · <b>Total ${esc(money(total))}</b></td></tr>
 <tr><td style="padding:14px 24px 0;"><table role="presentation" cellpadding="0" cellspacing="0">
-${kv(order.delivery === "Delivery" ? "Deliver to" : "Collection", where)}${place.deliveryNotes ? kv("Delivery notes", place.deliveryNotes) : ""}${contact ? kv("Contact", contact) : ""}${order.reference ? kv("Reference", order.reference) : ""}${taken ? kv("Entered by", taken) : ""}
+${kv(shipped ? "Deliver to" : "Collection", where)}${place.deliveryNotes ? kv("Delivery notes", place.deliveryNotes) : ""}${contact ? kv("Contact", contact) : ""}${order.reference ? kv("Reference", order.reference) : ""}${taken ? kv("Entered by", taken) : ""}
 </table></td></tr>
 ${order.customerNote ? `<tr><td style="padding:14px 24px 0;"><div style="border:1px solid #14181f;border-radius:10px;padding:10px 12px;"><div style="font-size:12px;font-weight:700;color:#5d6675;text-transform:uppercase;letter-spacing:.05em;">Customer comments</div><div style="font-size:14px;white-space:pre-line;margin-top:3px;">${esc(order.customerNote)}</div></div></td></tr>` : ""}
 <tr><td style="padding:18px 24px 22px;"><a href="${esc(orderUrl)}" style="display:inline-block;background:#0062cc;color:#fff;text-decoration:none;font-weight:600;padding:11px 18px;border-radius:10px;">Open the order</a></td></tr>
@@ -94,7 +97,8 @@ export function buildCustomerConfirmation(order: MailOrder, { showPrices, orders
   const customer = order.customerSnapshot || {};
   const bags = order.lines.reduce((t, l) => t + l.quantity, 0);
   const total = order.totalPence ?? order.pence + (order.deliveryPence || 0);
-  const where = order.delivery === "Delivery" ? [place.name && place.name !== "Main location" ? place.name : "", place.address, place.postcode].filter(Boolean).join(", ") || "Your saved address" : "Collection from the Strangers Roastery, 10 Dove Street, Norwich NR2 1DE";
+  const shipped = isWholesaleDelivery(order.delivery);
+  const where = shipped ? [place.name && place.name !== "Main location" ? place.name : "", place.address, place.postcode].filter(Boolean).join(", ") || "Your saved address" : "Collection from the Strangers Roastery, 10 Dove Street, Norwich NR2 1DE";
   const hello = (place.contact || customer.contact || "").split(/\s+/)[0];
   const terms = order.paymentTerms?.label ? `${order.paymentTerms.label}${order.paymentTerms.note ? `\n${order.paymentTerms.note}` : ""}` : "";
   const subject = `Order confirmed: ${bags} ${bags === 1 ? "bag" : "bags"} of Strangers Coffee (${order.id.slice(0, 11)})`;
@@ -103,8 +107,8 @@ export function buildCustomerConfirmation(order: MailOrder, { showPrices, orders
     `${hello ? `Hi ${hello},` : "Hello,"}`, "", `Thanks for your order${order.business ? ` for ${order.business}` : ""}. We've received it and will be in touch if anything changes.`, "",
     `Order ${order.id} · ${when(order.createdAt)}`, "", ...order.lines.map(lineText), "",
     `${bags} ${bags === 1 ? "bag" : "bags"} · ${kg(order.grams)}`,
-    ...(showPrices ? [`Coffee ${money(order.pence)} · ${order.delivery === "Delivery" ? `Delivery ${order.deliveryPence ? money(order.deliveryPence) : "free"}` : "Collection, no charge"} · Total ${money(total)}`] : []), "",
-    `${order.delivery === "Delivery" ? "Delivering to" : "Collection"}: ${where}`, ...(order.reference ? [`Your reference: ${order.reference}`] : []),
+    ...(showPrices ? [`Coffee ${money(order.pence)} · ${shipped ? `Delivery ${order.deliveryPence ? money(order.deliveryPence) : "free"}` : "Collection, no charge"} · Total ${money(total)}`] : []), "",
+    `${shipped ? "Delivering to" : "Collection"}: ${where}`, ...(order.reference ? [`Your reference: ${order.reference}`] : []),
     ...(order.customerNote ? ["", "Your comments:", order.customerNote] : []), ...(terms ? ["", `Payment terms: ${terms}`] : []), "",
     "By placing this order, you accepted the payment terms and conditions set up for your account.", "",
     `See your orders: ${ordersUrl}`, "", "Strangers Coffee",
@@ -122,9 +126,9 @@ export function buildCustomerConfirmation(order: MailOrder, { showPrices, orders
 <tr><th style="${cell}color:#5d6675;font-size:12px;">Bags</th><th style="${cell}color:#5d6675;font-size:12px;">Coffee</th><th style="${cell}color:#5d6675;font-size:12px;">Size</th><th style="${cell}color:#5d6675;font-size:12px;">Grind</th>${showPrices ? `<th style="${cell}color:#5d6675;font-size:12px;text-align:right;">Price</th>` : ""}</tr>
 ${order.lines.map((l) => `<tr><td style="${cell}font-weight:700;">${l.quantity}</td><td style="${cell}">${esc(l.title)}${l.decaf ? " (decaf)" : ""}</td><td style="${cell}white-space:nowrap;">${esc(packName[l.pack] || l.packLabel || l.pack)}</td><td style="${cell}">${esc(l.grindLabel || "")}</td>${showPrices ? `<td style="${cell}text-align:right;white-space:nowrap;">${Number.isInteger(l.price) ? esc(money(l.price! * l.quantity)) : ""}</td>` : ""}</tr>`).join("")}
 </table></td></tr>
-<tr><td style="padding:12px 24px 0;font-size:14px;line-height:1.6;"><b>${bags} ${bags === 1 ? "bag" : "bags"}</b> · ${esc(kg(order.grams))}${showPrices ? `<br>Coffee ${esc(money(order.pence))} · ${order.delivery === "Delivery" ? `Delivery ${esc(order.deliveryPence ? money(order.deliveryPence) : "free")}` : "Collection, no charge"}<br><b style="font-size:16px;">Total ${esc(money(total))}</b>` : ""}</td></tr>
+<tr><td style="padding:12px 24px 0;font-size:14px;line-height:1.6;"><b>${bags} ${bags === 1 ? "bag" : "bags"}</b> · ${esc(kg(order.grams))}${showPrices ? `<br>Coffee ${esc(money(order.pence))} · ${shipped ? `Delivery ${esc(order.deliveryPence ? money(order.deliveryPence) : "free")}` : "Collection, no charge"}<br><b style="font-size:16px;">Total ${esc(money(total))}</b>` : ""}</td></tr>
 <tr><td style="padding:14px 24px 0;"><table role="presentation" cellpadding="0" cellspacing="0">
-${kv(order.delivery === "Delivery" ? "Delivering to" : "Collection", where)}${order.reference ? kv("Your reference", order.reference) : ""}${order.customerNote ? kv("Your comments", order.customerNote) : ""}${terms ? kv("Payment terms", terms) : ""}
+${kv(shipped ? "Delivering to" : "Collection", where)}${order.reference ? kv("Your reference", order.reference) : ""}${order.customerNote ? kv("Your comments", order.customerNote) : ""}${terms ? kv("Payment terms", terms) : ""}
 </table></td></tr>
 <tr><td style="padding:14px 24px 0;font-size:13px;color:#5d6675;line-height:1.5;">By placing this order, you accepted the payment terms and conditions set up for your account.</td></tr>
 <tr><td style="padding:18px 24px 22px;"><a href="${esc(ordersUrl)}" style="display:inline-block;background:#0062cc;color:#fff;text-decoration:none;font-weight:600;padding:11px 18px;border-radius:10px;">See your orders</a></td></tr>
@@ -153,11 +157,13 @@ export async function confirmToCustomer(env: Env, ctx: ExecutionContext | undefi
 export function buildDispatchEmail(order: MailOrder, ordersUrl: string) {
   const place = order.locationSnapshot || order.customerSnapshot || {};
   const customer = order.customerSnapshot || {};
-  const shipped = order.delivery === "Delivery";
+  const shipped = isWholesaleDelivery(order.delivery);
   const bags = order.lines.reduce((t, l) => t + l.quantity, 0);
   const hello = (place.contact || customer.contact || "").split(/\s+/)[0];
-  const where = [place.name && place.name !== "Main location" ? place.name : "", place.address, place.postcode].filter(Boolean).join(", ") || "your saved address";
-  const tracking = typeof order.trackingUrl === "string" && /^https?:\/\//i.test(order.trackingUrl) ? order.trackingUrl : "";
+  const destination = order.shippingDestination;
+  const where = (destination ? [destination.address, destination.postcode]
+    : [place.name && place.name !== "Main location" ? place.name : "", place.address, place.postcode]).filter(Boolean).join(", ") || "your saved address";
+  const tracking = shipped && typeof order.trackingUrl === "string" && /^https?:\/\//i.test(order.trackingUrl) ? order.trackingUrl : "";
   const ref = order.id.slice(0, 11);
   const headline = shipped ? "Your order has been shipped" : "Your order has been collected from the Roastery";
   const subject = shipped ? `Shipped: your Strangers Coffee order (${ref})` : `Collected: your Strangers Coffee order (${ref})`;
@@ -224,7 +230,7 @@ ${order.lines.map((l) => `<tr><td style="${cell}font-weight:700;width:40px;">${l
 }
 
 export async function prepareReadyEmail(env: Env, order: MailOrder, ordersUrl: string): Promise<Outgoing | null> {
-  if (!emailReady(env) || order.delivery === "Delivery") return null;
+  if (!emailReady(env) || isWholesaleDelivery(order.delivery)) return null;
   const [settings, email] = await Promise.all([orderEmailSettings(env), orderEmailAddress(env, order.customerId)]);
   if (!settings.confirmCustomers || !email) return null;
   const mail = buildReadyEmail(order, ordersUrl), name = order.business || "a wholesale customer";
@@ -237,7 +243,7 @@ export async function prepareDispatchEmail(env: Env, order: MailOrder, ordersUrl
   const [settings, email] = await Promise.all([orderEmailSettings(env), orderEmailAddress(env, order.customerId)]);
   if (!settings.confirmCustomers || !email) return null;
   const mail = buildDispatchEmail(order, ordersUrl), name = order.business || "a wholesale customer";
-  return { to: { id: "customer", name, email, email_prefs: "{}", active: 1 }, kind: "order", mail, about: `${order.delivery === "Delivery" ? "shipped" : "collected"} email for ${order.id} to ${name}`, from: FROM(env), replyTo: settings.to[0] || DEFAULT_ORDER_EMAIL };
+  return { to: { id: "customer", name, email, email_prefs: "{}", active: 1 }, kind: "order", mail, about: `${isWholesaleDelivery(order.delivery) ? "shipped" : "collected"} email for ${order.id} to ${name}`, from: FROM(env), replyTo: settings.to[0] || DEFAULT_ORDER_EMAIL };
 }
 
 /** The customer hears when Strangers changes the bags on, or skips, a delivery of their standing order for them

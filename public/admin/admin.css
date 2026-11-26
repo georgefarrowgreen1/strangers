@@ -335,6 +335,64 @@ html:has(#scrim:not([hidden])){overflow:hidden}
 .w-editor-body>.w-duplicate{justify-self:start;margin:0}
 .w-editor-footer{display:grid;gap:8px;padding-block:12px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
 .w-editor-footer .w-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:0}
+.w-shipping-heading{display:grid;gap:4px;min-width:0}
+.w-shipping-heading h3{font-size:18px}
+.w-shipping-status,.w-shipping-scan,.w-shipping-next,.w-shipping-review,.w-shipping-recovery,.w-shipping-verify{display:grid;justify-items:start;gap:8px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--sunk);min-width:0}
+.w-shipping-status>span:last-child,.w-shipping-scan p,.w-shipping-next p{font-size:13.5px;line-height:1.45;color:var(--muted)}
+.w-shipping-status small{font-size:12px;line-height:1.4;color:var(--muted)}
+.w-shipping-review .kv,.w-shipping-review .w-section-head,.w-shipping-verify .field{width:100%}
+.w-shipping-review .w-address{font-size:16px;line-height:1.6;color:var(--fg)}
+.w-shipping-recovery h3,.w-shipping-verify h3{font-size:14px}
+.w-shipping-recovery p,.w-shipping-verify p{font-size:13.5px;line-height:1.45}
+.w-shipping-recovery code{font-size:12px;overflow-wrap:anywhere;user-select:text}
+.w-shipping-confirm{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;min-height:44px;cursor:pointer}
+.w-shipping-confirm input[type=checkbox]{flex:none;width:22px;height:22px;min-height:22px;margin:0}
+.w-shipping-scan h3,.w-shipping-next h3{font-size:12px;font-weight:650;color:var(--muted)}
+.w-shipping-scan strong{font-size:20px;line-height:1.25}
+.w-shipping-notice{padding:12px;border-radius:12px;background:var(--warn-bg);font-size:13.5px;line-height:1.45}
+.w-shipping-snapshot{border:1px solid var(--line);border-radius:12px;font-size:13.5px}
+.w-shipping-snapshot summary{min-height:44px;padding:12px;cursor:pointer;font-weight:600}
+.w-shipping-snapshot .w-address{padding:0 12px 12px}
+.w-shipping-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border:0;padding:0;margin:0;min-width:0}
+.w-shipping-fields legend{font-size:15px;font-weight:650;margin-bottom:12px}
+.w-shipping-fields>.field,.w-shipping-fields>.hint{grid-column:1/-1}
+.w-shipping-fields>.field:has([name=postcode]),.w-shipping-fields>.field:has([name=weightGrams]){grid-column:auto}
+.w-shipping-fields input[name=postcode]{text-transform:uppercase}
+.w-shipping-tracking{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.w-shipping-tracking>span{display:grid;gap:5px;min-width:0}
+.w-shipping-tracking b{font-size:12px;color:var(--muted)}
+.w-shipping-tracking code{font:600 16px ui-monospace,monospace;overflow-wrap:anywhere;user-select:text}
+.w-shipping-tracking .btn{flex:none}
+.w-shipping-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.w-shipping-tools .btn{justify-content:center}
+.w-shipping-sheet #wErr:empty{display:none}
+.w-shipping-sheet #wErr:not(:empty){padding:12px;border-radius:12px;background:var(--bad-bg);font-size:13.5px;line-height:1.45}
+.w-rm-settings{display:grid;gap:16px;max-width:1120px;min-width:0}
+.w-rm-card{display:grid;align-content:start;gap:14px;padding:20px;min-width:0;overflow-wrap:anywhere}
+.w-rm-card h2{font-size:17px;font-weight:650}
+.w-rm-card p{font-size:14px;line-height:1.5;color:var(--muted)}
+.w-rm-card>.btn{justify-self:start}
+.w-rm-switch-row,.w-rm-card-head{display:flex;justify-content:space-between;align-items:center;gap:16px;min-width:0}
+.w-rm-switch-row>div{display:grid;gap:6px;min-width:0}
+.w-rm-switch,.w-rm-card-head .pill{flex:none}
+.w-rm-switch-state{min-width:2em;font-size:14px}
+.w-rm-preserved{padding:12px 14px;border-radius:12px;background:var(--sunk)}
+.w-rm-setup-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.w-rm-card .kv{padding:12px 0;border-block:1px solid var(--line);font-size:14px}
+.w-rm-card .err{color:var(--bad)}
+.w-rm-card .err:empty,.w-rm-feedback:empty{display:none}
+.w-rm-feedback{color:var(--fg)!important}
+.w-rm-steps{display:grid;gap:16px;margin:0;padding-left:22px}
+.w-rm-steps li{padding-left:4px;font-size:14px}
+.w-rm-steps li b{display:block;margin-bottom:5px}
+.w-rm-steps li span{display:block;color:var(--muted);line-height:1.5}
+.w-rm-storage{border-color:color-mix(in srgb,var(--warn) 35%,var(--line))}
+.w-rm-credential-fields{display:grid;gap:16px;border:0;padding:0;margin:0;min-width:0}
+.w-rm-credentials #wErr:empty{display:none}
+.w-rm-credentials #wErr:not(:empty){padding:12px;border-radius:12px;background:var(--bad-bg);font-size:13.5px;line-height:1.45}
+@media(min-width:900px){.w-rm-setup-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.w-rm-card{padding:16px}.w-rm-switch-row{align-items:flex-start;gap:12px}.w-rm-switch-row h2{font-size:16px}}
+@media(max-width:420px){.w-shipping-sheet .w-editor-body{gap:12px}.w-shipping-sheet .w-editor-footer .btn{font-size:14px}.w-shipping-fields .fl{font-size:13px}}
 @media(min-width:700px){
   #sheet:has(>.w-editor){width:min(640px,calc(100vw - 48px))}
   .w-sheet.w-editor{max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px)}

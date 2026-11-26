@@ -204,6 +204,29 @@ test("when an order is marked dispatched the customer is told, once: shipped (wi
   assert.equal(await settle(1, 1500), 0);
 });
 
+test("older courier and case-variant delivery orders send shipped mail and never collection mail", async () => {
+  await customerEmails(true);
+  for (const delivery of ["Courier", " delivery "]) {
+    const { order } = await place();
+    assert.equal(await settle(1), 1);
+    take();
+    srv.sql(`UPDATE wholesale_preview SET data=json_set(data,'$.delivery','${delivery}') WHERE kind='order' AND id='${order.id}'`);
+    const ready = await orderStatus(order, "Ready");
+    assert.equal(srv.sql(`SELECT COUNT(*) AS n FROM wholesale_email_outbox WHERE event_key='ready:${order.id}'`)[0].n, 0);
+    const link = "https://www.royalmail.com/track-your-item#/tracking-results/AB123456789GB";
+    const dispatched = await call("PATCH", `/api/staff-orders/orders/${order.id}`,
+      { ifVersion: ready.version, status: "Dispatched", trackingUrl: link });
+    assert.equal(dispatched.status, 200, dispatched.text);
+    assert.equal(await settle(1), 1);
+    const [mail] = take();
+    assert.match(mail.subject, /^Shipped:/);
+    assert.match(mail.text, /on its way to .*1 Elm Hill/);
+    assert.ok(mail.text.includes(link));
+    assert.doesNotMatch(mail.text, /COLLECTED|READY TO COLLECT/i);
+  }
+  await customerEmails(false);
+});
+
 test("an open order uses the current customer email and exposes the correct activity and delivery records", async () => {
   await customerEmails(true);
   const { order } = await place({ delivery: "Roastery collection" });

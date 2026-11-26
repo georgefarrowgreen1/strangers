@@ -3,4 +3,10 @@
 // Each order keeps the charge it was placed with (deliveryPence), so changing these never changes a past order.
 export const SHIPPING_PENCE = 744; // including VAT
 export const FREE_SHIPPING_FROM_PENCE = 25000;
+
+// Older imported records can describe courier fulfilment before the current order form's canonical values.
+export function isWholesaleDelivery(value) {
+  return typeof value === "string" && /^(?:delivery|courier)$/i.test(value.trim());
+}
+
 export const shippingFor = (delivery, coffeePence) => delivery === "Delivery" && coffeePence < FREE_SHIPPING_FROM_PENCE ? SHIPPING_PENCE : 0;
