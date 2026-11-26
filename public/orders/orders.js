@@ -367,8 +367,14 @@
  function shippingNeedsReview(shipment){
   return !!(shipment?.orderChanged||shipment?.reviewRequired||['booking','review'].includes(shipment?.state));
  }
+ function bookingNotice(result){
+  if(result?.bookingConfigured===false)return ['Royal Mail setup needed','Ask an admin to complete setup before booking.'];
+  if(result?.bookingEnabled===false)return ['Royal Mail bookings paused','An admin can turn on new bookings.'];
+  return null;
+ }
  function shippingSummaryText(row,result){
-  const shipment=result?.shipment;
+  const shipment=result?.shipment,notice=!shipment&&bookingNotice(result);
+  if(notice)return [...notice,'notice'];
   if(!result?.enabled)return ['Royal Mail unavailable','Use a courier tracking link at dispatch.','notice'];
   if(shippingNeedsReview(shipment))return ['Royal Mail needs review','Check the shipment before handing over the parcel.','warning'];
   if(shipment?.state==='failed')return ['Booking needs attention','Ask an admin to check the booking.','warning'];
@@ -433,6 +439,8 @@
   const {result,row,busy}=review,shipment=result?.shipment;
   if(busy==='load')return 'Loading this order’s Royal Mail details…';
   if(!result)return '';
+  const notice=!shipment&&bookingNotice(result);
+  if(notice)return notice[1];
   if(!result.enabled)return 'Royal Mail is unavailable. You can add any courier’s tracking link when you confirm dispatch.';
   if(!shipment)return row.status==='Ready'
    ?'An admin can book this order from the wholesale order details.'
@@ -478,7 +486,8 @@
   if(body.contains(document.activeElement)&&document.activeElement.dataset.royalMailAction)review.focusedAction=document.activeElement.dataset.royalMailAction;
   const tracking=royalMailLink(number),pending=shipment?.state==='booking'||shipment?.state==='review'||shipment?.reviewRequired;
   const stateLabels={booking:'Awaiting carrier confirmation',review:'Carrier confirmation pending',created:'Shipment booked',labelled:'Label ready',dispatched:'Marked dispatched in Royal Mail',failed:'Booking needs attention'};
-  const headline=labelNeedsReview?'Label needs review':shipment?(Object.hasOwn(stateLabels,shipment.state)?stateLabels[shipment.state]:'Shipment linked'):result?'No Royal Mail shipment':'Shipment';
+  const headline=labelNeedsReview?'Label needs review':shipment?(Object.hasOwn(stateLabels,shipment.state)?stateLabels[shipment.state]:'Shipment linked'):
+   result?(bookingNotice(result)?.[0]||'No Royal Mail shipment'):'Shipment';
   const labelReady=shipment?.orderId&&!labelNeedsReview&&['labelled','dispatched'].includes(shipment.state);
   const canRefresh=result?.enabled&&shipment&&shipment.state!=='failed';
   const refreshLabel=pending?'Check request':number&&result.trackingEnabled?'Refresh tracking':'Check shipment';

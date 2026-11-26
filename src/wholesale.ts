@@ -31,7 +31,7 @@ import { handleBillingAccounts } from "./invoicing/accounts";
 import { handleBatches } from "./invoicing/batches";
 import { handleReconciliation } from "./invoicing/reconciliation";
 import { handleQuickBooksMatches } from "./invoicing/quickbooksMatches";
-import { handleWholesaleRoyalMail, resolveWholesaleHandover, ROYAL_MAIL_ORDER_ROUTE } from "./wholesaleRoyalMail";
+import { handleRoyalMailSettings, handleWholesaleRoyalMail, resolveWholesaleHandover, ROYAL_MAIL_ORDER_ROUTE } from "./wholesaleRoyalMail";
 
 type Pack = "quarter" | "half" | "kilo";
 /** The minimum this business must order, in grams of coffee (0 when Admin has exempted it). */
@@ -477,6 +477,7 @@ export async function updateOrderStatus(env: Env, id: string, body: Record<strin
 export async function handleWholesaleAdmin(req: Request, env: Env, route: string, user: User, links: Links, ctx?:ExecutionContext): Promise<Response> {
   const quickbooks = await handleQuickBooks(req, env, route, user, ctx); if (quickbooks) return quickbooks;
   if (user.role !== "admin") throw denied();
+  if (route === "royal-mail") return handleRoyalMailSettings(req, env, user.name);
   const shipping = ROYAL_MAIL_ORDER_ROUTE.exec(route);
   if (shipping) return handleWholesaleRoyalMail(req, env, shipping[1], shipping[2], user);
   if (route.startsWith("invoicing/")) {

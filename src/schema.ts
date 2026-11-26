@@ -547,6 +547,17 @@ const MIGRATIONS: Migration[] = [
       catch (error) { if (!(await columns(env, table)).has(column)) throw error; }
     }
   } },
+  { id: 51, name: "Wholesale Royal Mail booking settings", run: async env => {
+    await env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS wholesale_royal_mail_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        enabled INTEGER NOT NULL CHECK (enabled IN (0,1)),
+        version INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )`),
+      env.DB.prepare("INSERT OR IGNORE INTO wholesale_royal_mail_settings (id, enabled, version, updated_at) VALUES (1,0,0,0)"),
+    ]);
+  } },
 ];
 
 async function migrate(env: Env): Promise<void> {

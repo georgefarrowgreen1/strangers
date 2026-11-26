@@ -15,6 +15,7 @@ const customerId = "538d867c-7d6e-4813-9e44-eaa2b5d70b3a";
 const orderRef = index => "WS-" + index.toString(16).toUpperCase().padStart(32, "0");
 const orderPath = id => "/api/admin/wholesale/orders/" + id;
 const shipPath = id => orderPath(id) + "/shipping";
+const settingsPath = "/api/admin/wholesale/royal-mail";
 const binding = value => ({ type: "text", value });
 const packageDetails = { ifVersion: 1, weightGrams: 2140, recipient: {
   name: "Example Coffee Bar", line1: "18 Example Lane", city: "Norwich", postcode: "NR1 5AB",
@@ -30,6 +31,7 @@ test("wholesale shipping keeps booking, label validity and dispatch consistent a
   const unlabelled = new Set();
   let interceptCreate;
   let interceptLabel;
+  let interceptLookup;
   const worker = new Miniflare({ host: "127.0.0.1", port: 0, telemetry: { enabled: false }, cf: false, workers: [{
     config: {
       name: "wholesale-royal-mail",
@@ -88,18 +90,20 @@ test("wholesale shipping keeps booking, label validity and dispatch consistent a
         return new RuntimeResponse(pdf, { headers: { "content-type": "application/pdf" } });
       }
       const reference = decodeURIComponent(url.pathname.split("/").at(-1)).replaceAll('"', "");
+      await interceptLookup?.(reference);
       return RuntimeResponse.json(records.has(reference) ? [records.get(reference)] : []);
     } } },
   }] });
   t.after(() => worker.dispose());
   let cookie;
-  const call = (path, method = "GET", body, origin = host) => worker.dispatchFetch(origin + path, {
-    method, headers: { origin, "content-type": "application/json", ...(cookie ? { cookie } : {}) },
+  const call = (path, method = "GET", body, origin = host, session = cookie) => worker.dispatchFetch(origin + path, {
+    method, headers: { origin, "content-type": "application/json", ...(session ? { cookie: session } : {}) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const setup = await call("/api/auth/setup", "POST", { code: setupCode, name: "Test Admin", username: "ship.admin", password: "Local test password 2026!" });
   assert.equal(setup.status, 200);
   assert.equal((await call(shipPath(orderRef(1)) + "/label")).status, 401);
+  assert.equal((await call(settingsPath)).status, 401);
   cookie = setup.headers.getSetCookie().find(value => /^sfbb_session=[^;]/.test(value)).split(";")[0];
   const db = await worker.getD1Database("DB");
   const order = { preview: false, customerId, status: "Ready", delivery: "Delivery", business, createdAt: Date.now(),
@@ -121,6 +125,74 @@ test("wholesale shipping keeps booking, label validity and dispatch consistent a
   const refresh = id => call(shipPath(id) + "/refresh", "POST", {});
   const releaseRefresh = id => db.prepare("UPDATE wholesale_royal_mail_shipments SET refresh_after=0 WHERE order_id=?").bind(id).run();
   const posts = () => requests.filter(row => row.host === "api.parcel.royalmail.com" && row.method === "POST").length;
+  const settings = async () => (await call(settingsPath)).json();
+  async function setBookings(enabled) {
+    const { version } = await settings();
+    const response = await call(settingsPath, "PUT", { ifVersion: version, enabled });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).enabled, enabled);
+  }
+
+  await t.test("only admins can change the default-off booking switch and the API returns no keys", async () => {
+    const id = orderRef(8);
+    await seed(id);
+    assert.deepEqual(await settings(), {
+      enabled: false, version: 0, bookingConfigured: true, trackingConfigured: true, serviceCode: "TPS48",
+    });
+    const view = await (await call(shipPath(id))).json();
+    assert.equal(view.bookingEnabled, false);
+    assert.equal(view.bookingConfigured, true);
+    assert.equal(view.canCreate, false);
+    const paused = await create(id);
+    assert.equal(paused.status, 409);
+    assert.equal((await paused.json()).code, "royal_mail_booking_paused");
+    assert.equal(requests.length, 0);
+    assert.equal(await read(id), null);
+    const user = { username: "ship.staff", password: "Temporary staff password 2026!" };
+    assert.equal((await call("/api/admin/users", "POST", { ...user, name: "Packing staff", role: "staff" })).status, 200);
+    const signIn = await call("/api/auth/change", "POST", { ...user, newPassword: "Staff own password 2026!" }, host, "");
+    assert.equal(signIn.status, 200);
+    const staff = signIn.headers.getSetCookie().find(value => /^sfbb_session=[^;]/.test(value)).split(";")[0];
+    assert.equal((await call(settingsPath, "GET", undefined, host, staff)).status, 403);
+    assert.equal((await call(settingsPath, "PUT", { ifVersion: 0, enabled: true }, host, staff)).status, 403);
+    assert.equal((await call(settingsPath, "PUT", { ifVersion: 0, enabled: "true" })).status, 400);
+    await setBookings(true);
+    assert.equal((await call(settingsPath, "PUT", { ifVersion: 0, enabled: false })).status, 409);
+    assert.equal((await settings()).enabled, true);
+    assert.equal((await (await call(shipPath(id))).json()).canCreate, true);
+  });
+
+  await t.test("pausing during preflight prevents the carrier POST even if bookings are turned on again", async () => {
+    for (const reenable of [false, true]) {
+      const id = orderRef(reenable ? 10 : 9);
+      await seed(id);
+      const before = posts();
+      let enter, release;
+      const entered = new Promise(resolve => { enter = resolve; });
+      const held = new Promise(resolve => { release = resolve; });
+      interceptLookup = async () => { enter(); await held; };
+      const attempt = create(id);
+      try {
+        const early = await Promise.race([entered.then(() => null), attempt]);
+        if (early) assert.fail(await early.text());
+        await setBookings(false);
+        if (reenable) await setBookings(true);
+      } finally {
+        release();
+        interceptLookup = undefined;
+      }
+      const result = await attempt;
+      assert.equal(result.status, 409);
+      assert.equal((await result.json()).code, reenable ? "royal_mail_booking_policy_changed" : "royal_mail_booking_paused");
+      assert.equal(posts(), before);
+      assert.equal((await read(id)).state, "failed");
+      assert.equal((await read(id)).requestedAt, null);
+      if (!reenable) {
+        assert.equal((await dispatch(id, 1, "https://courier.example/123")).status, 200);
+        await setBookings(true);
+      }
+    }
+  });
 
   await t.test("concurrent booking and handover, safe reprints and exact-once dispatch email", async () => {
     const id = orderRef(1);
@@ -132,13 +204,15 @@ test("wholesale shipping keeps booking, label validity and dispatch consistent a
     interceptCreate = async () => { enter(); await held; };
     const first = create(id);
     try {
-      await Promise.race([entered, first.then(async response => assert.fail(await response.text()))]);
+      const early = await Promise.race([entered.then(() => null), first]);
+      if (early) assert.fail(await early.text());
       assert.equal((await create(id)).status, 202);
       const disputed = await dispatch(id, 1);
       assert.equal(disputed.status, 409);
       assert.equal((await disputed.json()).code, "royal_mail_handover_review");
       assert.equal(posts(), 1);
-      assert.equal(emails.length, 0);
+      assert.equal(await db.prepare("SELECT 1 FROM wholesale_email_outbox WHERE order_id=?").bind(id).first(), null);
+      await setBookings(false);
     } finally {
       release();
       interceptCreate = undefined;
@@ -171,6 +245,8 @@ test("wholesale shipping keeps booking, label validity and dispatch consistent a
     assert.match(email.mail.text, /18 Example Lane, Norwich, NR1 5AB/);
     assert.doesNotMatch(email.mail.text, /16 Example Lane/);
     assert.equal((await call(shipPath(id) + "/label")).status, 200);
+    assert.equal((await settings()).enabled, false, "old labels, scans and dispatch work while paused");
+    await setBookings(true);
   });
 
   await t.test("carrier conflicts require exact verification and cannot send stale tracking", async () => {

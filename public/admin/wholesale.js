@@ -49,8 +49,9 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
     reload();
   });
   let orderPages = 1, customerPages = 1, loadingMore = false;
+  let royalMailConfig = null, royalMailBusy = false, royalMailNeedsReload = false, royalMailIssue = "", royalMailFeedback = "", royalMailGeneration = 0;
   const sectionGroups = [
-    ["Order management", [["orders", "Orders", "doc"], ["customers", "Customers", "people"], ["tabs", "Tabs", "db"]]],
+    ["Order management", [["orders", "Orders", "doc"], ["customers", "Customers", "people"], ["tabs", "Tabs", "db"], ["royal-mail", "Royal Mail", "tune"]]],
     ["Catalogue and reporting", [["catalogue", "Coffee catalogue", "coffee"], ["custom", "Custom coffees", "pen"], ["invoices", "Invoicing", "doc"], ["insights", "Insights", "pulse"]]],
   ];
   const sections = sectionGroups.flatMap(([, group]) => group);
@@ -191,8 +192,8 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
   }
 
   async function view() {
-    const current = ++sequence, section = tab, filter = { query, status, approval, queue: orderQueue, dispatch: dispatchScope, sort: orderSort, sortChosen };
-    const snapshot = await api("GET", "/api/admin/wholesale");
+    const current = ++sequence, section = tab, settingsGeneration = royalMailGeneration, filter = { query, status, approval, queue: orderQueue, dispatch: dispatchScope, sort: orderSort, sortChosen };
+    const snapshot = section === "royal-mail" ? { stats: data?.stats, accounts: data?.accounts } : await api("GET", "/api/admin/wholesale");
     if (section === "orders" || section === "customers") {
       const result = await pages(snapshot, section, section === "orders" ? orderPages : customerPages, filter);
       snapshot[section] = result.rows; snapshot.accounts = result.accounts;
@@ -205,14 +206,23 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
     }
     if (section === "custom") snapshot.customerNames = (await api("GET", "/api/admin/wholesale/customers/names")).customers;
     if (section === "customers") snapshot.invites = (await api("GET", "/api/admin/wholesale/customers/invites")).invites;
+    if (section === "royal-mail" && !royalMailBusy) {
+      try { snapshot.royalMail = checkedRoyalMailConfig(await api("GET", "/api/admin/wholesale/royal-mail")); }
+      catch (error) { snapshot.royalMailIssue = error.message; }
+    }
     if (current !== sequence) return html``;
     data = snapshot;
+    if (section === "royal-mail" && !royalMailBusy && settingsGeneration === royalMailGeneration) {
+      if (snapshot.royalMail?.version !== royalMailConfig?.version) royalMailFeedback = "";
+      royalMailConfig = snapshot.royalMail || null; royalMailIssue = snapshot.royalMailIssue || ""; royalMailNeedsReload = !!royalMailIssue;
+    }
     onNavigationChange();
     const content = section === "orders" ? orders()
       : section === "customers" ? customers()
       : section === "invoices" ? await invoiceUI.view()
       : section === "insights" ? await insightsUI.view()
       : section === "tabs" ? await tabsUI.view()
+      : section === "royal-mail" ? royalMailSettings()
       : catalogue();
     if (current !== sequence) return html``;
     // The privacy preference can change while the section's data loads.
@@ -221,6 +231,51 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
     return html`<div class="w-workspace w-operations${section === "invoices" ? " w-invoicing" : ""}">${head(section === "orders" ? wideOrders.matches ? "Wholesale orders" : "Wholesale" : sections.find(([id]) => id === section)[1], "", sensitive ? privacyToggle() : undefined)}
       <div id="wSectionsHost" class="w-sections-host" hidden></div>
       <div class="w-content${sensitive ? " w-sensitive" : ""}">${content}</div></div>`;
+  }
+
+  function checkedRoyalMailConfig(value) {
+    if (!value || typeof value.enabled !== "boolean" || !Number.isSafeInteger(value.version) || value.version < 0 ||
+      typeof value.bookingConfigured !== "boolean" || typeof value.trackingConfigured !== "boolean" ||
+      !(value.serviceCode === null || typeof value.serviceCode === "string")) throw new Error("Royal Mail settings could not be confirmed. Reload settings before changing them.");
+    return value;
+  }
+  function royalMailSettings() {
+    return html`<section id="wRoyalMailSettings" class="w-rm-settings" aria-label="Royal Mail setup" aria-busy="${String(royalMailBusy)}">${royalMailSettingsContent()}</section>`;
+  }
+  function royalMailSettingsContent() {
+    const config = royalMailConfig;
+    if (!config) return html`<section class="group glass w-rm-card"><h2>Royal Mail setup</h2><p id="wRoyalMailSettingsError" class="err" role="alert">${royalMailIssue || "Royal Mail settings are unavailable."}</p><button class="btn soft" type="button" data-act="wh-royal-mail-reload" ${royalMailBusy ? raw("disabled") : ""}>Reload settings</button></section>`;
+    const available = config.enabled && config.bookingConfigured;
+    return html`<section class="group glass w-rm-card w-rm-booking"><div class="w-rm-switch-row"><div><h2 id="wRoyalMailBookingsTitle">New Royal Mail bookings</h2><p id="wRoyalMailBookingsHint">${available ? "Ready delivery orders can request new Royal Mail postage." : config.enabled ? "Complete the connection setup before requesting new postage." : "New postage requests are paused."}</p></div>
+      <button class="wi-switch w-rm-switch" type="button" role="switch" aria-checked="${String(config.enabled)}" aria-labelledby="wRoyalMailBookingsTitle" aria-describedby="wRoyalMailBookingsHint" data-act="wh-royal-mail-toggle" ${royalMailBusy || royalMailNeedsReload || (!config.enabled && !config.bookingConfigured) ? raw("disabled") : ""}><span class="wi-switch-track" aria-hidden="true"><span class="wi-switch-thumb"></span></span><span class="w-rm-switch-state">${config.enabled ? "On" : "Off"}</span></button></div>
+      <p class="w-rm-preserved">Existing shipments, label downloads and tracking stay available when new bookings are off.</p>
+      ${royalMailNeedsReload ? html`<p class="err" id="wRoyalMailSettingsError" role="alert">${royalMailIssue}</p><button class="btn soft" type="button" data-act="wh-royal-mail-reload" ${royalMailBusy ? raw("disabled") : ""}>Reload settings</button>` : html`<p id="wRoyalMailSettingsError" class="err" role="alert"></p>`}<p class="hint w-rm-feedback" role="status">${royalMailBusy ? "Saving settings…" : royalMailFeedback}</p></section>
+      <div class="w-rm-setup-grid"><section class="group glass w-rm-card"><div class="w-rm-card-head"><h2>Click &amp; Drop</h2><span class="pill ${config.bookingConfigured ? "ok" : "warn"}">${config.bookingConfigured ? "Configured" : "Needs setup"}</span></div><p>${config.bookingConfigured ? "The postage connection and booking service are configured." : "A Click & Drop connection and a booking service are required before new bookings can be enabled."}</p><div class="kv"><span>Booking service</span><strong>${config.serviceCode || "Not set"}</strong></div><p class="hint">The API key and service code are managed in the Worker’s deployment settings. Credentials are never shown here.</p></section>
+      <section class="group glass w-rm-card"><div class="w-rm-card-head"><h2>Carrier tracking</h2><span class="pill ${config.trackingConfigured ? "ok" : ""}">${config.trackingConfigured ? "Configured" : "Optional"}</span></div><p>${config.trackingConfigured ? "Refresh a shipment to show its latest Royal Mail scan in Admin and the wholesale orders page." : "Connect Royal Mail tracking to show carrier scans here. Existing tracking links still open on Royal Mail."}</p><p class="hint">Tracking is separate from the switch for new postage requests.</p></section></div>
+      <section class="group glass w-rm-card"><h2>From packing to dispatch</h2><ol class="w-rm-steps"><li><b>Pack and review</b><span>Mark a delivery order Ready, open Royal Mail shipping and check its address and packed weight.</span></li><li><b>Check the label</b><span>Download the confirmed label when available. If postage is still pending, finish it in Click &amp; Drop and check the shipment again.</span></li><li><b>Confirm dispatch</b><span>Attach the label and confirm dispatch from the order when the parcel leaves the roastery.</span></li></ol><button class="btn soft" type="button" data-act="wh-royal-mail-orders">Open orders</button></section>`;
+  }
+  async function changeRoyalMailSettings(reloadOnly = false) {
+    if (royalMailBusy || (!reloadOnly && (!royalMailConfig || royalMailNeedsReload || !royalMailConfig.enabled && !royalMailConfig.bookingConfigured))) return;
+    const session = packingSession, before = royalMailConfig, desired = !before?.enabled;
+    const source = document.activeElement;
+    royalMailGeneration++; royalMailBusy = true;
+    const draw = () => { const host = $("#wRoyalMailSettings"); if (host) { host.setAttribute("aria-busy", String(royalMailBusy)); put(host, royalMailSettingsContent()); } };
+    draw();
+    try {
+      const result = checkedRoyalMailConfig(await api(reloadOnly ? "GET" : "PUT", "/api/admin/wholesale/royal-mail", reloadOnly ? undefined : { enabled: desired, ifVersion: before.version }));
+      if (session !== packingSession) return;
+      if (!reloadOnly && (result.enabled !== desired || result.version <= before.version)) throw new Error("The booking setting could not be confirmed. Reload settings before changing it again.");
+      royalMailConfig = result; royalMailNeedsReload = false; royalMailIssue = "";
+      royalMailFeedback = reloadOnly ? "Settings reloaded." : result.enabled ? "New Royal Mail bookings are on." : "New Royal Mail bookings are off. Existing shipments remain available.";
+    } catch (error) {
+      if (session !== packingSession) return;
+      royalMailNeedsReload = true; royalMailIssue = error.message + " Reload settings to check the saved state."; royalMailFeedback = "";
+    } finally {
+      if (session === packingSession) {
+        royalMailBusy = false; const restore = document.activeElement === source || document.activeElement === document.body; draw();
+        if (restore) $(royalMailNeedsReload ? '#wRoyalMailSettings [data-act="wh-royal-mail-reload"]' : '#wRoyalMailSettings [data-act="wh-royal-mail-toggle"]:enabled')?.focus({ preventScroll: true });
+      }
+    }
   }
 
   function more(kind) {
@@ -697,8 +752,7 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
       const tone = shipment?.state === "failed" ? "bad" : needsLabelReview || ["booking", "review"].includes(shipment?.state) || uncertain ? "warn" : labelReady ? "ok" : "";
       openSheet(html`<form id="wRoyalMailForm" class="w-sheet w-editor w-shipping-sheet">${editorHead("Royal Mail shipping")}<div class="w-editor-body"><div class="w-shipping-heading"><h3>${row.business || row.createdName}</h3><p class="w-id" title="${row.id}">${row.reference ? "Reference " + row.reference + " · " : ""}${shortId(row.id)}…</p><p class="hint">Order placed ${carrierDate(row.createdAt)}</p></div>
         <div id="wShippingState" class="w-shipping-status" role="status"><span class="pill ${tone}">${shipping ? status : "Checking Royal Mail shipping…"}</span><span>${recorded ? "Confirm dispatch separately when the parcel leaves." : reviewing ? "Check this parcel summary before requesting postage." : "Review the saved address and enter the sealed parcel weight."}</span>${shipment?.requestedAt ? html`<small>Requested ${carrierDate(shipment.requestedAt)}</small>` : ""}${shipment?.checkedAt ? html`<small>Last checked ${carrierDate(shipment.checkedAt)}</small>` : ""}</div>
-        ${shipping?.enabled === false ? html`<p class="w-shipping-notice">Royal Mail shipping is not configured. You can still add a tracking link and dispatch the order as usual.</p>` : ""}
-        ${shipping?.enabled && !shipping.canCreate && !recorded ? html`<p class="w-shipping-notice">Pack the order and mark it Ready before requesting postage.</p>` : ""}
+        ${shipping && (shipping.enabled === false || shipping.bookingConfigured === false) ? html`<p class="w-shipping-notice">New Royal Mail booking setup is incomplete. Check Wholesale → Royal Mail. You can still add a tracking link and dispatch the order as usual.</p>` : shipping?.bookingEnabled === false ? html`<p class="w-shipping-notice">New Royal Mail bookings are paused in Wholesale → Royal Mail. Existing shipments, label downloads and tracking remain available.</p>` : shipping?.enabled && !shipping.canCreate && !recorded ? html`<p class="w-shipping-notice">Pack the order and mark it Ready before requesting postage.</p>` : ""}
         ${shipping?.trackingWarning ? html`<p class="w-shipping-notice" role="status">${shipping.trackingWarning}</p>` : ""}
         ${recorded && shipping?.trackingEnabled === false ? html`<p class="w-shipping-notice">Carrier scans are not connected. You can check the label request and follow the tracking link on Royal Mail.</p>` : ""}
         ${shipment?.problem ? html`<p class="w-shipping-notice" role="status">${shipment.problem}</p>` : ""}
@@ -1594,7 +1648,7 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
     drawPhotos();
   }
   return {
-    clear() { invoiceUI.clear(); insightsUI.clear(); sequence++; emailHealthToken++; packingSession++; data = null; previewOrder = packingOrder = ""; hideOrderPreview = false; quickBusy.clear(); orderErrors.clear(); emailDraft = null; batch = null; picked.clear(); picking = false; clearTimeout(timer); },
+    clear() { invoiceUI.clear(); insightsUI.clear(); sequence++; emailHealthToken++; packingSession++; royalMailGeneration++; royalMailConfig = null; royalMailBusy = royalMailNeedsReload = false; royalMailIssue = royalMailFeedback = ""; data = null; previewOrder = packingOrder = ""; hideOrderPreview = false; quickBusy.clear(); orderErrors.clear(); emailDraft = null; batch = null; picked.clear(); picking = false; clearTimeout(timer); },
     view,
     navigation,
     syncNavigation,
@@ -1608,6 +1662,8 @@ window.WholesaleAdmin = function ({ api, html, raw, svg, put, head, openSheet, c
     searchBillingAccounts: invoiceUI.accountsSearch,
     invoicingChange: invoiceUI.workspaceChange,
     async act(name, id) {
+      if (name === "wh-royal-mail-toggle" || name === "wh-royal-mail-reload") { await changeRoyalMailSettings(name === "wh-royal-mail-reload"); return; }
+      if (name === "wh-royal-mail-orders") { selectSection("orders"); await reload(); return; }
       if (name.startsWith("wh-invoice-")) { await invoiceUI.act(name, id); return; }
       if (name.startsWith("wh-ins-")) { await insightsUI.act(name, id); return; }
       if (name.startsWith("wh-tabs-")) { await tabsUI.act(name, id); return; }

@@ -95,6 +95,8 @@ Managers and admins with an address can receive a summary every Monday at 07:30 
 
 ## Royal Mail for wholesale dispatch
 
+**Admin → Wholesale → Royal Mail** shows which carrier settings are configured and controls new bookings. Bookings start off. Once the Click & Drop key and service are configured, an admin can turn them on. Switching off stops new requests before they are sent. Existing labels, tracking and manual dispatch stay available, and requests already sent to Royal Mail can finish.
+
 In **Admin → Wholesale → Order details**, the **Royal Mail shipping** panel prepares postage for one packed parcel within Great Britain. Review the recipient, delivery address and sealed parcel weight before booking. The packing desk shows label readiness and the latest carrier scan. **Mark dispatched** confirms physical handover and uses the verified Royal Mail tracking link and label address in the dispatch email when available. Existing invoicing rules apply at handover.
 
 - Configure the wholesale Click & Drop integration with `WHOLESALE_ROYAL_MAIL_CLICK_DROP_KEY` as a Worker secret and `WHOLESALE_ROYAL_MAIL_SERVICE_CODE` as the service code verified for that account. Use the account's service register code or shipping account name via `WHOLESALE_ROYAL_MAIL_SERVICE_REGISTER_CODE` and `WHOLESALE_ROYAL_MAIL_SHIPPING_ACCOUNT` when required. Integrated label download requires an Online Business Account. [Click & Drop API](https://help.parcel.royalmail.com/hc/en-gb/articles/360011462338-Integrating-with-the-Click-Drop-API)

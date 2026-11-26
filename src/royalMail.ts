@@ -63,6 +63,17 @@ export interface RoyalMailOrder {
   providerState: "created" | "labelled" | "dispatched";
 }
 
+export function validRoyalMailCredential(value: unknown): value is string {
+  return typeof value === "string" && /^[!-~]{1,512}$/.test(value);
+}
+
+export function validRoyalMailService(code: unknown, register: string | undefined, account: string | undefined): code is string {
+  return typeof code === "string" && /^[A-Z0-9]{1,10}$/.test(code) &&
+    (register === undefined || /^(?!00)\d{2}$/.test(register)) &&
+    (account === undefined || typeof account === "string" && !!account.trim() &&
+      account.length <= 50 && !/[\u0000-\u001f\u007f]/.test(account));
+}
+
 function invalidShipment(message: string): never {
   throw new RoyalMailError("royal_mail_invalid_shipment", message);
 }
@@ -111,10 +122,7 @@ function orderBody(input: RoyalMailOrderInput) {
       !Number.isSafeInteger(weightInGrams) || weightInGrams < 1 || weightInGrams > 30000) {
     invalidShipment("Choose a parcel format and enter its packed weight in grams.");
   }
-  if (!/^[A-Z0-9]{1,10}$/.test(serviceCode) ||
-      (serviceRegisterCode !== undefined && !/^(?!00)\d{2}$/.test(serviceRegisterCode)) ||
-      (shippingAccountName !== undefined && (typeof shippingAccountName !== "string" || !shippingAccountName.trim()
-        || shippingAccountName.length > 50 || /[\u0000-\u001f\u007f]/.test(shippingAccountName)))) {
+  if (!validRoyalMailService(serviceCode, serviceRegisterCode, shippingAccountName)) {
     invalidShipment("Choose a Royal Mail service configured for this account.");
   }
 
@@ -174,7 +182,7 @@ async function clickDrop(
   fetcher: typeof fetch,
 ): Promise<unknown> {
   const token = typeof key === "string" ? key.trim() : "";
-  if (!/^[!-~]{1,512}$/.test(token)) throw new RoyalMailError("royal_mail_configuration", "Configure a valid Royal Mail Click & Drop key.");
+  if (!validRoyalMailCredential(token)) throw new RoyalMailError("royal_mail_configuration", "Configure a valid Royal Mail Click & Drop key.");
   const posting = body !== undefined;
   const headers = new Headers({ Authorization: "Bearer " + token, Accept: label ? "application/pdf" : "application/json" });
   if (posting) headers.set("Content-Type", "application/json");
@@ -341,8 +349,7 @@ function trackingSummary(value: unknown): RoyalMailTrackingSummary {
 export async function fetchRoyalMailTracking(
   { clientId, clientSecret, acceptTerms }: RoyalMailTrackingCredentials, trackingNumbers: readonly string[], fetcher = fetch,
 ): Promise<RoyalMailTrackingSummary[]> {
-  const validKey = (value: string) => typeof value === "string" && /^[!-~]{1,512}$/.test(value);
-  if (!validKey(clientId) || !validKey(clientSecret) || acceptTerms !== true) {
+  if (!validRoyalMailCredential(clientId) || !validRoyalMailCredential(clientSecret) || acceptTerms !== true) {
     throw new RoyalMailError("royal_mail_configuration", "Configure approved Royal Mail Tracking API credentials.");
   }
   if (!Array.isArray(trackingNumbers) || trackingNumbers.length < 1 || trackingNumbers.length > 30) {

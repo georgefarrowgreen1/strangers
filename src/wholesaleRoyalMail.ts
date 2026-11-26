@@ -1,7 +1,7 @@
 import { audit } from "./audit";
 import { isWholesaleDelivery } from "../public/wholesale/shipping.js";
 import { ApiError, type Env, invalid, json, readJson } from "./http";
-import { createRoyalMailOrder, fetchRoyalMailLabel, fetchRoyalMailTracking, findRoyalMailOrder, RoyalMailError, royalMailTrackingNumber } from "./royalMail";
+import { createRoyalMailOrder, fetchRoyalMailLabel, fetchRoyalMailTracking, findRoyalMailOrder, RoyalMailError, royalMailTrackingNumber, validRoyalMailCredential, validRoyalMailService } from "./royalMail";
 import { get, object, text, version, type Versioned } from "./wholesaleStore";
 import type { CustomerLocation } from "./wholesaleCustomers";
 
@@ -45,24 +45,71 @@ interface Shipment {
 
 type ShippingOrder = Order & Versioned;
 export type ShippingGuard = { sql: string; args: (string | number | null)[] };
+type BookingPolicy = { enabled: number; version: number };
 const REFRESH_INTERVAL = 30_000;
 const BOOKING_GRACE = 60_000;
+const BOOKING_ALLOWED = "EXISTS (SELECT 1 FROM wholesale_royal_mail_settings WHERE id = 1 AND enabled = 1 AND version = ?)";
 export const ROYAL_MAIL_ORDER_ROUTE = /^orders\/(WS-[A-F0-9]{32})\/shipping(?:\/(label|refresh|verify))?$/;
 
 function config(env: Env) {
   const key = env.WHOLESALE_ROYAL_MAIL_CLICK_DROP_KEY?.trim();
   const serviceCode = env.WHOLESALE_ROYAL_MAIL_SERVICE_CODE?.trim();
-  return key && serviceCode ? { key, serviceCode,
-    serviceRegisterCode: env.WHOLESALE_ROYAL_MAIL_SERVICE_REGISTER_CODE?.trim() || undefined,
-    shippingAccountName: env.WHOLESALE_ROYAL_MAIL_SHIPPING_ACCOUNT?.trim() || undefined,
-  } : null;
+  const serviceRegisterCode = env.WHOLESALE_ROYAL_MAIL_SERVICE_REGISTER_CODE?.trim() || undefined;
+  const shippingAccountName = env.WHOLESALE_ROYAL_MAIL_SHIPPING_ACCOUNT?.trim() || undefined;
+  return {
+    key: validRoyalMailCredential(key) ? key : null,
+    serviceCode: validRoyalMailService(serviceCode, serviceRegisterCode, shippingAccountName) ? serviceCode : null,
+    serviceRegisterCode, shippingAccountName,
+  };
 }
 
 function trackingConfig(env: Env) {
   const clientId = env.WHOLESALE_ROYAL_MAIL_TRACKING_CLIENT_ID?.trim();
   const clientSecret = env.WHOLESALE_ROYAL_MAIL_TRACKING_CLIENT_SECRET?.trim();
-  return clientId && clientSecret && env.WHOLESALE_ROYAL_MAIL_TRACKING_TERMS_ACCEPTED === "yes"
+  return validRoyalMailCredential(clientId) && validRoyalMailCredential(clientSecret) && env.WHOLESALE_ROYAL_MAIL_TRACKING_TERMS_ACCEPTED === "yes"
     ? { clientId, clientSecret, acceptTerms: true as const } : null;
+}
+
+async function bookingPolicy(env: Env): Promise<BookingPolicy> {
+  return await env.DB.prepare("SELECT enabled, version FROM wholesale_royal_mail_settings WHERE id = 1").first<BookingPolicy>()
+    ?? { enabled: 0, version: 0 };
+}
+
+export async function handleRoyalMailSettings(req: Request, env: Env, actor: string): Promise<Response> {
+  if (req.method !== "GET" && req.method !== "PUT") {
+    throw new ApiError(405, "method_not_allowed", "Use GET or PUT for Royal Mail setup.");
+  }
+  const { key, serviceCode } = config(env);
+  const bookingConfigured = !!key && !!serviceCode;
+  const trackingConfigured = !!trackingConfig(env);
+  const view = (current: BookingPolicy) => json({
+    enabled: current.enabled === 1, version: current.version, bookingConfigured, trackingConfigured, serviceCode,
+  });
+  const current = await bookingPolicy(env);
+  if (req.method === "GET") return view(current);
+  const body = object(await readJson(req, 1024));
+  if (typeof body.enabled !== "boolean") throw invalid("Choose whether new Royal Mail bookings are on or off.");
+  const expected = version(body.ifVersion);
+  const conflict = () => new ApiError(409, "conflict", "Royal Mail setup changed on another device. Reload it before saving.");
+  if (current.version !== expected) throw conflict();
+  if (body.enabled && !bookingConfigured) {
+    throw new ApiError(409, "royal_mail_not_configured", "Configure the Click & Drop key and service before turning on bookings.");
+  }
+  if (current.enabled === Number(body.enabled)) return view(current);
+  const saved = await env.DB.prepare(`UPDATE wholesale_royal_mail_settings SET enabled = ?, version = version + 1, updated_at = ?
+    WHERE id = 1 AND version = ? RETURNING enabled, version`).bind(Number(body.enabled), Date.now(), expected).first<BookingPolicy>();
+  if (!saved) throw conflict();
+  await audit(env, "wholesale_royal_mail", actor, `New Royal Mail bookings turned ${saved.enabled ? "on" : "off"}.`);
+  return view(saved);
+}
+
+function checkBookingPolicy(current: BookingPolicy, reviewedVersion = current.version) {
+  if (!current.enabled) {
+    throw new ApiError(409, "royal_mail_booking_paused", "New Royal Mail bookings are off. An admin can turn them on in Wholesale → Royal Mail.");
+  }
+  if (current.version !== reviewedVersion) {
+    throw new ApiError(409, "royal_mail_booking_policy_changed", "Royal Mail setup changed. Review the parcel and request the label again.");
+  }
 }
 
 function field(value: unknown, name: string, limit: number, required = true) {
@@ -193,12 +240,16 @@ export async function handleWholesaleRoyalMail(req: Request, env: Env, id: strin
     throw new ApiError(404, "not_found", "Royal Mail shipping is available on wholesale delivery orders.");
   }
   const settings = config(env);
+  const bookingConfigured = !!settings.key && !!settings.serviceCode;
   const tracking = trackingConfig(env);
   const getView = async (status = 200, trackingWarning?: string) => {
-    const [latest, shipment] = await Promise.all([get<Order>(env, "order", id), getShipment(env, id)]);
+    const [latest, shipment, policy] = await Promise.all([get<Order>(env, "order", id), getShipment(env, id), bookingPolicy(env)]);
     if (!eligibleOrder(latest)) throw new ApiError(404, "not_found", "This order is no longer available.");
-    return json({ enabled: !!settings,
-      canCreate: !!settings && actor.role === "admin" && latest.status === "Ready" && !latest.skipped,
+    return json({ enabled: !!settings.key,
+      bookingEnabled: policy.enabled === 1,
+      bookingConfigured,
+      canCreate: bookingConfigured && policy.enabled === 1 && actor.role === "admin" &&
+        latest.status === "Ready" && !latest.skipped && (!shipment || shipment.state === "failed"),
       orderVersion: latest.version, shipment: await shipmentView(shipment, latest), trackingEnabled: !!tracking,
       ...(trackingWarning ? { trackingWarning } : {}),
     }, status);
@@ -207,7 +258,7 @@ export async function handleWholesaleRoyalMail(req: Request, env: Env, id: strin
   if (req.method !== (action === "label" ? "GET" : "POST")) {
     throw new ApiError(405, "method_not_allowed", "This shipping action is unavailable.");
   }
-  if (!settings) throw new ApiError(503, "royal_mail_not_configured", "Royal Mail Click & Drop requires an account key and a service code.");
+  if (!settings.key) throw new ApiError(503, "royal_mail_not_configured", "Configure a valid Royal Mail Click & Drop key.");
 
   const existing = await getShipment(env, id);
   if (action === "label") {
@@ -317,8 +368,12 @@ export async function handleWholesaleRoyalMail(req: Request, env: Env, id: strin
   }
 
   if (actor.role !== "admin") throw new ApiError(403, "permission_denied", "An admin must create Royal Mail shipments.");
-  if (order.status !== "Ready" || order.skipped) throw new ApiError(409, "order_not_ready", "Pack the order and mark it Ready before creating postage.");
   if (existing && existing.state !== "failed") return getView(existing.provider_id ? 200 : 202);
+  const { key, serviceCode, serviceRegisterCode, shippingAccountName } = settings;
+  if (!serviceCode) throw new ApiError(503, "royal_mail_not_configured", "Configure the Royal Mail Click & Drop service before creating postage.");
+  const policy = await bookingPolicy(env);
+  checkBookingPolicy(policy);
+  if (order.status !== "Ready" || order.skipped) throw new ApiError(409, "order_not_ready", "Pack the order and mark it Ready before creating postage.");
 
   const body = object(await readJson(req, 4096));
   if (version(body.ifVersion) !== order.version) throw new ApiError(409, "conflict", "Review the latest order before creating postage.");
@@ -342,37 +397,39 @@ export async function handleWholesaleRoyalMail(req: Request, env: Env, id: strin
       destination_address, destination_postcode)
     SELECT ?, 'booking', ?, ?, ?, ?, ?, 0, ?, ? WHERE EXISTS (
       SELECT 1 FROM wholesale_preview WHERE kind='order' AND id=? AND version=? AND json_extract(data,'$.status')='Ready'
-    ) ON CONFLICT(order_id) DO UPDATE SET state=excluded.state, operation=excluded.operation,
+    ) AND ${BOOKING_ALLOWED} ON CONFLICT(order_id) DO UPDATE SET state=excluded.state, operation=excluded.operation,
       order_version=excluded.order_version, shipping_fingerprint=excluded.shipping_fingerprint,
       weight_grams=excluded.weight_grams, updated_at=excluded.updated_at, requested_at=0, checked_at=NULL, refresh_after=NULL, problem=NULL,
       destination_address=excluded.destination_address, destination_postcode=excluded.destination_postcode
     WHERE wholesale_royal_mail_shipments.state = 'failed' RETURNING operation`)
     .bind(id, operation, order.version, fingerprint, weight, Date.now(),
       [address.addressLine1, address.addressLine2, address.city].filter(Boolean).join(", "), address.postcode,
-      id, order.version).first();
+      id, order.version, policy.version).first();
   if (!reserved) {
+    checkBookingPolicy(await bookingPolicy(env), policy.version);
     if (await getShipment(env, id)) return getView(202);
     throw new ApiError(409, "conflict", "The order changed. Review it before creating postage.");
   }
 
   let outcome: "lookup" | "requested" | "known" = "lookup";
   try {
-    const prior = await findRoyalMailOrder(settings.key, id);
+    const prior = await findRoyalMailOrder(key, id);
     if (!prior) {
       // Commit the outbound marker before transmission. A process stopped before this point can release the reservation.
       const at = Date.now();
       const sending = await env.DB.prepare(`UPDATE wholesale_royal_mail_shipments SET requested_at = ?, updated_at = ?
         WHERE order_id = ? AND operation = ? AND state = 'booking' AND requested_at = 0
-        AND EXISTS (SELECT 1 FROM wholesale_preview WHERE kind = 'order' AND id = ? AND version = ?)`)
-        .bind(at, at, id, operation, id, order.version).run();
+        AND EXISTS (SELECT 1 FROM wholesale_preview WHERE kind = 'order' AND id = ? AND version = ?)
+        AND ${BOOKING_ALLOWED}`)
+        .bind(at, at, id, operation, id, order.version, policy.version).run();
       if (!sending.meta.changes) {
+        checkBookingPolicy(await bookingPolicy(env), policy.version);
         throw new ApiError(409, "conflict", "The order changed while Royal Mail was checked. Review it before creating postage.");
       }
     }
     outcome = prior ? "known" : "requested";
-    const carrier = prior ?? await createRoyalMailOrder(settings.key, { reference: id, orderDate: new Date(order.createdAt).toISOString(),
-      recipient: address, parcel: { weightInGrams: weight, format: "parcel" }, serviceCode: settings.serviceCode,
-      serviceRegisterCode: settings.serviceRegisterCode, shippingAccountName: settings.shippingAccountName,
+    const carrier = prior ?? await createRoyalMailOrder(key, { reference: id, orderDate: new Date(order.createdAt).toISOString(),
+      recipient: address, parcel: { weightInGrams: weight, format: "parcel" }, serviceCode, serviceRegisterCode, shippingAccountName,
       subtotalPence: order.pence, shippingPence: order.deliveryPence ?? 0, totalPence: order.totalPence ?? order.pence + (order.deliveryPence ?? 0),
     });
     outcome = "known";
@@ -381,9 +438,11 @@ export async function handleWholesaleRoyalMail(req: Request, env: Env, id: strin
     await recordCarrier(env, id, operation, carrier, !!prior || latestChanged);
   } catch (error) {
     const state = outcome === "lookup" || (outcome === "requested" && error instanceof RoyalMailError && !error.uncertain) ? "failed" : "review";
-    const problem = state === "failed" ? error instanceof RoyalMailError ? error.message : "Royal Mail could not be reached. Review the order and try again." : null;
+    const settingsChanged = error instanceof ApiError && ["royal_mail_booking_paused", "royal_mail_booking_policy_changed"].includes(error.code);
+    const problem = settingsChanged ? "The booking setting changed before postage was requested." :
+      error instanceof RoyalMailError || error instanceof ApiError ? error.message : "Royal Mail could not be reached. Review the order and try again.";
     await env.DB.prepare(`UPDATE wholesale_royal_mail_shipments SET state = ?, problem = ?, updated_at = ?
-      WHERE order_id = ? AND operation = ? AND provider_id IS NULL`).bind(state, problem, Date.now(), id, operation).run();
+      WHERE order_id = ? AND operation = ? AND provider_id IS NULL`).bind(state, state === "failed" ? problem : null, Date.now(), id, operation).run();
     if (error instanceof ApiError) throw error;
     return getView(state === "review" ? 202 : 200);
   }
