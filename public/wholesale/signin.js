@@ -1,7 +1,9 @@
 (() => {
   const $ = selector => document.querySelector(selector);
-  const home = location.pathname.startsWith('/wholesale/') ? '/wholesale/' : '/';
+  const home = new URL(location.pathname.startsWith('/wholesale/') ? '/wholesale/' : '/', location.origin);
   const params = new URLSearchParams(location.search);
+  if (params.has('order')) home.searchParams.set('order', params.get('order'));
+  if (location.hash === '#orders') home.hash = 'orders';
   let invite = params.get('invite'), reset = params.get('reset');
   let mode = 'login', busy = false, checkingLink = false, generation = 0;
   let linkBusiness = '', resetUsername = '';

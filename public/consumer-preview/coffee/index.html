@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f7f3e9">
+<meta name="robots" content="noindex, nofollow">
+<title>Online shop | Strangers Coffee</title>
+<meta name="description" content="At Strangers Coffee Roasters, we’re passionate about showcasing the finest coffee beans from around the world. We celebrate the distinctive flavours of each origin, honouring the skill and dedication of the farmers and producers who make exceptional coffee possible.">
+<link rel="icon" href="/consumer-preview/assets/mark.svg" type="image/svg+xml">
+<link rel="preload" href="/consumer-preview/assets/instrument-serif.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/consumer-preview/assets/style.css">
+<link rel="stylesheet" href="/consumer-preview/assets/pages.css">
+<link rel="stylesheet" href="/consumer-preview/assets/checkout.css">
+<link rel="stylesheet" href="/consumer-preview/assets/checkout-motion.css">
+<link rel="stylesheet" href="/consumer-preview/assets/shop.css">
+<script type="module" src="/consumer-preview/assets/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="notice"><a href="/shipping/">Free shipping on orders over £45</a></div>
+<header class="site-header">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="Strangers Coffee home"><img src="/consumer-preview/assets/logo.svg" width="82" height="49" alt="Strangers Coffee Company"></a>
+    <nav class="desktop-nav" aria-label="Main navigation"><a href="/coffee/" aria-current="page">Online shop</a><a href="/location/">Locations</a><a href="/about/">About</a><a href="/brewguides/">Brew guides</a><button class="text-button" type="button" data-find>Find my coffee</button></nav>
+    <div class="header-actions">
+      <a class="account-link" href="/account/" aria-label="My account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="7.5" r="3.5"/><path d="M5 21v-1.4a7 7 0 0 1 14 0V21"/></svg>
+      </a>
+      <button class="bag-button" type="button" aria-label="Cart" data-bag>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 8h14l1.5 13h-17L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+        <span class="bag-label">Cart</span><span class="bag-count" id="bag-count">0</span>
+      </button>
+      <button class="menu-button" id="menu-button" type="button" aria-controls="mobile-menu" aria-expanded="false">
+        <span class="menu-icon" aria-hidden="true"></span><span class="sr-only">Menu</span>
+      </button>
+    </div>
+  </div>
+  <nav id="mobile-menu" class="mobile-menu" aria-label="Mobile navigation" inert hidden>
+    <div class="container mobile-links"><a href="/coffee/" aria-current="page">Online shop</a><a href="/location/">Locations</a><a href="/about/">About</a><a href="/brewguides/">Brew guides</a><a href="/account/">My account</a><button class="text-button" type="button" data-find>Find my coffee</button></div>
+  </nav>
+</header>
+<main id="main">
+<section class="container shop-hero">
+  <div class="shop-hero-frame">
+    <div class="shop-hero-copy">
+      <h1>Online shop</h1>
+      <p>Great coffee, freshly roasted in Norwich using 100% arabica coffee beans, sent straight to your door by Strangers Coffee Roasters.</p>
+      <button type="button" class="button primary" data-find>Find my coffee</button>
+    </div>
+    <img class="shop-hero-image" src="/consumer-preview/assets/finder-brew.webp" alt="" width="620" height="349" fetchpriority="high">
+  </div>
+  <nav class="shop-jump" aria-label="In the online shop">
+    <a href="#coffee">Coffee</a>
+    <a href="#gifts">Gifts &amp; accessories</a>
+    <a href="#shop-faq-title">FAQs</a>
+  </nav>
+</section>  <section class="section container coffee-shelf" id="coffee" data-full-catalogue aria-labelledby="shelf-title">
+    <div class="section-heading shelf-heading">
+      <h2 id="shelf-title" tabindex="-1">Explore our coffee</h2>
+      <p id="shelf-status" class="shelf-count" role="status"></p>
+    </div>
+    <div class="shelf-tools">
+      <div class="pills" id="filters" role="group" aria-label="Filter by taste">
+        <button type="button" data-filter="All" aria-pressed="true">All coffees</button>
+        <button type="button" data-filter="Chocolatey" aria-pressed="false">Chocolatey</button>
+        <button type="button" data-filter="Fruity" aria-pressed="false">Fruity</button>
+        <button type="button" data-filter="Decaf" aria-pressed="false">Decaf</button>
+      </div>
+      <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.7" cy="10.7" r="5.8"/><path d="m15 15 4.5 4.5"/></svg><span class="sr-only">Search coffees</span><input id="search" type="search" placeholder="Search"></label>
+      <label class="shelf-taste">
+        <span class="sr-only">Filter by taste</span>
+        <select id="shelf-taste">
+          <option value="All">All tastes</option>
+          <option value="Chocolatey">Chocolatey</option>
+          <option value="Fruity">Fruity</option>
+          <option value="Decaf">Decaf</option>
+        </select>
+      </label>
+    </div>
+    <div class="product-grid" id="products"></div>
+    <noscript><p>Enable JavaScript to try the catalogue and demo checkout.</p></noscript>
+  </section>
+<div class="page-main container content-stack shop-information">
+    <section class="shop-gifts" id="gifts" aria-labelledby="gift-title">
+      <h2 class="page-section-title" id="gift-title">Gifts &amp; accessories</h2>
+      <div class="shop-gift-grid"><article class="shop-gift">
+    <img src="/consumer-preview/assets/in-store-gift-card.webp" alt="In-store Gift Card" width="640" height="480" loading="lazy">
+    <div class="shop-gift-copy">
+      <h3>In-store Gift Card</h3>
+      <p class="gift-price">From £10.00</p>
+      <div class="shop-gift-description"><p>This gift card can be used in any of our high street shops, but it cannot be redeemed for online purchases on our website.</p><p>It is a physical gift card and will be posted to the recipient at the shipping address provided at checkout.</p></div>
+      <a class="button outline" href="https://strangerscoffee.com/coffee/p/in-store-gift-card" aria-label="View In-store Gift Card on the live shop">View on the live shop</a>
+    </div>
+  </article><article class="shop-gift">
+    <img src="/consumer-preview/assets/online-gift-card.webp" alt="Online Gift Card" width="640" height="480" loading="lazy">
+    <div class="shop-gift-copy">
+      <h3>Online Gift Card</h3>
+      <p class="gift-price">From £10.00</p>
+      <div class="shop-gift-description"><p>When you purchase this digital gift card, a unique code is created. The recipient can enter this code at checkout to deduct the gift card amount from their order total.</p><p>This gift card never expires and cannot be used in our high street shops.</p></div>
+      <a class="button outline" href="https://strangerscoffee.com/coffee/p/online-gift-card" aria-label="View Online Gift Card on the live shop">View on the live shop</a>
+    </div>
+  </article><article class="shop-gift">
+    <img src="/consumer-preview/assets/strangers-coffee-tea-towel.webp" alt="Strangers Coffee Tea Towel" width="640" height="480" loading="lazy">
+    <div class="shop-gift-copy">
+      <h3>Strangers Coffee Tea Towel</h3>
+      <p class="gift-price">£10.00</p>
+      <div class="shop-gift-description"><p>A mash up of new and old designs used through the history of Strangers Coffee.</p></div>
+      <a class="button outline" href="https://strangerscoffee.com/coffee/p/strangers-coffee-tea-towel" aria-label="View Strangers Coffee Tea Towel on the live shop">View on the live shop</a>
+    </div>
+  </article></div>
+    </section>
+    <div class="shop-reading">
+      <section class="article-copy" aria-labelledby="shop-information-title">
+        <h2 id="shop-information-title">Strangers Coffee Co: Exceptional Speciality Coffee from Around the World</h2>
+        <p>At Strangers Coffee Roasters, we’re passionate about showcasing the finest coffee beans from around the world. We celebrate the distinctive flavours of each origin, honouring the skill and dedication of the farmers and producers who make exceptional coffee possible.</p><p>Our coffee is freshly roasted and dispatched five days a week (Monday to Friday). We aim to ship all orders placed before 6am on the same day, excluding Bank Holidays.</p>
+      </section>
+      <section class="shop-questions article-copy" aria-labelledby="shop-faq-title">
+        <h2 id="shop-faq-title">FAQs</h2>
+        <div class="shop-faqs">
+          <details><summary>How often are you roasting?</summary><p>Our coffee is freshly roasted and dispatched five days a week, from Monday to Friday. We aim to send all orders placed before 6am on the same working day, excluding Bank Holidays, so your coffee arrives as fresh as possible.</p></details><details><summary>How long does shipping take?</summary><p>Choose between Royal Mail Tracked 24 and Royal Mail Tracked 48 delivery at checkout. Tracked 24 typically arrives within 1–2 working days, while Tracked 48 usually arrives within 2–3 working days. Please allow a little extra time during particularly busy periods.</p></details><details><summary>Do you offer free shipping?</summary><p>Yes! We offer complimentary Royal Mail Tracked 48 delivery on all UK orders over £45, so you can enjoy your coffee with reliable, fully tracked shipping at no extra cost.</p></details><details><summary>What type of coffee do you use?</summary><p>We source exceptional coffee from around the world, selecting only 100% Arabica beans that achieve an SCA quality score of 80 points or higher.</p></details>
+        </div>
+        <div class="shop-related">
+          <a href="/shipping/">Shipping &amp; returns</a><a href="/contact/">Contact</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-identity">
+      <a class="brand footer-brand" href="/" aria-label="Strangers Coffee home"><img src="/consumer-preview/assets/logo.svg" width="82" height="49" alt="Strangers Coffee Company"></a>
+      <div class="footer-identity-copy"><p>Strangers Coffee Company Norwich</p><a href="/account/">My account</a></div>
+    </div>
+    <nav aria-labelledby="footer-explore"><h2 class="footer-nav-title" id="footer-explore">Explore</h2><a href="/coffee/" aria-current="page">Online shop</a><a href="/location/">Locations</a><a href="/about/">About</a><a href="/brewguides/">Brew guides</a><a href="/wholesale/">Wholesale</a></nav>
+    <nav aria-labelledby="footer-care"><h2 class="footer-nav-title" id="footer-care">Customer care</h2><a href="/contact/">Contact</a><a href="/shipping/">Shipping &amp; returns</a><a href="/privacy-policy/">Privacy policy</a><a href="/terms-conditions/">Terms &amp; conditions</a></nav>
+  </div>
+  <div class="container footer-note">Retail preview · Demo orders only</div>
+</footer>
+
+<dialog id="dialog" aria-labelledby="dialog-title">
+  <div class="panel">
+    <header class="panel-header">
+      <h2 id="dialog-title"></h2>
+      <button type="button" class="close-button" id="close-dialog" aria-label="Close"><span aria-hidden="true">×</span></button>
+    </header>
+    <div id="panel-body" class="panel-body"></div>
+    <div id="panel-actions" class="panel-actions" hidden></div>
+  </div>
+</dialog>
+<template id="empty-shelf">
+  <div class="empty-shelf">
+    <h3>No matching coffees</h3>
+    <p>Try a different taste or search term.</p>
+    <button class="button outline" type="button" data-reset>Clear filters</button>
+  </div>
+</template>
+</body>
+</html>

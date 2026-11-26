@@ -17,7 +17,8 @@ after(async () => { await srv?.stop(); });
 test("wholesale domain: canonical and legacy hosts share ordering while staff links stay on the staff domain", () => {
   for (const host of [canonical, legacy, canonical.toUpperCase(), legacy.toUpperCase()]) {
     assert.equal(appForHost(host, rota, admin, canonical, legacy), "preview");
-    assert.deepEqual(appLinks(new URL(`https://${host}/`), rota, admin, canonical, legacy), { rota: `https://${rota}/`, admin: `https://${admin}/`, diary: "https://staffstrangerscoffee.com/", preview: "/" });
+    const preview = host.toLowerCase() === legacy ? "/wholesale/" : "/";
+    assert.deepEqual(appLinks(new URL(`https://${host}/`), rota, admin, canonical, legacy), { rota: `https://${rota}/`, admin: `https://${admin}/`, diary: "https://staffstrangerscoffee.com/", preview });
   }
   assert.equal(appLinks(new URL(`https://${admin}/`), rota, admin, canonical, legacy).preview, `https://${canonical}/`);
   assert.equal(appForHost("strangerscoffee.trade.evil.example", rota, admin, canonical, legacy), "diary");
@@ -96,7 +97,7 @@ test("wholesale domain: customer-only sign-in and approval work without exposing
   assert.match(focus.text, /data-sc-pointer/);
   const staff = await call("GET", "/wholesale/staff-signin");
   const target = new URL(staff.response.headers.get("location"));
-  assert.equal(target.origin, "https://staffstrangerscoffee.com"); assert.equal(target.pathname, "/signin"); assert.equal(target.searchParams.get("next"), `https://${legacy}/`);
+  assert.equal(target.origin, "https://staffstrangerscoffee.com"); assert.equal(target.pathname, "/signin"); assert.equal(target.searchParams.get("next"), `https://${legacy}/wholesale/`);
   assert.equal((await call("POST", "/api/auth/setup", { name: "Owner", username: "owner", password: "owner-password", code: SETUP_CODE })).response.status, 404);
   const credentials = { username: "trade.buyer", password: "trade-buyer-password", business: "Trade café", contact: "Buyer", email: "buyer@example.com" };
   assert.equal((await call("POST", "/api/wholesale/auth/register", credentials)).response.status, 201);
@@ -136,4 +137,58 @@ test("wholesale domain: customer-only sign-in and approval work without exposing
   assert.equal((await call("GET", "/api/wholesale/invoices", undefined, customerCookie)).response.status, 200);
   assert.equal((await call("POST", "/api/wholesale/auth/logout", {}, customerCookie)).response.status, 200);
   assert.equal((await call("GET", "/api/wholesale/catalogue", undefined, customerCookie)).response.status, 401);
+});
+
+test("legacy hostname: wholesale sign-in, session and order recovery remain on the original origin", async () => {
+  const fixture = await startServer({
+    host: legacy, vars: { PREVIEW_HOST: canonical, LEGACY_PREVIEW_HOST: legacy, ADMIN_HOST: admin },
+  });
+  const request = (path, options) => fetch(fixture.base + path, { redirect: "manual", ...options });
+  const post = (path, body, cookie) => request(path, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) },
+    body: JSON.stringify(body),
+  });
+  try {
+    const token = "b".repeat(64);
+    const oldSignin = await request(`/signin?invite=${token}`);
+    assert.equal(oldSignin.status, 302);
+    assert.equal(oldSignin.headers.get("location"), `/wholesale/signin?invite=${token}`);
+    assert.equal((await request("/?order=WS-existing")).headers.get("location"), "/wholesale/?order=WS-existing");
+    assert.equal((await request("/wholesale/?order=WS-existing")).headers.get("location"), "/wholesale/signin?order=WS-existing");
+    assert.match(await (await request("/wholesale/signin")).text(), /Wholesale sign-in/);
+    const staffSignin = new URL((await request("/wholesale/staff-signin")).headers.get("location"));
+    assert.equal(staffSignin.searchParams.get("next"), `https://${legacy}/wholesale/`);
+    assert.equal((await request("/api/wholesale/orders")).status, 401);
+
+    const buyer = { username: "legacy.buyer", password: "legacy-buyer-password", business: "Legacy café", contact: "Buyer", email: "legacy-buyer@example.com" };
+    assert.equal((await post("/api/wholesale/auth/register", buyer)).status, 201);
+    fixture.sql("UPDATE wholesale_accounts SET approval_status = 'approved', active = 1; UPDATE wholesale_preview SET data = json_set(data, '$.status', 'Active') WHERE kind = 'customer';");
+    const login = await post("/api/wholesale/auth/login", buyer);
+    assert.equal(login.status, 200);
+    const setCookie = login.headers.getSetCookie().find(value => value.startsWith("sf_wholesale_session="));
+    assert.match(setCookie, /Path=\//i);
+    assert.doesNotMatch(setCookie, /Domain=/i);
+    const cookie = setCookie.split(";")[0];
+    const headers = { cookie };
+    const cataloguePage = await request("/wholesale/", { headers });
+    assert.equal(cataloguePage.status, 200);
+    assert.match(await cataloguePage.text(), /data-sc-app="wholesale"/);
+    const root = await request("/", { headers });
+    assert.equal(root.status, 200);
+    assert.doesNotMatch(await root.text(), /data-sc-app="wholesale"/);
+    const session = await (await request("/api/wholesale/session", { headers })).json();
+    assert.equal(session.links.preview, "/wholesale/");
+
+    const pendingAttempt = { requestId: crypto.randomUUID(), lines: [{ productId: "brazil", pack: "kilo", grind: "beans", quantity: 1, price: 1800 }], delivery: "Roastery collection", customerVersion: session.customer.version };
+    const placed = await post("/api/wholesale/orders", pendingAttempt, cookie);
+    assert.equal(placed.status, 201);
+    const { order } = await placed.json();
+    const resumed = await (await post("/api/wholesale/orders", pendingAttempt, cookie)).json();
+    assert.equal(resumed.order.id, order.id);
+    const history = await (await request("/api/wholesale/orders", { headers })).json();
+    assert.deepEqual(history.orders.map(item => item.id), [order.id]);
+  } finally {
+    await fixture.stop();
+  }
 });

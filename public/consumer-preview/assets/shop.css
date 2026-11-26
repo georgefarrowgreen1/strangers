@@ -1,0 +1,224 @@
+.shop-hero-frame {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--forest);
+  color: var(--paper);
+}
+
+.shop-hero-copy {
+  padding: clamp(24px, 5vw, 68px);
+  align-self: center;
+}
+
+.shop-hero h1 {
+  font-size: clamp(3.2rem, 7.2vw, 6.8rem);
+  letter-spacing: -.028em;
+}
+
+.shop-hero-copy p {
+  margin: 14px 0 20px;
+  max-width: 44ch;
+  color: #e4eddf;
+  line-height: 1.52;
+}
+
+.shop-hero-image {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.shop-hero-frame :focus-visible {
+  outline-color: var(--acid);
+}
+
+.shop-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 clamp(15px, 3.4vw, 44px);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.shop-jump a, .shop-related a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--forest);
+  font-size: .88rem;
+  font-weight: 700;
+  text-underline-offset: 4px;
+  text-decoration-color: #829987;
+}
+
+.shop-jump a:hover, .shop-related a:hover {
+  text-decoration-color: currentColor;
+}
+
+.coffee-shelf[data-full-catalogue] {
+  padding-block: clamp(28px, 4.6vw, 64px) clamp(32px, 5vw, 70px);
+}
+
+.coffee-shelf[data-full-catalogue] .product-image {
+  aspect-ratio: 1.21;
+}
+
+.shelf-count {
+  color: var(--soft);
+  font-size: .87rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.shop-information {
+  padding-block-start: 0;
+}
+
+.shop-gifts {
+  border-top: 1px solid var(--border);
+  padding-block-start: clamp(26px, 4vw, 48px);
+}
+
+.shop-gift-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 2vw, 28px);
+}
+
+.shop-gift {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  background: var(--base);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.shop-gift img {
+  width: 100%;
+  aspect-ratio: 1.55;
+  object-fit: cover;
+}
+
+.shop-gift-copy {
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  align-items: start;
+  gap: 9px;
+  padding: clamp(14px, 2vw, 26px);
+}
+
+.shop-gift h3 {
+  color: var(--deep);
+  font-size: clamp(1.85rem, 3vw, 2.6rem);
+  overflow-wrap: anywhere;
+}
+
+.shop-gift-description {
+  display: grid;
+  gap: 7px;
+  color: var(--soft);
+  line-height: 1.5;
+  font-size: .94rem;
+}
+
+.shop-gift .button {
+  justify-self: start;
+  margin-block-start: 4px;
+}
+
+.shop-reading {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  align-items: start;
+  gap: clamp(24px, 5.2vw, 72px);
+  border-top: 1px solid var(--border);
+  padding-block-start: clamp(24px, 4vw, 56px);
+}
+
+.shop-questions {
+  background: #e7ead9;
+  border: 1px solid #d5dbca;
+  border-radius: 14px;
+  padding: clamp(16px, 3.1vw, 36px);
+}
+
+.shop-related {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 18px;
+  margin-top: 8px;
+}
+
+@media (max-width: 760px) {
+  .shop-hero-frame {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shop-hero-image {
+    position: absolute;
+    z-index: -2;
+    inset: 0;
+    min-height: 0;
+    opacity: .48;
+    object-position: 64% 48%;
+  }
+
+  .shop-hero-frame::after {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    content: "";
+    background: linear-gradient(100deg, #103d2ef5 3%, #103d2ee5 54%, #103d2e88);
+  }
+
+  .shop-hero h1 {
+    font-size: clamp(2.9rem, 9.4vw, 5rem);
+  }
+
+  .shop-hero-copy p {
+    margin: 9px 0 13px;
+    max-width: 39ch;
+    font-size: .94rem;
+  }
+
+  .shop-gift-grid, .shop-reading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shop-gift {
+    display: grid;
+    grid-template-columns: minmax(0, .38fr) minmax(0, 1fr);
+  }
+
+  .shop-gift img {
+    height: 100%;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .shop-hero-copy {
+    padding: 19px;
+  }
+
+  .shop-gift h3 {
+    font-size: 1.75rem;
+  }
+
+  .shop-gift-description {
+    font-size: .88rem;
+  }
+
+  .shop-gift .button {
+    padding-inline: 12px;
+  }
+}

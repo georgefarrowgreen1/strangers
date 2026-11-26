@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<script src="/consumer-preview/assets/legacy-orders.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f7f3e9">
+<meta name="robots" content="noindex, nofollow">
+<title>Speciality coffee roasters in Norwich | Strangers Coffee</title>
+<meta name="description" content="Speciality coffee roasters based in Norwich using 100% arabica coffee. Available to buy online and shipped to you.">
+<link rel="icon" href="/consumer-preview/assets/mark.svg" type="image/svg+xml">
+<link rel="preload" href="/consumer-preview/assets/instrument-serif.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/consumer-preview/assets/style.css">
+<link rel="stylesheet" href="/consumer-preview/assets/pages.css">
+<link rel="stylesheet" href="/consumer-preview/assets/checkout.css">
+<link rel="stylesheet" href="/consumer-preview/assets/checkout-motion.css">
+
+<script type="module" src="/consumer-preview/assets/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="notice"><a href="/shipping/">Free shipping on orders over £45</a></div>
+<header class="site-header">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="Strangers Coffee home"><img src="/consumer-preview/assets/logo.svg" width="82" height="49" alt="Strangers Coffee Company"></a>
+    <nav class="desktop-nav" aria-label="Main navigation"><a href="/coffee/">Online shop</a><a href="/location/">Locations</a><a href="/about/">About</a><a href="/brewguides/">Brew guides</a><button class="text-button" type="button" data-find>Find my coffee</button></nav>
+    <div class="header-actions">
+      <a class="account-link" href="/account/" aria-label="My account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="7.5" r="3.5"/><path d="M5 21v-1.4a7 7 0 0 1 14 0V21"/></svg>
+      </a>
+      <button class="bag-button" type="button" aria-label="Cart" data-bag>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 8h14l1.5 13h-17L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+        <span class="bag-label">Cart</span><span class="bag-count" id="bag-count">0</span>
+      </button>
+      <button class="menu-button" id="menu-button" type="button" aria-controls="mobile-menu" aria-expanded="false">
+        <span class="menu-icon" aria-hidden="true"></span><span class="sr-only">Menu</span>
+      </button>
+    </div>
+  </div>
+  <nav id="mobile-menu" class="mobile-menu" aria-label="Mobile navigation" inert hidden>
+    <div class="container mobile-links"><a href="/coffee/">Online shop</a><a href="/location/">Locations</a><a href="/about/">About</a><a href="/brewguides/">Brew guides</a><a href="/account/">My account</a><button class="text-button" type="button" data-find>Find my coffee</button></div>
+  </nav>
+</header>
+<main id="main">
+  <section class="hero container" id="top" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <h1 id="hero-title">Speciality coffee<br>
+        roasters based<br>
+        <em>in Norwich</em></h1>
+      <p class="hero-description">Using 100% arabica coffee. Available to buy online and shipped to you.</p>
+      <div class="hero-actions"><a class="button primary" href="/coffee/">Online shop</a><button class="button light-outline" type="button" data-find>Find my coffee</button></div>
+    </div>
+    <div class="hero-media">
+      <img src="/consumer-preview/assets/hero.webp" width="500" height="667" alt="A hand holding a Strangers flat white in the sun" fetchpriority="high">
+    </div>
+  </section>
+
+  <section class="section container coffee-shelf" id="coffee" aria-labelledby="shelf-title">
+    <div class="section-heading shelf-heading">
+      <h2 id="shelf-title" tabindex="-1">Explore our coffee</h2>
+      <button type="button" class="button outline shelf-find" data-find>Find my coffee</button>
+    </div>
+    <div class="shelf-tools">
+      <div class="pills" id="filters" role="group" aria-label="Filter by taste">
+        <button type="button" data-filter="All" aria-pressed="true">All coffees</button>
+        <button type="button" data-filter="Chocolatey" aria-pressed="false">Chocolatey</button>
+        <button type="button" data-filter="Fruity" aria-pressed="false">Fruity</button>
+        <button type="button" data-filter="Decaf" aria-pressed="false">Decaf</button>
+      </div>
+      <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.7" cy="10.7" r="5.8"/><path d="m15 15 4.5 4.5"/></svg><span class="sr-only">Search coffees</span><input id="search" type="search" placeholder="Search"></label>
+      <label class="shelf-taste">
+        <span class="sr-only">Filter by taste</span>
+        <select id="shelf-taste">
+          <option value="All">All tastes</option>
+          <option value="Chocolatey">Chocolatey</option>
+          <option value="Fruity">Fruity</option>
+          <option value="Decaf">Decaf</option>
+        </select>
+      </label>
+    </div>
+    <p id="shelf-status" class="sr-only" role="status"></p>
+    <div class="product-grid" id="products"></div>
+    <noscript><p>Enable JavaScript to try the catalogue and demo checkout.</p></noscript>
+  </section>
+
+  <section class="container story" id="story" aria-labelledby="story-title">
+    <div class="story-image"><img src="/consumer-preview/assets/roastery.webp" width="960" height="640" loading="lazy" alt="Coffee roasting in the Strangers roastery"></div>
+    <div class="story-copy"><p class="eyebrow">From Green Beans to Final Roast</p><h2 id="story-title">Carefully Sourced <em>and Roasted</em></h2><p>At our roastery, we meticulously sample every coffee before purchasing the raw green beans. Once we discover a coffee we love, we profile it on our roaster to achieve the optimal flavours. We analyse every batch of roasted coffee, ensuring exceptional flavour quality before release. This rigorous process guarantees that we maintain complete control over every aspect of our roasting, delivering the finest coffee to our customers.</p><a class="button outline" href="/location/#dove-street">Our locations</a></div>
+    <div class="story-about">
+      <h3>Strangers Coffee Company - Award-Winning Coffee in Norwich</h3>
+      <p>Strangers Coffee Company is an independent coffee brand with three locations across Norwich: a café, a roastery, and a takeaway site. Established in 2009, Strangers is firmly rooted in the city’s coffee scene and is known for serving only speciality-grade coffee, roasted all on-site at their roastery.</p>
+      <a href="/about/">Read more</a>
+    </div>
+  </section>
+
+  <section class="section container cafes" id="visit" aria-labelledby="visit-title">
+    <div class="section-heading"><div><h2 id="visit-title">Our locations</h2></div></div>
+    <div class="pills" id="cafe-switch" aria-label="Choose a café"></div>
+    <div class="cafe-detail" id="cafe-detail" aria-live="polite"></div>
+  </section>
+
+</main>
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-identity">
+      <a class="brand footer-brand" href="/" aria-label="Strangers Coffee home"><img src="/consumer-preview/assets/logo.svg" width="82" height="49" alt="Strangers Coffee Company"></a>
+      <div class="footer-identity-copy"><p>Strangers Coffee Company Norwich</p><a href="/account/">My account</a></div>
+    </div>
+    <nav aria-labelledby="footer-explore"><h2 class="footer-nav-title" id="footer-explore">Explore</h2><a href="/coffee/">Online shop</a><a href="/location/">Locations</a><a href="/about/">About</a><a href="/brewguides/">Brew guides</a><a href="/wholesale/">Wholesale</a></nav>
+    <nav aria-labelledby="footer-care"><h2 class="footer-nav-title" id="footer-care">Customer care</h2><a href="/contact/">Contact</a><a href="/shipping/">Shipping &amp; returns</a><a href="/privacy-policy/">Privacy policy</a><a href="/terms-conditions/">Terms &amp; conditions</a></nav>
+  </div>
+  <div class="container footer-note">Retail preview · Demo orders only</div>
+</footer>
+
+<dialog id="dialog" aria-labelledby="dialog-title">
+  <div class="panel">
+    <header class="panel-header">
+      <h2 id="dialog-title"></h2>
+      <button type="button" class="close-button" id="close-dialog" aria-label="Close"><span aria-hidden="true">×</span></button>
+    </header>
+    <div id="panel-body" class="panel-body"></div>
+    <div id="panel-actions" class="panel-actions" hidden></div>
+  </div>
+</dialog>
+<template id="empty-shelf">
+  <div class="empty-shelf">
+    <h3>No matching coffees</h3>
+    <p>Try a different taste or search term.</p>
+    <button class="button outline" type="button" data-reset>Clear filters</button>
+  </div>
+</template>
+</body>
+</html>

@@ -313,16 +313,18 @@ test('public preview serves read-only retail assets within the shop', async () =
 test('retail and wholesale entry points follow the active Worker boundary', async () => {
   const request = path => fetch(server.base + path, { redirect: 'manual' });
   const entry = await request('/');
-  assert.equal(entry.status, 302);
   if (standalone) {
+    assert.equal(entry.status, 302);
     assert.equal(entry.headers.get('location'), '/shop/');
     for (const path of ['/signin', '/theme.css', '/wholesale/', '/api/wholesale/catalogue', '/admin/']) {
       assert.equal((await request(path)).status, 404, path);
     }
     return;
   }
-  assert.equal(entry.headers.get('location'), '/signin');
-  assert.match(await (await request('/signin')).text(), /Wholesale sign-in/);
+  assert.equal(entry.status, 200);
+  assert.match(await entry.text(), /Strangers Coffee/);
+  assert.equal((await request('/signin')).headers.get('location'), '/wholesale/signin');
+  assert.match(await (await request('/wholesale/signin')).text(), /Wholesale sign-in/);
   assert.equal((await request('/api/wholesale/catalogue')).status, 401);
 });
 
