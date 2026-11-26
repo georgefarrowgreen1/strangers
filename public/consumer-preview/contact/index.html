@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="/consumer-preview/assets/checkout-motion.css">
 <link rel="stylesheet" href="/consumer-preview/assets/support.css">
 <script type="module" src="/consumer-preview/assets/app.js"></script>
+<script type="module" src="/consumer-preview/assets/contact.js"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -52,12 +53,12 @@
       <form class="contact-form support-contact-form" id="contact-form" action="/contact/" method="post" aria-labelledby="contact-form-title" aria-describedby="contact-preview-note">
         <div class="support-form-heading">
           <h2 id="contact-form-title">Contact Form</h2>
-          <p id="contact-preview-note">This form previews the experience. Send enquiries through <a href="https://strangerscoffee.com/contact">the live contact form</a>.</p>
+          <p id="contact-preview-note">Use this form for help with the retail preview. For orders from our current online shop, use <a href="https://strangerscoffee.com/contact">the shop’s contact form</a>.</p>
         </div>
         <fieldset class="contact-fields" disabled>
           <div class="form-row"><div class="field"><label for="contact-firstName">First Name</label><input id="contact-firstName" name="firstName" maxlength="100" required type="text" autocomplete="given-name"></div><div class="field"><label for="contact-lastName">Last Name</label><input id="contact-lastName" name="lastName" maxlength="100" required type="text" autocomplete="family-name"></div></div>
           <div class="field"><label for="contact-email">Email</label><input id="contact-email" name="email" maxlength="254" required type="email" autocomplete="email"></div><div class="field"><label for="contact-subject">Subject</label><input id="contact-subject" name="subject" maxlength="180" required type="text"></div><div class="field"><label for="contact-message">Message</label><textarea id="contact-message" name="message" maxlength="2000" required rows="5"></textarea></div>
-          <button class="button support-form-submit" type="submit">Submit</button>
+          <button class="button support-form-submit" type="submit">Send message</button>
         </fieldset>
         <p class="contact-status" id="contact-status" role="status" hidden></p>
         <noscript><p><a href="https://strangerscoffee.com/contact">Open the live contact form</a></p></noscript>

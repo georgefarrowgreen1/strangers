@@ -1,40 +1,157 @@
 import { orderImagePath } from './account-store.js';
-import { grindLabel, orderTotals, sizeNames } from './checkout.js';
+import { grindLabel, sizeNames } from './checkout.js';
 import { escapeHtml as html } from './html.js';
+import { products } from './products.js';
 import { money } from './store.js';
 
 const dateFormat = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeZone: 'Europe/London' });
 const profileFields = ['name', 'phone', 'address', 'town', 'postcode', 'method', 'cafe'];
+const fallbackImage = '/consumer-preview/assets/mark.svg';
+const orderReference = /^SC-[A-F0-9]{8}$/;
 
 const statusLabels = {
-  placed: 'Placed', preparing: 'Preparing', ready: 'Ready', completed: 'Completed', cancelled: 'Cancelled',
+  placed: 'Confirmed', preparing: 'Preparing', ready: 'Ready', dispatched: 'On its way', completed: 'Completed', cancelled: 'Cancelled',
 };
+const productsById = new Map(products.map(product => [product.id, product]));
 
-function orderMarkup(order) {
+function dateMarkup(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? `<time datetime="${date.toISOString()}">${dateFormat.format(date)}</time>` : '';
+}
+
+function orderStatus(order) {
+  return Object.hasOwn(statusLabels, order.status) ? order.status : 'placed';
+}
+
+function isTestOrder(order) {
+  return order.paymentMode === 'test' || order.paymentStatus === 'test' || order.preview === true;
+}
+
+function trackingLink(order) {
+  const { carrier, number } = order.tracking ?? {};
+  if (order.method !== 'delivery' || carrier !== 'royal-mail' || typeof number !== 'string' || !/^[A-Z0-9]{8,30}$/i.test(number)) return '';
+  return `https://www.royalmail.com/track-your-item#/tracking-results/${number.toUpperCase()}`;
+}
+
+function orderTimeline(order, status) {
+  const collection = order.method === 'collection';
+  const stages = [
+    ['placed', 'Order confirmed'], ['preparing', 'Preparing your coffee'],
+    ['ready', collection ? 'Ready to collect' : 'Packed at the roastery'],
+    ...(collection ? [] : [['dispatched', 'Dispatched']]),
+    ['completed', collection ? 'Collected' : 'Delivered'],
+  ];
+  const times = new Map([['placed', order.createdAt]]);
+  if (order.tracking?.shippedAt) times.set('dispatched', order.tracking.shippedAt);
+  if (Array.isArray(order.timeline)) {
+    for (const event of order.timeline) {
+      if (event?.at && Object.hasOwn(statusLabels, event.status)) times.set(event.status, event.at);
+    }
+  }
+  const cancelled = status === 'cancelled';
+  const steps = cancelled ? [...stages.filter(([id]) => times.has(id)), ['cancelled', 'Cancelled']] : stages;
+  const active = steps.findIndex(([id]) => id === status);
+  const tracking = trackingLink(order);
+  return `<section class="account-delivery-progress" aria-label="Order progress">
+    <div class="account-delivery-heading">
+      <div><h3>${collection ? 'Collection progress' : 'Delivery progress'}</h3>${order.deliveryService ? `<p>${html(order.deliveryService)}</p>` : ''}</div>
+      ${tracking ? `<a class="button outline" href="${tracking}" target="_blank" rel="noopener noreferrer" aria-label="Track parcel with Royal Mail (opens in a new tab)">Track parcel</a>` : ''}
+    </div>
+    <ol class="account-timeline">
+      ${steps.map(([id, label], index) => `<li${index <= active ? ' data-reached' : ''}${id === status ? ' aria-current="step"' : ''}>
+        <strong>${label}</strong>${index <= active ? dateMarkup(times.get(id)) : ''}
+      </li>`).join('')}
+    </ol>
+  </section>`;
+}
+
+function hasVariant(product, line) {
+  return product && product.available !== false && Object.hasOwn(product.prices, line.size) && product.grinds.includes(line.grind);
+}
+
+function lineVariantLabel(line) {
+  return [sizeNames[line.size] ?? line.size, grindLabel(line.grind)].filter(Boolean).join(' · ');
+}
+
+function reorderOptions(lines) {
+  const unavailable = lines.filter(line => !hasVariant(productsById.get(line.id), line));
+  return {
+    available: lines.length - unavailable.length,
+    unavailable: unavailable.map(line => {
+      const profile = productsById.get(line.id)?.profile ?? line.product.profile;
+      const similar = profile && products.find(product => product.id !== line.id && product.profile === profile && hasVariant(product, line));
+      return { line, similar };
+    }),
+  };
+}
+
+function orderMarkup(order, { latest, open }) {
   const { reference, createdAt, method, cafe, pricing, lines } = order;
   const label = method === 'collection' ? 'Collection' : 'UK delivery';
+  const status = orderStatus(order);
+  const statusLabel = method === 'collection' && status === 'ready' ? 'Ready to collect' : statusLabels[status];
+  const contactAddress = method === 'delivery' && order.contact?.address
+    ? [order.contact.address, order.contact.town, order.contact.postcode].filter(Boolean) : [];
+  const { available, unavailable } = reorderOptions(lines);
   return `<li class="account-order">
-    <details class="account-order-record">
+    <details class="account-order-record${latest ? ' account-order-latest' : ''}" data-order-reference="${html(reference)}"${open ? ' open' : ''}>
       <summary class="account-order-summary">
         <span class="account-order-copy">
-          <strong>${html(reference)}</strong>
-          <small><time datetime="${html(createdAt)}">${dateFormat.format(new Date(createdAt))}</time> · ${label}</small>
+          ${latest ? '<small class="account-eyebrow">Latest order</small>' : ''}
+          <strong>Order ${html(reference)}</strong>
+          <small>${dateMarkup(createdAt)} · ${label}${isTestOrder(order) ? ' · Test order' : ''}</small>
         </span>
-        <span class="account-order-price"><strong>${money(pricing.total)}</strong><small>${html(statusLabels[order.status] ?? 'Demo order')}</small></span>
+        <span class="account-order-price"><span class="account-order-status" data-status="${status}">${statusLabel}</span><strong>${money(pricing.total)}</strong></span>
       </summary>
       <div class="account-order-body">
         ${cafe ? `<p class="account-order-destination">Collection at ${html(cafe.name)}<br>${html(cafe.address)}</p>` : ''}
+        ${contactAddress.length ? `<p class="account-order-destination">Delivery address · ${contactAddress.map(html).join(', ')}</p>` : ''}
         <ul class="account-order-lines">${lines.map(line => `<li>
-          <img src="${html(orderImagePath(line.product.image) || '/consumer-preview/assets/mark.svg')}" alt="" width="48" height="48" loading="lazy">
-          <div><strong>${html(line.product.name)}</strong><small>${sizeNames[line.size]} · ${html(grindLabel(line.grind))} · Qty ${line.qty}</small></div>
+          <img src="${html(orderImagePath(line.product.image) || fallbackImage)}" data-product-image="${html(line.id)}" alt="" width="48" height="48" loading="lazy">
+          <div><strong>${html(line.product.name)}</strong><small>${html(lineVariantLabel(line))} · Qty ${html(line.qty)}</small></div>
           <span>${money(line.unitPrice * line.qty)}</span>
         </li>`).join('')}</ul>
-        ${orderTotals(pricing, method)}
-        <button type="button" class="button outline account-reorder" data-account-reorder="${html(reference)}" aria-label="Add coffees from ${html(reference)} to cart">Add to cart again</button>
+        ${orderTimeline(order, status)}
+        ${unavailable.length ? `<div class="account-reorder-options">
+          <h3>Some items are unavailable</h3>
+          <ul>${unavailable.map(({ line, similar }) => `<li><span>${html(line.product.name)} · ${html(lineVariantLabel(line))}</span>
+            ${similar ? `<button type="button" class="text-button" data-product="${html(similar.id)}">Try ${html(similar.name)}</button>` : '<a class="text-button" href="/coffee/">Browse coffees</a>'}</li>`).join('')}</ul>
+        </div>` : ''}
+        <div class="account-order-actions">
+          <button type="button" class="button outline" data-account-receipt="${html(reference)}" aria-label="Download receipt ${html(reference)}">Download receipt</button>
+          ${available ? `<button type="button" class="button" data-account-reorder="${html(reference)}" aria-label="Add ${unavailable.length ? 'available ' : ''}coffees from ${html(reference)} to cart">${unavailable.length ? 'Reorder available items' : 'Order again'}</button>` : ''}
+          ${orderReference.test(reference) ? `<a class="button outline" href="/contact/?order=${encodeURIComponent(reference)}" aria-label="Get order help for ${html(reference)}">Get order help</a>` : ''}
+        </div>
         <p class="account-notice" role="status"></p>
       </div>
     </details>
   </li>`;
+}
+
+function downloadReceipt(order) {
+  const { reference, createdAt, method, lines, pricing } = order;
+  if (!orderReference.test(reference)) return;
+  const shippingLabel = method === 'collection' ? 'Collection' : order.deliveryService || 'Delivery';
+  const content = `<!doctype html><html lang="en-GB"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Strangers Coffee receipt ${html(reference)}</title>
+    <style>body{font:16px/1.5 system-ui,sans-serif;color:#17372c;max-width:44rem;margin:3rem auto;padding:0 1.2rem}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:.6rem .25rem;border-bottom:1px solid #cbd4c1}th:last-child,td:last-child{text-align:right}dt,dd{display:inline;margin:0 .5rem 0 0}dd:after{content:'';display:block}</style>
+    <main><h1>Strangers Coffee</h1><h2>${isTestOrder(order) ? 'Test order receipt' : 'Order receipt'} ${html(reference)}</h2>
+    <p>${dateMarkup(createdAt)} · ${method === 'collection' ? 'Collection' : 'UK delivery'}</p>
+    ${isTestOrder(order) ? '<p>No payment was taken for this test order.</p>' : ''}
+    <table><thead><tr><th scope="col">Coffee</th><th scope="col">Bags</th><th scope="col">Amount</th></tr></thead><tbody>
+    ${lines.map(line => `<tr><td>${html(line.product.name)}<br>${html(lineVariantLabel(line))}</td><td>${html(line.qty)}</td><td>${money(line.unitPrice * line.qty)}</td></tr>`).join('')}</tbody></table>
+    <dl><div><dt>Subtotal</dt><dd>${money(pricing.subtotal)}</dd></div>
+    <div><dt>${html(shippingLabel)}</dt><dd>${money(pricing.shipping)}</dd></div>
+    <div><dt><strong>Total</strong></dt><dd><strong>${money(pricing.total)}</strong></dd></div></dl></main></html>`;
+  const href = URL.createObjectURL(new Blob([content], { type: 'text/html;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = `strangers-receipt-${reference}.html`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 1500);
 }
 
 async function accountRequest(options = {}) {
@@ -161,7 +278,9 @@ export function setupAccount(root, reorder) {
   const dashboard = root.querySelector('#account-dashboard');
   const dashboardStatus = root.querySelector('#account-dashboard-status');
   const session = root.querySelector('#account-session');
-  const sessionName = root.querySelector('#account-session-name');
+  const heroTitle = root.querySelector('#account-title');
+  const heroLabel = root.querySelector('#account-hero-label');
+  const avatar = root.querySelector('#account-avatar');
   const signOut = root.querySelector('#account-sign-out');
   const orderHistory = root.querySelector('#account-order-history');
   const form = root.querySelector('#account-profile');
@@ -169,11 +288,15 @@ export function setupAccount(root, reorder) {
   const saveStatus = root.querySelector('#account-save-status');
   const cafeField = root.querySelector('#account-cafe-field');
   const details = root.querySelector('#account-details');
-  const orders = root.querySelector('#account-orders');
+  const overview = root.querySelector('#account-overview');
+  const savedAddress = root.querySelector('#account-saved-address');
+  const noAddress = root.querySelector('#account-no-address');
+  const editAddress = root.querySelector('#account-edit-address');
   const tabs = [...root.querySelectorAll('[data-account-tab]')];
   const url = new URL(window.location.href);
   const requestedMode = url.searchParams.get('mode');
-  const returnPath = url.searchParams.get('return_to') === '/coffee/' ? '/coffee/' : '/account/';
+  const requestedReturn = url.searchParams.get('return_to');
+  const returnPath = ['/coffee/', '/checkout/'].includes(requestedReturn) ? requestedReturn : '/account/';
   let token;
   if (requestedMode === 'setup' || requestedMode === 'reset') {
     token = window.takeStrangersAccountLink?.() ?? new URLSearchParams(url.hash.slice(1)).get('token');
@@ -191,7 +314,7 @@ export function setupAccount(root, reorder) {
     authLinks.replaceChildren(...modes.map(mode => {
       const link = document.createElement('a');
       const query = new URLSearchParams({ mode });
-      if (returnPath === '/coffee/') query.set('return_to', returnPath);
+      if (returnPath !== '/account/') query.set('return_to', returnPath);
       link.href = '/account/?' + query;
       link.textContent = modeLabels[mode];
       return link;
@@ -208,7 +331,8 @@ export function setupAccount(root, reorder) {
     controls.forEach(control => { control.disabled = true; });
     dashboard.hidden = true;
     session.hidden = true;
-    sessionName.textContent = '';
+    updateSavedAddress({});
+    updateGreeting('');
     access.hidden = false;
     authPanel.hidden = true;
     retry.hidden = true;
@@ -308,13 +432,33 @@ export function setupAccount(root, reorder) {
     if (!form.elements.method.value) form.elements.method.value = 'delivery';
     if (!form.elements.cafe.value) form.elements.cafe.selectedIndex = 0;
     syncCafeField();
+    updateSavedAddress(profile);
+  }
+
+  function updateSavedAddress(profile) {
+    savedAddress.textContent = [profile.address, profile.town, profile.postcode].filter(Boolean).join('\n');
+    savedAddress.hidden = !savedAddress.textContent;
+    noAddress.hidden = !savedAddress.hidden;
+    editAddress.textContent = savedAddress.hidden ? 'Add address' : 'Edit address';
+  }
+
+  function updateGreeting(name) {
+    const firstName = typeof name === 'string' ? name.trim().split(/\s+/)[0] : '';
+    heroTitle.textContent = firstName ? `Welcome back, ${firstName}.` : 'My account';
+    heroLabel.hidden = avatar.hidden = !firstName;
+    avatar.textContent = firstName ? Array.from(firstName)[0].toUpperCase() : '';
   }
 
   function showDashboard(name) {
-    sessionName.textContent = name;
+    updateGreeting(name);
     dashboardStatus.textContent = '';
+    const previous = new Map([...orderHistory.querySelectorAll('[data-order-reference]')]
+      .map(record => [record.dataset.orderReference, record.open]));
     orderHistory.innerHTML = currentOrders.length
-      ? `<ul class="account-order-list">${currentOrders.map(orderMarkup).join('')}</ul>`
+      ? `<ul class="account-order-list">${currentOrders.map((order, index) => orderMarkup(order, {
+        latest: index === 0,
+        open: previous.get(order.reference) ?? (index === 0),
+      })).join('')}</ul>`
       : '<div class="account-empty"><h3>No orders yet</h3><p>Your coffee orders will appear here after checkout.</p><a href="/coffee/" class="button">Shop coffee</a></div>';
     controls.forEach(control => { control.disabled = saving; });
     access.hidden = true;
@@ -338,7 +482,7 @@ export function setupAccount(root, reorder) {
       if (currentEmail !== email) fillProfile(account.profile, email);
       currentEmail = email;
       currentOrders = account.orders;
-      showDashboard(account.profile.name || account.identity.name || email);
+      showDashboard(account.profile.name || account.identity.name || '');
     } catch (error) {
       if (sequence !== loadSequence) return;
       if (currentEmail) {
@@ -355,7 +499,7 @@ export function setupAccount(root, reorder) {
   function switchTab(tab) {
     const showingDetails = tab === 'details';
     details.hidden = !showingDetails;
-    orders.hidden = showingDetails;
+    overview.hidden = showingDetails;
     for (const button of tabs) {
       button.setAttribute('aria-pressed', String(button.dataset.accountTab === tab));
     }
@@ -365,13 +509,18 @@ export function setupAccount(root, reorder) {
     switchTab(window.location.hash === '#details' ? 'details' : 'orders');
   }
 
-  for (const button of tabs) {
-    button.addEventListener('click', () => {
-      const tab = button.dataset.accountTab;
-      if (window.location.hash !== `#${tab}`) window.history.pushState(null, '', `#${tab}`);
-      switchTab(tab);
-    });
+  function openTab(tab) {
+    if (window.location.hash !== `#${tab}`) window.history.pushState(null, '', `#${tab}`);
+    switchTab(tab);
   }
+
+  for (const button of tabs) {
+    button.addEventListener('click', () => openTab(button.dataset.accountTab));
+  }
+  editAddress.addEventListener('click', () => {
+    openTab('details');
+    form.elements.address.focus();
+  });
   window.addEventListener('popstate', syncTab);
   window.addEventListener('hashchange', syncTab);
   syncTab();
@@ -433,7 +582,7 @@ export function setupAccount(root, reorder) {
       }
       if (!result.profile) throw new Error('Your details couldn’t be saved. Try again.');
       fillProfile(result.profile, email);
-      sessionName.textContent = result.profile.name || email;
+      updateGreeting(result.profile.name || '');
       saveStatus.textContent = 'Account details saved.';
     } catch (error) {
       if (currentEmail === email) {
@@ -446,12 +595,22 @@ export function setupAccount(root, reorder) {
     }
   });
 
+  orderHistory.addEventListener('error', event => {
+    const image = event.target;
+    if (!image.matches('img[data-product-image]') || image.getAttribute('src') === fallbackImage) return;
+    const current = orderImagePath(productsById.get(image.dataset.productImage)?.image);
+    image.src = current && image.getAttribute('src') !== current ? current : fallbackImage;
+  }, true);
+
   orderHistory.addEventListener('click', event => {
-    const button = event.target.closest('[data-account-reorder]');
+    const button = event.target.closest('[data-account-reorder], [data-account-receipt]');
     if (!button) return;
-    const order = currentOrders.find(record => record.reference === button.dataset.accountReorder);
+    const receipt = button.dataset.accountReceipt;
+    const order = currentOrders.find(record => record.reference === (receipt ?? button.dataset.accountReorder));
     if (!order) return;
-    const added = reorder(order, button);
+    if (receipt) return downloadReceipt(order);
+    const lines = order.lines.filter(line => hasVariant(productsById.get(line.id), line));
+    const added = reorder({ ...order, lines }, button);
     button.closest('.account-order-body').querySelector('.account-notice').textContent =
       added === 0 ? 'These coffees or quantities are unavailable to add to your cart.' : '';
   });

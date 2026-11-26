@@ -1,3 +1,5 @@
+import { catalogueAdditions } from './products-additions.js';
+
 const catalogue = [
   {
     "id": "christmas-blend",
@@ -476,6 +478,7 @@ async function loadUnavailable() {
 }
 
 const unavailable = await loadUnavailable();
-export const products = catalogue.map(product =>
-  unavailable.has(product.id) ? { ...product, available: false } : product
+export const products = [...catalogue, ...catalogueAdditions].map(product =>
+  unavailable.has(product.id) || product.contents?.some(id => unavailable.has(id))
+    ? { ...product, available: false } : product
 );

@@ -3,12 +3,13 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
   const endpoint = "/api/admin/consumer";
   const previewUrl = "https://preview.staffstrangerscoffee.com/";
   const tabs = [
-    ["overview", "Overview"], ["orders", "Orders"], ["customers", "Customers"], ["catalogue", "Catalogue"],
+    ["overview", "Overview"], ["orders", "Orders"], ["customers", "Customers"], ["catalogue", "Catalogue"], ["support", "Support"],
   ];
   const statuses = [
     ["placed", "Placed", "acc"],
     ["preparing", "Preparing", "warn"],
     ["ready", "Ready", "ok"],
+    ["dispatched", "Dispatched", "acc"],
     ["completed", "Completed", ""],
     ["cancelled", "Cancelled", "bad"],
   ];
@@ -24,7 +25,9 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
   const method = value => ({ delivery: "Delivery", collection: "Collection" })[value] || "—";
   const endpointFor = (area, id) => `${endpoint}/${area}/${encodeURIComponent(id)}`;
 
-  let data, section = "overview", orderFilter = "", message = "", updating = false, generation = 0;
+  let data, section = "overview", orderFilter = "to-pack", message = "", updating = false, generation = 0;
+  let queue = { orders: [], count: 0, nextCursor: null, summary: {} }, selectedReference = "", queueVersion = 0, searchTimer;
+  const orderCache = new Map(), packing = new Map(), trackingDrafts = new Map(), orderErrors = new Map(), blockedOrders = new Set();
   let queries = {};
   const writes = new Set();
   const find = id => document.getElementById(id);
@@ -83,7 +86,7 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
           ${heading("Signed-in checkout", "Accept or pause recorded demo orders from signed-in customers.")}
           <div class="consumer-checkout">
             ${badge(checkoutEnabled === true ? "Accepting orders" : checkoutEnabled === false ? "Paused" : "Unavailable", checkoutEnabled === true ? "ok" : "warn")}
-            <p>Preview orders do not collect payment or trigger fulfilment.</p>
+            <p>Test orders do not collect payment. Packing and dispatch records update customer order status without booking a shipment.</p>
             ${typeof checkoutEnabled === "boolean" ? html`<button class="btn soft" type="button" data-act="consumer-checkout" ${writes.has("checkout") ? raw("disabled") : ""}>${checkoutEnabled ? "Pause checkout" : "Resume checkout"}</button>` : ""}
           </div>
         </section>
@@ -95,23 +98,30 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
       <label class="search">${svg("search")}<input id="consumerSearch" type="search" aria-label="${label}" placeholder="${placeholder}" value="${queries[section] || ""}" maxlength="120"></label>
       ${hasOrderFilter ? html`<label class="field"><select id="consumerOrderFilter" aria-label="Order status">
         <option value="">All statuses</option>
+        <option value="to-pack" ${orderFilter === "to-pack" ? raw("selected") : ""}>To pack</option>
         ${statuses.map(([id, statusLabel]) => html`<option value="${id}" ${id === orderFilter ? raw("selected") : ""}>${statusLabel}</option>`)}
       </select></label>` : ""}
     </div>`;
   }
 
   function orders() {
-    const rows = data.orders.filter(order => (!orderFilter || order.status === orderFilter) && matches(order.reference));
-    if (!rows.length) return empty("bag", data.orders.length ? "No orders match these filters." : "No signed-in preview orders yet.");
-    return html`<div class="consumer-order-columns" aria-hidden="true"><span>Order</span><span>Fulfilment</span><span>Total</span><span>Status</span></div>
-      <ul class="consumer-list" role="list">
-      ${rows.map(order => html`<li><button class="item consumer-order" type="button" data-act="consumer-order" data-id="${order.reference}">
-        <span class="tx"><b>${order.reference}</b><span>${date(order.createdAt)}</span></span>
-        <span class="consumer-method">${method(order.method)}</span>
-        <span class="consumer-total num">${money(order.total)}</span>
-        <span class="consumer-status">${orderBadge(order.status)}</span><span class="chev">${svg("chev")}</span>
-      </button></li>`)}
-      </ul>`;
+    const chosen = orderCache.get(selectedReference), counts = queue.summary || {};
+    return html`<div class="consumer-fulfilment-heading"><div><p class="consumer-kicker">Consumer (Preview)</p><h2>Retail fulfilment</h2><p>Pack orders, add tracking and manage Norwich collections.</p></div><span class="pill">Retail orders</span></div>
+      <div class="consumer-queue-filters" role="group" aria-label="Fulfilment queues">${[["to-pack", "To pack", counts.toPack], ["ready", "Ready", counts.ready], ["dispatched", "Dispatched", counts.dispatched]].map(([id, label, count]) => html`<button type="button" data-act="consumer-queue" data-id="${id}" aria-pressed="${String(orderFilter === id)}"><span>${label}</span><b>${count || 0}</b></button>`)}</div>
+      ${searchTools("Search consumer orders", "Search reference, customer, email or phone", true)}
+      <div class="consumer-desk"><section class="group glass consumer-queue" aria-label="Order queue"><header><h3>Order queue</h3><span>${queue.orders.length} of ${queue.count} orders</span></header>
+      ${queue.orders.length ? html`<ul class="consumer-list" role="list">${queue.orders.map(order => html`<li><button class="consumer-queue-order" type="button" data-act="consumer-order" data-id="${order.reference}" aria-pressed="${String(selectedReference === order.reference)}"><span><b>${order.reference}</b><span>${order.contact?.name || "Contact not recorded"} · ${method(order.method)}</span><small>${date(order.createdAt)}</small></span><span class="consumer-queue-badges">${paymentBadge(order)}${orderBadge(order.status)}</span></button></li>`)}</ul>` : empty("bag", "No orders match this queue. Try another status or search.")}
+      ${queue.nextCursor ? html`<button class="btn soft consumer-more" type="button" data-act="consumer-order-more" ${updating ? raw("disabled") : ""}>Load earlier orders</button>` : ""}</section>
+      <section class="group glass consumer-fulfilment-detail" id="consumerOrderDetail" aria-label="Order details">${chosen ? fulfilmentDetail(chosen) : empty("bag", "Select an order to review its saved details and packing checklist.")}</section></div>`;
+  }
+
+  function paymentBadge(order) {
+    if (order.paymentMode === "test" || order.paymentStatus === "test") return badge("Test payment", "warn");
+    return order.paymentMode === "live" && order.paymentStatus === "paid" ? badge("Paid", "ok") : badge("Payment not recorded", "");
+  }
+  function support() {
+    const rows = (data.support || []).filter(item => matches(item.reference, item.name, item.email, item.message, item.orderReference));
+    return rows.length ? html`<ul class="consumer-list consumer-support-list" role="list">${rows.map(item => html`<li class="item"><div class="tx"><b>${item.subject || item.reference}</b><span>${item.name} · ${item.email}</span><span>${date(item.createdAt)}${item.orderReference ? " · Order " + item.orderReference : ""}</span><p class="consumer-support-message">${item.message}</p><div class="row"><a class="btn sm soft" href="mailto:${encodeURIComponent(item.email)}">Reply by email</a><button class="btn sm soft" type="button" data-act="consumer-support" data-id="${item.reference}" ${writes.has(item.reference) ? raw("disabled") : ""}>${item.resolved ? "Reopen" : "Mark resolved"}</button>${badge(item.resolved ? "Resolved" : "Open", item.resolved ? "ok" : "warn")}</div></div></li>`)}</ul>` : empty("people", "No support messages match this view.");
   }
 
   function customers() {
@@ -139,11 +149,12 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
     </ul>`;
   }
 
-  const lists = { orders, customers, catalogue };
+  const lists = { orders, customers, catalogue, support };
   const listOptions = {
-    orders: ["Orders", "Manage recent signed-in demo orders.", "Search consumer orders", "Search order reference"],
+    orders: ["Orders", "", "Search consumer orders", "Search order reference"],
     customers: ["Customers", "Contact details saved by preview customers.", "Search consumer customers", "Search name or phone"],
     catalogue: ["Catalogue", "Choose which coffees are available to order in the preview.", "Search consumer coffees", "Search coffees"],
+    support: ["Support", "Preview customer messages and order enquiries.", "Search consumer support", "Search messages or order references"],
   };
   function panel() {
     if (!data.connected) return html`<section class="group glass consumer-card consumer-unconnected" aria-label="Storefront connection">
@@ -152,6 +163,7 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
       <button class="btn soft" id="consumerRefresh" type="button" data-act="consumer-refresh">Try again</button>
     </section>`;
     if (section === "overview") return overview();
+    if (section === "orders") return html`<div id="consumerResults">${orders()}</div>`;
     const [title, note, label, placeholder] = listOptions[section];
     return html`<section class="group glass consumer-card" aria-label="${title}">
       ${heading(title, note)}
@@ -175,6 +187,8 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
 
   async function load() {
     const result = await api("GET", endpoint);
+    if (result.connected && section === "orders") result.orderQueue = await api("GET", queuePath());
+    if (result.connected && section === "support") result.support = (await api("GET", endpoint + "/support")).messages || [];
     return {
       ...result,
       orders: result.orders || [], customers: result.customers || [], products: result.products || [],
@@ -186,10 +200,45 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
     const started = ++generation;
     const result = await load();
     if (started !== generation) return html``;
-    data = result;
+    acceptData(result);
     message = "";
     updating = false;
     return html`<div class="consumer-workspace" id="consumerWorkspace">${workspace()}</div>`;
+  }
+  function acceptData(result) {
+    data = result;
+    queue = result.orderQueue || { orders: result.orders || [], count: result.orderCount ?? result.orders.length, nextCursor: result.orderCursor, summary: result.orderSummary || {} };
+    queue.orders.forEach(rememberOrder);
+    if (!queue.orders.some(order => order.reference === selectedReference)) selectedReference = queue.orders[0]?.reference || "";
+  }
+  function queuePath(cursor) {
+    const query = new URLSearchParams();
+    if (queries.orders?.trim()) query.set("q", queries.orders.trim());
+    if (orderFilter) query.set("status", orderFilter);
+    if (cursor) query.set("cursor", cursor);
+    return endpoint + "/orders" + (query.size ? "?" + query : "");
+  }
+  function rememberOrder(order) {
+    const cached = orderCache.get(order.reference);
+    if (cached && cached.version > order.version) order = cached;
+    orderCache.set(order.reference, order);
+    const i = data?.orders.findIndex(item => item.reference === order.reference);
+    if (i >= 0) data.orders[i] = order;
+    const j = queue.orders.findIndex(item => item.reference === order.reference);
+    if (j >= 0) queue.orders[j] = order;
+  }
+  async function loadOrders(append = false) {
+    const started = ++queueVersion, identity = generation;
+    updating = true;
+    try {
+      const result = await api("GET", queuePath(append ? queue.nextCursor : null));
+      if (started !== queueVersion || identity !== generation) return;
+      queue = { ...result, orders: append ? [...new Map([...queue.orders, ...result.orders].map(order => [order.reference, order])).values()] : result.orders };
+      queue.orders.forEach(rememberOrder);
+      if (!queue.orders.some(order => order.reference === selectedReference)) selectedReference = queue.orders[0]?.reference || "";
+      updating = false; renderResults();
+    } catch (error) { if (started === queueVersion && identity === generation) report(error.message); }
+    finally { if (started === queueVersion) updating = false; }
   }
 
   function replaceWorkspace(returnFocus) {
@@ -207,15 +256,18 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
     status.textContent = text;
   }
 
-  function selectSection(id, opener) {
+  async function selectSection(id, opener) {
     if (!tabs.some(([key]) => key === id) || id === section || !data?.connected) return;
     section = id;
+    queueVersion++;
     const tabGroup = find("consumerTabs");
     for (const button of tabGroup.querySelectorAll("button")) button.setAttribute("aria-pressed", button.dataset.id === id);
     const panelRoot = find("consumerPanel");
     put(panelRoot, panel());
     SC.reveal(panelRoot, { offset: 5 });
     if (!opener.isConnected) tabGroup.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+    if (id === "orders") await loadOrders();
+    if (id === "support") { try { data.support = (await api("GET", endpoint + "/support")).messages || []; renderResults(); } catch (error) { report(error.message); } }
   }
 
   function renderResults() {
@@ -224,7 +276,7 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
   }
 
   async function refresh(opener) {
-    if (updating || writes.size) return;
+    if (updating || writes.size || [...packing.values()].some(state => state.running)) return;
     const started = generation;
     updating = true;
     const refreshButton = find("consumerRefresh");
@@ -234,7 +286,7 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
     try {
       const result = await load();
       if (started !== generation) return;
-      data = result;
+      acceptData(result);
       updating = false;
       message = "";
       const focused = document.activeElement;
@@ -271,53 +323,105 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
     }
   }
 
-  function openOrder(reference, opener) {
-    const order = data?.orders.find(entry => entry.reference === reference);
-    if (!order) return;
-    const current = statusById.get(order.status);
-    const detail = (label, value) => html`<div><dt>${label}</dt><dd>${value}</dd></div>`;
-    openSheet(html`<form class="consumer-order-sheet">
-      <div class="consumer-order-sheet-head"><div><h2 id="sheetTitle">${order.reference}</h2><p>Preview order</p></div>
-        <button class="btn soft consumer-close" type="button" data-sheet="close" aria-label="Close">${svg("x")}</button></div>
-      <dl class="consumer-order-detail">
-        ${detail("Placed", date(order.createdAt))}
-        ${detail("Fulfilment", method(order.method))}
-        ${order.cafe?.name ? detail("Collection from", order.cafe.name) : ""}
-        ${detail("Order total", money(order.total))}
-        ${detail("Current status", orderBadge(order.status))}
-      </dl>
-      ${Array.isArray(order.lines) && order.lines.length ? html`<div class="consumer-order-coffees"><h3>Coffees</h3>
-        <ul class="consumer-list" role="list">${order.lines.map(line => html`<li class="item"><span class="tx"><b>${line.product?.name || line.name}</b><span>${line.size} · ${line.grind}</span></span><span class="num">× ${line.qty}</span></li>`)}</ul>
-      </div>` : ""}
-      ${current ? html`<label class="field"><span class="fl">Update status</span><select id="consumerOrderStatus">
-        ${statuses.map(([id, label]) => html`<option value="${id}" ${id === order.status ? raw("selected") : ""}>${label}</option>`)}
-      </select></label>` : ""}
-      <p class="err" role="alert" id="consumerOrderError" hidden></p>
-      <div class="row"><button class="btn soft" type="button" data-sheet="close">Close</button>${current ? html`<button class="btn" type="submit">Save status</button>` : ""}</div>
-    </form>`, async (action, form) => {
-      if (action !== "submit") return;
-      const status = form.querySelector("select").value;
-      if (!statusById.has(status) || status === order.status) { closeSheet(); return; }
-      const error = form.querySelector(".err");
-      error.hidden = true;
-      try {
-        const saved = await save(reference, () => api("PATCH", endpointFor("orders", reference), { status }), () => { order.status = status; });
-        if (!saved) return;
-        const sheetStillOpen = form.isConnected;
-        if (sheetStillOpen) closeSheet();
-        renderResults();
-        if (sheetStillOpen) {
-          const orderButton = find("consumerResults")?.querySelector(`[data-id="${CSS.escape(reference)}"]`);
-          (orderButton || find("consumerOrderFilter"))?.focus({ preventScroll: true });
-        }
-        toast("Order status saved.");
-      } catch (err) {
-        if (!form.isConnected) { report(err.message); return; }
-        error.hidden = false;
-        error.textContent = err.message;
-      }
-    }, opener);
+  function fulfilmentDetail(order) {
+    const state = packing.get(order.reference), checked = state?.wanted || new Set(order.packedLines || []);
+    const busy = writes.has(order.reference) || blockedOrders.has(order.reference), saving = !!state?.running, canPack = ["placed", "preparing"].includes(order.status);
+    const allPacked = order.lines.length > 0 && checked.size === order.lines.length;
+    const tracking = trackingDrafts.get(order.reference) ?? order.tracking?.number ?? "";
+    const error = orderErrors.get(order.reference);
+    return html`<header class="consumer-detail-head"><div><p>Order details</p><h3>${order.reference}</h3><span>${date(order.createdAt)}</span></div>${paymentBadge(order)}</header>
+      <div class="consumer-detail-summary"><div><span>Customer</span><b>${order.contact?.name || "Not recorded"}</b></div><div><span>Fulfilment</span><b>${order.method === "collection" ? order.cafe?.name || "Collection" : order.deliveryService || "Royal Mail Tracked 48"}</b></div><div><span>Total</span><b>${money(order.total)}</b></div></div>
+      <div class="consumer-detail-body">${order.contact ? html`<section class="consumer-contact"><h4>Saved customer details</h4><p>${[order.contact.email, order.contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</p>${order.method === "delivery" ? html`<p>${[order.contact.address, order.contact.town, order.contact.postcode].filter(Boolean).join(", ")}</p>` : html`<p>${order.cafe?.address || ""}</p>`}</section>` : html`<p class="hint">Customer details were not recorded on this older preview order.</p>`}
+      <section><div class="consumer-packing-heading"><h4>Pack order</h4><span id="consumerPackedCount" role="status">${checked.size} of ${order.lines.length} lines${saving ? " · Saving…" : ""}</span></div>
+        <div class="consumer-packing-lines">${order.lines.map((line, index) => html`<label class="consumer-packing-line"><input id="consumerPack-${index}" type="checkbox" data-consumer-packed-line="${index}" data-reference="${order.reference}" ${checked.has(index) ? raw("checked") : ""} ${!canPack || busy ? raw("disabled") : ""}><span><b>${line.product?.name || line.name || "Coffee"}</b><small>${line.size} · ${line.grind}</small></span><strong>× ${line.qty}</strong></label>`)}</div>
+        <div class="row consumer-detail-actions">${order.status === "placed" ? html`<button class="btn soft" type="button" data-act="consumer-status" data-id="preparing" ${busy || saving ? raw("disabled") : ""}>Start preparing</button>` : ""}${canPack ? html`<button class="btn" type="button" data-act="consumer-status" data-id="ready" ${!allPacked || busy || saving ? raw("disabled") : ""}>Mark packed</button>` : orderBadge(order.status)}</div></section>
+      ${order.method === "delivery" && ["ready", "dispatched", "completed"].includes(order.status) ? html`<form id="consumerDispatchForm" data-reference="${order.reference}"><h4>${order.status === "ready" ? "Dispatch" : "Tracking details"}</h4><label class="field"><span class="fl">Royal Mail tracking number</span><input id="consumerTrackingNumber" name="tracking" maxlength="30" placeholder="e.g. AB123456789GB" autocomplete="off" spellcheck="false" value="${tracking}" ${busy ? raw("disabled") : ""} required></label><button class="btn" type="submit" ${busy || saving ? raw("disabled") : ""}>${order.status === "ready" ? "Save and dispatch" : "Save tracking"}</button>${order.tracking?.url ? html`<a class="btn soft" href="${order.tracking.url}" target="_blank" rel="noopener noreferrer">Track parcel</a>` : ""}</form>` : ""}
+      ${order.status === "ready" && order.method === "collection" ? html`<section><h4>Collection</h4><p>Ready to collect from ${order.cafe?.name || "the selected café"}.</p><button class="btn" type="button" data-act="consumer-status" data-id="completed" ${busy ? raw("disabled") : ""}>Mark collected</button></section>` : ""}
+      ${order.status === "dispatched" ? html`<button class="btn soft" type="button" data-act="consumer-status" data-id="completed" ${busy ? raw("disabled") : ""}>Mark delivered</button>` : ""}
+      <p class="hint">${order.paymentMode === "test" ? "Test payment: no charge was collected. " : ""}Dispatch records do not book a shipment. Cancellation does not issue a refund.</p>
+      ${error ? html`<div class="consumer-order-problem" role="alert"><p>${error}</p><button class="btn soft" type="button" data-act="consumer-order-reload">Reload latest order</button></div>` : ""}
+      <section><h4>Order timeline</h4><ol class="consumer-timeline">${(order.timeline || []).map(event => html`<li><b>${statusById.get(event.status)?.label || event.status}</b><span>${date(event.at)}</span></li>`)}</ol></section>
+      <div class="row consumer-detail-actions">${order.status === "ready" ? html`<button class="btn soft" type="button" data-act="consumer-status" data-id="preparing" ${busy ? raw("disabled") : ""}>Reopen packing</button>` : ""}${!["completed", "cancelled"].includes(order.status) ? html`<button class="btn soft bad" type="button" data-act="consumer-cancel" ${busy || saving ? raw("disabled") : ""}>Cancel order</button>` : ""}</div></div>`;
   }
+  function renderDetail() {
+    const target = find("consumerOrderDetail"), order = orderCache.get(selectedReference);
+    if (!target || !order) return;
+    const focused = target.contains(document.activeElement) ? document.activeElement.id : "";
+    put(target, fulfilmentDetail(order));
+    if (focused) find(focused)?.focus({ preventScroll: true });
+  }
+  function chooseOrder(reference) {
+    if (!orderCache.has(reference)) return;
+    selectedReference = reference; renderResults();
+    const detail = find("consumerOrderDetail");
+    if (matchMedia("(max-width:760px)").matches) SC.reveal(detail, { offset: 12 });
+  }
+  async function reloadOrder(reference) {
+    const result = await api("GET", endpoint + "/orders?q=" + encodeURIComponent(reference));
+    const order = result.orders.find(item => item.reference === reference);
+    if (!order) throw new Error("This order is no longer available. Refresh the queue.");
+    rememberOrder(order); packing.delete(reference); orderErrors.delete(reference); blockedOrders.delete(reference); renderDetail();
+    return order;
+  }
+  async function updateOrder(fields) {
+    const reference = selectedReference, order = orderCache.get(reference);
+    if (!order || writes.has(reference) || blockedOrders.has(reference) || packing.get(reference)?.running) return;
+    writes.add(reference); renderDetail();
+    const identity = generation, navigation = queueVersion;
+    try {
+      const result = await api("PATCH", endpointFor("orders", reference), { ifVersion: order.version, ...fields });
+      if (identity !== generation) return;
+      if (result.order?.reference !== reference || !Number.isSafeInteger(result.order.version)) throw new Error("The order change could not be confirmed. Reload its latest details.");
+      rememberOrder(result.order); orderErrors.delete(reference);
+      if (fields.tracking) trackingDrafts.delete(reference);
+      if (fields.status && section === "orders" && navigation === queueVersion && selectedReference === reference) orderFilter = ["placed", "preparing"].includes(result.order.status) ? "to-pack" : result.order.status;
+      if (section === "orders") await loadOrders();
+      toast("Order updated.");
+    } catch (error) { if (identity === generation) { blockedOrders.add(reference); orderErrors.set(reference, error.message + " Reload the latest order before trying again."); } }
+    finally { writes.delete(reference); renderDetail(); }
+  }
+  async function flushPacking(reference, state) {
+    if (state.running) return;
+    state.running = true; renderDetail();
+    const refreshButton = find("consumerRefresh"); if (refreshButton) refreshButton.disabled = true;
+    const identity = generation;
+    try {
+      while (identity === generation) {
+        const order = orderCache.get(reference), wanted = [...state.wanted].sort((a, b) => a - b);
+        if (JSON.stringify(wanted) === JSON.stringify(order.packedLines || [])) break;
+        const result = await api("PATCH", endpointFor("orders", reference), { ifVersion: order.version, packedLines: wanted });
+        if (result.order?.reference !== reference || !Number.isSafeInteger(result.order.version)) throw new Error("The packing save could not be confirmed.");
+        if (identity !== generation) return;
+        rememberOrder(result.order); orderErrors.delete(reference);
+      }
+    } catch (error) {
+      if (identity === generation) {
+        state.wanted = new Set(orderCache.get(reference)?.packedLines || []);
+        blockedOrders.add(reference);
+        orderErrors.set(reference, error.message + " Reload the latest order before changing its packing again.");
+      }
+    } finally { state.running = false; if (selectedReference === reference) renderDetail(); if (refreshButton?.isConnected) refreshButton.disabled = updating || writes.size > 0 || [...packing.values()].some(item => item.running); }
+  }
+  function packingChanged(input) {
+    const reference = input.dataset.reference, order = orderCache.get(reference);
+    if (!order || writes.has(reference) || blockedOrders.has(reference) || !["placed", "preparing"].includes(order.status)) { input.checked = (order?.packedLines || []).includes(Number(input.dataset.consumerPackedLine)); return; }
+    let state = packing.get(reference);
+    if (!state) { state = { wanted: new Set(order.packedLines || []), running: false }; packing.set(reference, state); }
+    const index = Number(input.dataset.consumerPackedLine);
+    if (input.checked) state.wanted.add(index); else state.wanted.delete(index);
+    void flushPacking(reference, state);
+    if (selectedReference === reference) renderDetail();
+  }
+  async function dispatch(form) {
+    if (form.dataset.reference !== selectedReference) return;
+    const number = form.querySelector("input").value.trim().toUpperCase();
+    if (!/^[A-Z0-9]{8,30}$/.test(number)) { orderErrors.set(selectedReference, "Use a Royal Mail tracking number with 8 to 30 letters or numbers."); renderDetail(); return; }
+    const order = orderCache.get(selectedReference);
+    await updateOrder({ tracking: { carrier: "royal-mail", number }, ...(order.status === "ready" ? { status: "dispatched" } : {}) });
+  }
+  document.addEventListener("change", event => { if (event.target.matches("[data-consumer-packed-line]")) packingChanged(event.target); });
+  document.addEventListener("input", event => { if (event.target.id === "consumerTrackingNumber") { const form = event.target.closest("form"); if (form?.dataset.reference) trackingDrafts.set(form.dataset.reference, event.target.value); } });
+  document.addEventListener("submit", event => { if (event.target.id === "consumerDispatchForm") { event.preventDefault(); void dispatch(event.target); } });
 
   async function checkout(opener) {
     if (typeof data?.settings.acceptOrders !== "boolean") return;
@@ -380,19 +484,29 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, openSheet, closeSheet,
       data = null;
       section = "overview";
       queries = {};
-      orderFilter = "";
+      orderFilter = "to-pack";
       message = "";
       updating = false;
       writes.clear();
+      clearTimeout(searchTimer); queueVersion++; orderCache.clear(); packing.clear(); trackingDrafts.clear(); orderErrors.clear(); blockedOrders.clear(); selectedReference = "";
     },
-    search(value) { queries[section] = value; renderResults(); },
-    filterOrders(value) { orderFilter = value; renderResults(); },
+    search(value) { queries[section] = value; if (section === "orders") { clearTimeout(searchTimer); searchTimer = setTimeout(async () => { await loadOrders(); const input = find("consumerSearch"); if (input) { input.focus({ preventScroll: true }); input.setSelectionRange(value.length, value.length); } }, 250); } else renderResults(); },
+    filterOrders(value) { if (!["", "to-pack", ...statusById.keys()].includes(value)) return; orderFilter = value; void loadOrders(); },
     setAvailability,
     async act(name, id, opener) {
-      if (name === "consumer-tab") selectSection(id, opener);
+      if (name === "consumer-tab") await selectSection(id, opener);
       if (name === "consumer-refresh") await refresh(opener);
-      if (name === "consumer-order") openOrder(id, opener);
+      if (name === "consumer-order") chooseOrder(id);
       if (name === "consumer-checkout") await checkout(opener);
+      if (name === "consumer-queue") { orderFilter = id; await loadOrders(); }
+      if (name === "consumer-order-more" && queue.nextCursor && !updating) await loadOrders(true);
+      if (name === "consumer-status") await updateOrder({ status: id });
+      if (name === "consumer-order-reload") { try { await reloadOrder(selectedReference); } catch (error) { report(error.message); } }
+      if (name === "consumer-cancel" && await confirmSheet({ title: "Cancel this order?", text: "This records cancellation in the preview and customer history. No refund or carrier cancellation is sent.", confirm: "Cancel order" })) await updateOrder({ status: "cancelled" });
+      if (name === "consumer-support") {
+        const item = data.support?.find(message => message.reference === id);
+        if (item) { try { const result = await api("PATCH", endpoint + "/support/" + encodeURIComponent(id), { resolved: !item.resolved }); Object.assign(item, result.message); renderResults(); } catch (error) { report(error.message); } }
+      }
     },
   };
 };

@@ -1,8 +1,10 @@
 import { type Env, ApiError, json, readBytes } from "./http";
 import { cleanEmail } from "./email/address";
 import { sendRetailAccountMail } from "./retailAccountMail";
+import { retailInstagram } from "./retailInstagram";
 import { retailServicePublicKey, retailServiceRequest } from "./retailService";
 import { noStore, staticFile, withFingerprints } from "./siteAssets";
+import { productFromPath } from "../public/consumer-preview/assets/product-paths.js";
 
 export const BRANDED_RETAIL_ORIGIN = "https://preview.staffstrangerscoffee.com";
 const ACCOUNT_ORIGIN = "https://strangers-coffee-retail-demo.magicloom512.chatgpt.site";
@@ -10,9 +12,10 @@ const SESSION_COOKIE = "__Host-strangers_consumer_session";
 const MAX_SESSION_SECONDS = 4 * 60 * 60;
 const PROOF = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;
 const AUTH_ROUTE = /^\/consumer-auth\/(register|setup|login|forgot|reset|logout)$/;
+const ORDER_ROUTE = /^\/api\/retail\/orders(?:\/(SC-[A-F0-9]{8}))?$/;
 const ASSET = /^(?:\/_releases\/[0-9a-f]{20})?\/consumer-preview\/assets\/[a-z0-9][a-z0-9_.-]{0,110}\.(?:css|js|svg|webp|woff2|txt)$/i;
 const PAGES = new Set([
-  "/", "/coffee/", "/account/", "/location/", "/about/", "/brewguides/", "/contact/",
+  "/", "/coffee/", "/checkout/", "/account/", "/location/", "/about/", "/brewguides/", "/contact/",
   "/shipping/", "/privacy-policy/", "/terms-conditions/",
 ]);
 function proof(value: unknown): value is string {
@@ -174,21 +177,60 @@ async function availability(): Promise<Response> {
   return json({ unavailable: unavailableIds });
 }
 
-async function retailPage(req: Request, env: Env, url: URL): Promise<Response> {
-  const path = "/consumer-preview" + url.pathname;
+async function retailWriteApi(req: Request, env: Env, path: string, maxBytes: number): Promise<Response> {
+  const support = path === "/consumer-support-service/message";
+  if (req.method !== "POST") return methodNotAllowed("POST");
+  if (req.headers.get("origin") !== BRANDED_RETAIL_ORIGIN) {
+    return json({ error: "bad_origin", message: "Open this page on the retail preview." }, 403);
+  }
+  if (!/^application\/json(?:\s*;|$)/i.test(req.headers.get("content-type") || "")) {
+    return json({ error: "unsupported_media_type", message: "Send this request as JSON." }, 415);
+  }
+  const bytes = await readBytes(req, maxBytes, "The request was too large.");
+  let body: string;
+  try {
+    body = decode(bytes);
+  } catch {
+    throw new ApiError(400, "invalid_json", "This request must use UTF-8.");
+  }
+  const session = support ? "" : cookie(req, SESSION_COOKIE);
+  try {
+    const response = await retailServiceRequest(env, path, {
+      method: "POST", body, client: req.headers.get("cf-connecting-ip"),
+      session: proof(session) ? session : undefined,
+    });
+    const result = await serviceResult(response, 128 * 1024);
+    if (result) {
+      const headers = new Headers({ "referrer-policy": "no-referrer" });
+      if (result.retryAfter && /^\d{1,6}$/.test(result.retryAfter)) headers.set("retry-after", result.retryAfter);
+      if (result.status === 401 && proof(session)) headers.set("set-cookie", setCookie(SESSION_COOKIE, "", 0));
+      return json(result.data, result.status, headers);
+    }
+  } catch {
+    // A retry with the same checkout key can safely recover an uncertain response.
+  }
+  return json({ error: "retail_unavailable", message: support ? "The contact form is temporarily unavailable. Try again shortly." :
+    "Checkout is temporarily unavailable. Try again to confirm this order." }, 503);
+}
+
+async function retailPage(req: Request, env: Env, url: URL, page = url.pathname, product?: string): Promise<Response> {
+  const path = "/consumer-preview" + page;
   const asset = await env.ASSETS.fetch(new Request(new URL(path, url), { method: req.method }));
   if (!asset.ok || !(asset.headers.get("content-type") || "").startsWith("text/html")) {
     await asset.body?.cancel();
     return new Response("The consumer storefront is temporarily unavailable.", { status: 503 });
   }
   let response = noStore(asset);
-  if (url.pathname === "/account/") response.headers.set("referrer-policy", "no-referrer");
+  if (page === "/account/" || page === "/checkout/") response.headers.set("referrer-policy", "no-referrer");
   // The marker makes checkout check the saved profile before taking an order. The account API
   // verifies the actual session before returning customer data or accepting any write.
-  if (proof(cookie(req, SESSION_COOKIE)) && response.body) {
-    response = new HTMLRewriter().on("body", {
+  if (response.body && (product || proof(cookie(req, SESSION_COOKIE)))) {
+    const html = new HTMLRewriter();
+    if (proof(cookie(req, SESSION_COOKIE))) html.on("body", {
       element(element) { element.setAttribute("data-retail-signed-in", ""); },
-    }).transform(response);
+    });
+    if (product) html.on("title", { element(element) { element.setInnerContent(product + " | Strangers Coffee"); } });
+    response = html.transform(response);
   }
   return withFingerprints(response, env, url);
 }
@@ -199,6 +241,10 @@ export async function handleBrandedRetail(req: Request, env: Env, url: URL, ctx?
   const reading = req.method === "GET" || req.method === "HEAD";
 
   if (path === "/api/account" || path === "/api/account/orders") return accountApi(req, path);
+  const order = ORDER_ROUTE.exec(path);
+  if (order) return retailWriteApi(req, env,
+    "/consumer-orders-service/orders" + (order[1] ? "/" + order[1] : ""), order[1] ? 2048 : 24 * 1024);
+  if (path === "/api/retail/support") return retailWriteApi(req, env, "/consumer-support-service/message", 12 * 1024);
   if (path === "/signin") return reading ? redirect("/account/") : methodNotAllowed("GET, HEAD");
   if (path === "/consumer-auth/service-key") {
     return req.method === "GET" ? retailServicePublicKey(env).catch(unavailable) : methodNotAllowed("GET");
@@ -206,6 +252,12 @@ export async function handleBrandedRetail(req: Request, env: Env, url: URL, ctx?
   const action = AUTH_ROUTE.exec(path)?.[1];
   if (action) return authApi(req, env, action, ctx);
   if (path === "/consumer-auth/availability") return req.method === "GET" ? availability() : methodNotAllowed("GET");
+  const instagramPhoto = /^\/consumer-social\/photo\/([A-Za-z0-9_-]{3,35})$/.exec(path)?.[1];
+  if (path === "/consumer-social/posts" || instagramPhoto) {
+    if (!reading) return methodNotAllowed("GET, HEAD");
+    return ctx ? retailInstagram(req, env, ctx, url, instagramPhoto)
+      : json({ error: "feed_unavailable" }, 503);
+  }
   if (ASSET.test(path)) {
     if (!reading) return methodNotAllowed("GET, HEAD");
     const conditionals = new Headers();
@@ -221,5 +273,10 @@ export async function handleBrandedRetail(req: Request, env: Env, url: URL, ctx?
   if (!reading) return undefined;
   if (PAGES.has(path)) return retailPage(req, env, url);
   if (PAGES.has(path + "/")) return redirect(path + "/" + url.search, 308);
+  const product = productFromPath(path);
+  if (product) {
+    if (!path.endsWith("/")) return redirect(path + "/" + url.search, 308);
+    return retailPage(req, env, url, "/product/", product.name);
+  }
   return undefined;
 }

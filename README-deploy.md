@@ -6,6 +6,10 @@ The customer domain and `www.strangerscoffee.trade` are Worker custom domains de
 
 The consumer preview at `https://preview.staffstrangerscoffee.com/` serves retail only. Wholesale customers use their existing credentials at `https://strangerscoffee.trade/`, where their accounts, saved orders, catalogue and invoices remain available. Sessions, browser baskets and pending checkout payloads from the former preview address stay with that origin. Staff sign in on the staff domain and open `https://staffstrangerscoffee.com/wholesale/`.
 
+The branded consumer storefront is maintained in `public/consumer-preview/`. The pinned packaging script is the original import, so it refuses to replace the locally maintained pages and assets. Consumer accounts, order snapshots, tracking and the support inbox use a separate retail database. Deploy additive retail database migrations and the signed retail service before releasing storefront and Consumer Admin changes through the normal GitHub workflow. Keep catalogue additions and the shared cart-pricing rules in sync with the retail service build.
+
+Consumer checkout records test payments and fulfilment. A real payment gateway, order email sender and carrier integration require dedicated retail configuration. Staff can review test orders, pack them, record tracking and reply to preview support messages in **Admin → Consumer (Preview)**.
+
 The site is one Cloudflare Worker serving the diary's pages and the API they talk to. It runs at **https://staffstrangerscoffee.com**, and the staff rota, from the same Worker, at **https://rota.staffstrangerscoffee.com**. **Every push to `main` redeploys it automatically** (Cloudflare Workers Builds).
 
 | Path | What it is |

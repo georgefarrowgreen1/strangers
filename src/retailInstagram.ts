@@ -82,9 +82,13 @@ async function fromPublicHomepage(): Promise<Post[]> {
   return posts;
 }
 
+function feedPath(url: URL) {
+  return url.pathname.startsWith("/consumer-social/") ? "/consumer-social" : "/shop";
+}
+
 let pending: Promise<Post[]> | undefined;
 async function getPosts(url: URL, env: InstagramEnv, ctx: ExecutionContext): Promise<Post[]> {
-  const key = new Request(new URL("/shop/instagram-cache", url));
+  const key = new Request(new URL(feedPath(url) + "/instagram-cache", url));
   const cached = await caches.default.match(key).catch(() => undefined);
   if (cached) return cached.json<Post[]>();
   if (!pending) {
@@ -110,7 +114,7 @@ export async function retailInstagram(req: Request, env: InstagramEnv, ctx: Exec
     return Response.json({ posts: posts.map(({ code, href, label }) => ({ code, href, label })) }, { headers });
   }
 
-  const key = new Request(new URL(`/shop/instagram-photo/${code}`, url));
+  const key = new Request(new URL(url.pathname, url));
   const cached = await caches.default.match(key).catch(() => undefined);
   if (cached) return req.method === "HEAD" ? new Response(null, cached) : cached;
   const post = (await getPosts(url, env, ctx)).find(item => item.code === code);
