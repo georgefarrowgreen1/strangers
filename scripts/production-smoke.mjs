@@ -62,7 +62,13 @@ for (let attempt = 0; ; attempt++) {
       check('rota.' + staff, '/signin', 302),
       check(trade, '/signin', 200, /text\/html/),
       check(trade, '/api/wholesale/catalogue', 401),
-      check(preview, '/shop/', 200, /text\/html/),
+      check(preview, '/', 200, /text\/html/),
+      check(preview, '/signin', 302),
+      check(preview, '/shop/', 302),
+      check(preview, '/wholesale/', 404),
+      check(preview, '/api/wholesale/catalogue', 404),
+      check(preview, '/api/admin/consumer', 404),
+      check(preview, '/api/account', 401),
       check(trade, '/shop/', 404),
     ]);
     console.log('Production sign-in, retail and wholesale boundaries passed for ' + sha.slice(0, 12));

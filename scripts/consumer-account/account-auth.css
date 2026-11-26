@@ -1,0 +1,107 @@
+
+.account-access {
+  align-items: start;
+}
+
+.account-access [role="status"]:empty {
+  margin: 0;
+}
+
+.account-access #account-retry {
+  margin-top: 15px;
+}
+
+.account-auth,
+.account-auth form,
+.account-auth fieldset {
+  display: grid;
+  min-width: 0;
+  gap: 13px;
+}
+
+.account-auth form > .button {
+  justify-self: start;
+}
+
+.account-auth label {
+  color: var(--ink);
+}
+
+.account-auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+}
+
+.account-auth-links a,
+.account-session button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: .88rem;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  overflow-wrap: anywhere;
+}
+
+.account-auth-links a {
+  color: var(--forest);
+}
+
+.account-session button {
+  color: inherit;
+}
+
+.account-session button:focus-visible {
+  outline-color: var(--acid);
+}
+
+#account-auth-status,
+.account-password-hint {
+  font-size: .88rem;
+}
+
+.account-auth .account-save-error {
+  color: #943d2e;
+}
+
+.account-password-field {
+  position: relative;
+  display: grid;
+}
+
+.account-password-field input {
+  padding-inline-end: 80px;
+}
+
+.account-password-field button {
+  position: absolute;
+  inset: 0 0 0 auto;
+  min-height: 44px;
+  min-width: 64px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 0 9px 9px 0;
+  background: transparent;
+  color: var(--forest);
+  font-size: .83rem;
+  font-weight: 700;
+}
+
+.account-password-field button:focus-visible {
+  outline-offset: -3px;
+}
+
+@media (min-width: 760px) {
+  .account-access {
+    grid-template-columns: minmax(0, .86fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+@media (max-width: 390px) {
+  .account-auth form > .button {
+    justify-self: stretch;
+  }
+}

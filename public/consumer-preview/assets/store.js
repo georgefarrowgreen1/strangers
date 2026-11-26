@@ -110,22 +110,8 @@ export function createStore(products, storage = browserStorage()) {
     return { subtotal, shipping, total: subtotal + shipping, count };
   }
 
-  function placeOrder({ method, name, email } = {}) {
-    if (!['delivery', 'collection'].includes(method)) return null;
-    if (typeof name !== 'string' || !name.trim() || typeof email !== 'string') return null;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      return null;
-    }
-    const { total, count } = totals(method);
-    if (!count) return null;
-
-    const order = { reference: orderReference(), total, count, method };
-    clear();
-    return order;
-  }
-
   restore();
-  return { cart, add, setQty, remove, clear, totals, placeOrder };
+  return { cart, add, setQty, remove, clear, totals };
 }
 
 function browserStorage() {
@@ -138,9 +124,4 @@ function browserStorage() {
 
 function validQuantity(qty) {
   return Number.isInteger(qty) && qty >= 1 && qty <= MAX_QUANTITY;
-}
-
-function orderReference() {
-  const [id] = globalThis.crypto.getRandomValues(new Uint32Array(1));
-  return `SC-${id.toString(16).padStart(8, '0').toUpperCase()}`;
 }

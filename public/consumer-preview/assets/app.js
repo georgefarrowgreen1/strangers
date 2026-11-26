@@ -1,7 +1,6 @@
 import { products, cafes } from './products.js';
 import { getServerAccount, setupAccount } from './account.js';
 import { clearOrderAttempt, placeAccountOrder } from './beta-orders.js';
-import { loadAccount, recordDemoOrder } from './account-store.js';
 import { escapeHtml as html } from './html.js';
 import { createStore, money, FREE_SHIPPING } from './store.js';
 import { checkoutDetails, checkoutDock, checkoutReview, grindLabel, orderTotals, processingMarkup, receiptMarkup, sizeNames } from './checkout.js';
@@ -328,7 +327,7 @@ function bagMarkup(message) {
   if (!cart.length) {
     return `<div class="empty-bag"><h3>Your cart is empty.</h3><p>Start with one of the coffees on the shelf.</p>
       <div class="drawer-actions"><button type="button" class="button" data-keep-shopping>Browse coffee</button>
-      ${lastReceipt ? '<button type="button" class="button outline" data-last-receipt>View last demo receipt</button>' : ''}</div></div>`;
+      ${lastReceipt ? '<button type="button" class="button outline" data-last-receipt>View last test receipt</button>' : ''}</div></div>`;
   }
   const { subtotal, shipping } = store.totals('delivery');
   const remaining = Math.max(0, FREE_SHIPPING - subtotal);
@@ -342,7 +341,7 @@ function bagMarkup(message) {
       <div><h3>${line.product.name}</h3><p>${sizeNames[line.size]} · ${grindLabel(line.grind)}</p>
       <div class="cart-controls">${quantityMarkup(line.qty, [line.product.name, sizeNames[line.size], line.grind].join(', '), index)}<button type="button" class="remove" data-remove="${index}" aria-label="Remove ${line.product.name}, ${sizeNames[line.size]}, ${line.grind}">Remove</button><span class="line-price">${money(line.unitPrice * line.qty)}</span></div></div></li>`).join('')}</ul>
     <div aria-live="polite">${orderTotals(store.totals('delivery'), 'delivery')}</div>
-    <div class="drawer-actions"><button class="button" type="button" data-checkout>Demo checkout</button><button class="button outline" type="button" data-keep-shopping>Keep shopping</button></div>
+    <div class="drawer-actions"><button class="button" type="button" data-checkout>Checkout</button><button class="button outline" type="button" data-keep-shopping>Keep shopping</button></div>
   </div>`;
 }
 
@@ -375,20 +374,22 @@ function reorderAccountOrder(order, opener) {
 
 function useCheckoutProfile(profile) {
   const { method: preferredMethod, cafe, ...details } = profile;
-  method = preferredMethod;
+  method = preferredMethod === 'collection' ? 'collection' : 'delivery';
   checkoutCafe = cafeById.has(cafe) ? cafe : 'dove-street';
   checkoutDraft = Object.fromEntries(checkoutFields.map(name => [name, details[name] ?? '']));
+}
+
+function showCheckoutSignIn() {
+  showPanel('checkout', 'Checkout', '<div class="drawer-content"><p>Sign in to place a test order. Your coffees will stay in your cart.</p><div class="drawer-actions"><a class="button" href="/account/?return_to=%2Fcoffee%2F">Sign in</a><button class="button outline" type="button" data-open-bag>Back to cart</button></div></div>');
 }
 
 function showCheckout() {
   const lines = store.cart();
   if (!lines.length) return showBag();
+  if (!signedIn) return showCheckoutSignIn();
   if (!Object.keys(checkoutDraft).length) {
-    if (signedIn) {
-      loadCheckoutProfile();
-      return;
-    }
-    useCheckoutProfile(loadAccount().profile);
+    void loadCheckoutProfile();
+    return;
   }
   const pricing = store.totals(method);
   showPanel('checkout', 'Checkout', checkoutDetails({ cafes, method, lines, pricing }), undefined, checkoutDock(pricing));
@@ -406,10 +407,10 @@ async function loadCheckoutProfile() {
     const account = await getServerAccount();
     if (!isCurrent()) return;
     if (!account) {
-      showPanel('checkout', 'Checkout', '<div class="drawer-content"><p>Your session ended. Sign in again to continue.</p><a class="button" href="/signin-with-chatgpt?return_to=%2Fcoffee%2F" target="_top">Sign in</a></div>');
+      showCheckoutSignIn();
       return;
     }
-    useCheckoutProfile(account.profile);
+    useCheckoutProfile({ ...account.profile, email: account.identity.email });
     showCheckout();
   } catch {
     if (isCurrent()) showPanel('checkout', 'Checkout', '<div class="drawer-content"><p>Saved details are temporarily unavailable.</p><button type="button" class="button" data-checkout>Try again</button></div>');
@@ -514,6 +515,11 @@ async function submitSignedOrder(lines) {
     clearOrderAttempt();
     finishOrder({ ...order, historySaved: true }, transition);
   } catch (error) {
+    if (error?.status === 401) {
+      checkoutDraft = {};
+      showCheckoutSignIn();
+      return;
+    }
     showCheckoutReview(error?.name === 'TimeoutError'
       ? 'That took too long. Try again to confirm the same order.'
       : error.message || 'Checkout is temporarily unavailable. Your cart is ready to retry.');
@@ -523,24 +529,10 @@ async function submitSignedOrder(lines) {
   }
 }
 
-function placeDemo() {
+function placeOrder() {
   if (orderInFlight || dialog.dataset.view !== 'checkout-review') return;
-  const lines = store.cart();
-  if (signedIn) {
-    submitSignedOrder(lines);
-    return;
-  }
-  const pricing = store.totals(method);
-  const result = store.placeOrder({ method, name: checkoutDraft.name, email: checkoutDraft.email });
-  if (!result) {
-    body.querySelector('#checkout-error').hidden = false;
-    return;
-  }
-
-  const cafe = result.method === 'collection' ? cafeById.get(checkoutCafe) : null;
-  const order = { ...result, lines, pricing, cafe, createdAt: new Date().toISOString() };
-  order.historySaved = recordDemoOrder(order);
-  finishOrder(order);
+  if (!signedIn) return showCheckoutSignIn();
+  void submitSignedOrder(store.cart());
 }
 
 menuButton.addEventListener('click', () => menuOpen(siteMenu.inert));
@@ -582,16 +574,12 @@ document.addEventListener('click', event => {
   else if (action.finderBack !== undefined) moveFinder(action.finderBack);
   else if (action.match) showProduct(action.match, control, { grind: finder.brew, fromFinder: true });
   else if (action.checkout !== undefined || action.checkoutEdit !== undefined) showCheckout();
-  else if (action.placeOrder !== undefined) placeDemo();
+  else if (action.placeOrder !== undefined) placeOrder();
   else if (action.lastReceipt !== undefined) showReceipt(lastReceipt);
   else if (action.viewOrders !== undefined && accountPage) closePanel();
   else if (action.openBag !== undefined) {
     stashCheckout(document.querySelector('#checkout-form'));
     showBag();
-  } else if (action.sample !== undefined) {
-    const form = document.querySelector('#checkout-form');
-    const sample = { name: 'Alex Taylor', email: 'alex@example.com', address: '10 Dove Street', town: 'Norwich', postcode: 'NR2 1DE' };
-    for (const [name, value] of Object.entries(sample)) form.elements[name].value = value;
   } else if (action.keepShopping !== undefined) {
     if (!shelf) {
       window.location.assign('/coffee/#shelf-title');

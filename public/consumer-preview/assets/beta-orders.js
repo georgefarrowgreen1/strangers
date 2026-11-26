@@ -32,7 +32,7 @@ export async function placeAccountOrder(method, cafe, cart) {
     signal: AbortSignal.timeout(10_000),
     body: JSON.stringify({ ...order, idempotencyKey: attempt.key }),
   });
-  if (response.status === 401) throw new Error('Your session ended. Sign in again to place this order.');
+  if (response.status === 401) throw Object.assign(new Error('Your session ended. Sign in again to place this order.'), { status: 401 });
   if (!response.ok) {
     const result = await response.json().catch(() => null);
     throw new Error(result?.message || 'Checkout is temporarily unavailable. Your cart is ready to retry.');
