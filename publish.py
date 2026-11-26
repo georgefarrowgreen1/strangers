@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/wholesale-royal-mail"
-EXPECTED = "e760bbd42cbdc3c736e871c73147cfe453bd89f4"
+BRANCH = "codex/admin-workspace-redesign"
+EXPECTED = "ca475c1ed5642797454af64655b9c2c8f9cd84c7"
 PRIOR = ""
 TIMED_OUT_TEST_RUN = None
-TITLE = "Add Royal Mail shipping and tracking to wholesale"
+TITLE = "Refine the Strangers Admin workspace"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

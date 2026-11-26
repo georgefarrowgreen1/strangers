@@ -1,7 +1,7 @@
-## Wholesale Royal Mail
+## Admin workspace redesign
 
-Adds Royal Mail Click & Drop booking, label downloads, carrier scans and dispatch review to wholesale fulfilment. The Royal Mail page under Admin → Wholesale includes an admin-only switch for new bookings and encrypted, write-only fields for booking and tracking credentials. New bookings start off. Existing order, dispatch email and invoicing rules apply at handover.
+Rebuilds the Admin shell and Today dashboard using the Strangers theme. It refines Wholesale, Royal Mail, Invoicing, QuickBooks, People, Sites, Sickness, Activity, Security, Backups & exports, and Consumer Preview. Desktop workspaces use list and detail layouts where suitable, with focused detail views on phones.
 
-Additive D1 migrations preserve existing orders and keep credentials out of JSON backups. The existing hosting encryption key enables credential entry in Admin. Royal Mail Worker settings remain available for connections without an Admin override.
+The change is in the Admin browser interface. The current order, billing, and customer APIs, database schema, and access controls continue to apply. Consumer Preview uses its existing separate gateway.
 
-Verified mobile and desktop Admin and packing flows, Node 22 carrier and credential tests, and a local upgrade from production’s current schema using simulated carrier responses.
+The approved review includes desktop and mobile browser screenshots. Local verification includes layout checks on all 17 routes at five widths, targeted Admin and QuickBooks browser tests, automatic-invoicing checks, and asset builds. GitHub's full Tests workflow gates the production merge.
