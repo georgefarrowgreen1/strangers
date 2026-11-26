@@ -5,9 +5,10 @@
 - Refine customer statements, billing address review, reminders, batch selection and month-end snapshots.
 - Use Admin confirmation sheets for invoicing settings that affect automatic processing. Keep QuickBooks setup URLs readable and copyable.
 - Compact the wholesale customer invoice history and keep the last loaded balances visible during a refresh.
+- Keep the Hide figures control in sync when the preference changes during a slow invoice refresh.
 
 ## Verification
 
-Verified the reviewed release against production main. The invoicing checks passed in 54 Chromium browser tests and 15 invoice API and PDF tests. Tested the UI from 320 to 1,728 px and captured the review screenshots from the running build with sample data. Typecheck and the production Worker dry run passed.
+Verified the reviewed release against production main. The invoicing checks passed in 54 Chromium browser tests and 15 invoice API and PDF tests. Tested the UI from 320 to 1,728 px and captured the review screenshots from the running build with sample data. After correcting the Hide figures state, all 20 relevant invoicing and Insights browser tests and the production Worker dry run passed.
 
-The wholesale order settings layout test measures the header's layout dimensions to avoid fractional rounding from viewport scroll. The inspection PDF test waits for its shortcut to be reachable at the scrolled position after the panel animates. Both corrected tests passed locally. The application files match the reviewed build. GitHub Tests is required before squash merge.
+The wholesale order settings layout test measures the header's layout dimensions to avoid fractional rounding from viewport scroll. The inspection PDF test waits for its shortcut to be reachable at the scrolled position after the panel animates. The Hide figures test pauses the invoice response and checks that the keyboard shortcut remains effective after the refresh. GitHub Tests is required before squash merge.

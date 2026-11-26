@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "codex/invoicing-ui-polish"
-EXPECTED = "bad1e7ca4813090dd3f2bc9cd3056ac1c624fbaf"
-PRIOR = "51f0b05904384f147e887e20a06d856839198b66"
+EXPECTED = "03fc54f76ffdce434d0b87741ba1f48d74415802"
+PRIOR = "bad1e7ca4813090dd3f2bc9cd3056ac1c624fbaf"
 TIMED_OUT_TEST_RUN = None
 TITLE = "Refine wholesale invoicing on mobile and desktop"
 EXPECTED_USER_ID = 292799750
