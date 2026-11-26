@@ -6,3 +6,5 @@ Serve the reviewed consumer storefront at `preview.staffstrangerscoffee.com` thr
 - Route the Consumer admin storefront link to the branded preview.
 
 Local checks cover all retail pages, the account exchange, write origins and cookie isolation, wholesale sign-in and idempotent checkout replay, and the previous retail preview. Full GitHub Tests are required before this release merges.
+
+The final revision rejects upstream redirects with the Workers runtime’s manual redirect mode. A local Chromium run used the real Workers and retail database to check sign-in return, account edits, checkout retry, order history, and sign-out with a simulated provider identity.
