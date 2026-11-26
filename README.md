@@ -1,5 +1,5 @@
 # Strangers release publisher
 
-Source commit `7f582462eb4372494b44d1ee60a8e480544f4cc7` based on `ba67d601ff97c4248b1eb84fb064b618618c1176` via `codex/branded-retail-preview`.
+Source commit `f3cfb6a40a14a43a50a8cfea7a6825ee54e5211a` based on `7e084bb8d817d454802f87d3fb41a5bfb66c8dc0` via `codex/consumer-account-login`.
 
-Publishes the consumer storefront at the preview hostname through GitHub and the existing Cloudflare Workers Build. The workflow verifies deployment identity and waits for GitHub Tests before merging.
+Publishes first-party consumer accounts and the isolated Consumer admin connection via GitHub and Cloudflare Workers Builds after GitHub Tests.

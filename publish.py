@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/branded-retail-preview"
-EXPECTED = "7f582462eb4372494b44d1ee60a8e480544f4cc7"
-PRIOR = "a33ba0e6157e86c0160f4a1a9380d1958c4d1336"
+BRANCH = "codex/consumer-account-login"
+EXPECTED = "f3cfb6a40a14a43a50a8cfea7a6825ee54e5211a"
+PRIOR = ""
 TIMED_OUT_TEST_RUN = None
-TITLE = "Publish the consumer storefront at the preview address"
+TITLE = "Use Strangers customer sign-in and isolate consumer ordering"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

@@ -1,10 +1,8 @@
-Serve the reviewed consumer storefront at `preview.staffstrangerscoffee.com` through the existing Wrangler deployment.
+Fixes the retail account and Consumer Admin issues on the branded preview.
 
-- Publish the reviewed retail pages and namespaced assets from the pinned preview source.
-- Keep retail account data and test orders on the existing backend. Native sign-in returns to the branded hostname through a single-use code bound to the browser.
-- Keep legacy wholesale sign-in, order links, browser storage, and checkout recovery at the same origin under `/wholesale/`. The older `/shop/` preview remains available.
-- Route the Consumer admin storefront link to the branded preview.
+- Adds Strangers email/password sign-in, email-verified account creation and password reset. Checkout requires a retail account and records test orders.
+- Connects Consumer Admin to retail orders and catalogue controls through signed service requests. Retail has a separate payment gateway readiness state.
+- Keeps the retail preview on its own route allowlist. Wholesale ordering stays on the wholesale hostname and staff wholesale access stays on the staff site. Retail auth ignores existing staff and wholesale cookies.
+- Adds focused tests for account endpoint Origin and cookie handling, delivery to a mock mailbox, service signature verification, and the retail/wholesale boundary.
 
-Local checks cover all retail pages, the account exchange, write origins and cookie isolation, wholesale sign-in and idempotent checkout replay, and the previous retail preview. Full GitHub Tests are required before this release merges.
-
-The final revision rejects upstream redirects with the Workers runtime’s manual redirect mode. A local Chromium run used the real Workers and retail database to check sign-in return, account edits, checkout retry, order history, and sign-out with a simulated provider identity.
+Local typecheck, Workers/API tests and mobile/desktop account checks passed. GitHub Tests gates the production release.
