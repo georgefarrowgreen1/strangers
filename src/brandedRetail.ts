@@ -4,6 +4,7 @@ import { sendRetailAccountMail } from "./retailAccountMail";
 import { retailInstagram } from "./retailInstagram";
 import { retailServicePublicKey, retailServiceRequest } from "./retailService";
 import { noStore, staticFile, withFingerprints } from "./siteAssets";
+import { applyStaticConsumerFields, customConsumerContent, applyConsumerFooterLinks } from "./consumerEditorStatic";
 import { applyConsumerPageMetadata } from "./consumerEditorMetadata";
 import { readPublishedConsumerEditor, readPublishedConsumerMedia } from "./consumerEditorClient";
 import { PAGES as EDITOR_PAGES, customPageForKey, pageForPath, type ConsumerEditorPage } from "../public/consumer-preview/assets/editor-model.js";
@@ -286,11 +287,13 @@ async function retailPage(req: Request, env: Env, url: URL, page = url.pathname,
         .on('meta[name="description"]', { element(e) { e.setAttribute("content", title); } })
         .on("main", { element(e) {
           e.setAttribute("class", "consumer-custom-page");
-          const escaped = title.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-          e.setInnerContent('<h1 class="consumer-page-title">' + escaped + '</h1>', {html:true});
+          e.setInnerContent(customConsumerContent(pages[scope]), {html:true});
         } });
     }
     if (design) {
+      applyStaticConsumerFields(html, "shared", selectedPages.shared);
+      applyStaticConsumerFields(html, scope, selectedPages[scope]);
+      applyConsumerFooterLinks(html, navigation);
       const encoded = JSON.stringify(design).replace(/</g, "\\u003c");
       const theme = selectedPages[scope]?.theme ?? (product ? selectedPages.product?.theme : undefined) ?? design.theme;
       html.on("html", { element(e) { e.setAttribute("data-consumer-theme", theme); } })

@@ -196,7 +196,13 @@ export function presentation(doc, scope, initial, description, onPick, commerce)
         ? JSON.stringify(design.productFields || Object.fromEntries(Object.entries(design.pages).filter(([id]) => id.startsWith('product:')))) : '');
       let entry = widgets.get(id);
       if (!entry || entry.signature !== signature) {
-        const node = widgetElement(doc, item, preview, design, commerce);
+        // Custom pages arrive with readable editorial HTML. Adopt the server-rendered article
+        // so the first client pass keeps it in place. Catalogue widgets add their live card grid.
+        const rendered = !preview && !entry && [...root.children].find(child => child.getAttribute('data-consumer-rendered-widget') === id);
+        const editorial = !['coffee-shelf','locations-list'].includes(item.type);
+        const node = rendered && editorial ? rendered : widgetElement(doc, item, preview, design, commerce);
+        if (rendered && rendered !== node) rendered.replaceWith(node);
+        node.removeAttribute('data-consumer-rendered-widget');
         entry?.node.replaceWith(node);
         entry = {signature, node};
         widgets.set(id, entry);
