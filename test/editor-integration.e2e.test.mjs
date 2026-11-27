@@ -225,3 +225,34 @@ test("an admin can build a custom page from a template, reopen its draft and rem
     await context.close();
   }
 });
+
+test("published product merchandising follows a coffee from its shoppable shelf to the real cart", {timeout: 60000}, async () => {
+  const initial = await change("", undefined, "GET");
+  const draft = structuredClone(initial.draft);
+  const title = "Bom Jesus from Alta Mogiana";
+  draft.pages["product:bom-jesus"] = {fields:{"product-title":title, "product-image-alt":"Our Bom Jesus coffee", "note-1":"Cocoa"}};
+  draft.pages.home = {sections:["w-coffees", "hero"], widgets:[
+    {id:"w-coffees", type:"coffee-shelf", heading:"Roastery favourites", items:["rocko", "bom-jesus"]},
+  ]};
+  const saved = await change("", {revision:initial.revision, document:draft}, "PUT");
+  await change("/publish", {revision:saved.revision});
+  const context = await localBrowser({width:393, height:852});
+  try {
+    const page = await context.newPage();
+    await page.goto(retail);
+    const cards = page.locator('[data-consumer-widget="w-coffees"] .consumer-retail-card');
+    await cards.nth(1).waitFor();
+    assert.match(await cards.nth(0).textContent(), /Rocko/);
+    assert.match(await cards.nth(1).textContent(), /Cocoa.*£10.50/);
+    assert.equal(await cards.nth(1).getByRole("heading").textContent(), title);
+    await cards.nth(1).click();
+    await page.getByRole("heading", {name:title, level:1}).waitFor();
+    await page.locator('#retail-product-grind').selectOption("Filter / Medium");
+    await page.getByRole("button", {name:"Add to cart", exact:true}).click();
+    await page.locator(".cart-line").getByText(title, {exact:true}).waitFor();
+    const lines = await page.evaluate(() => JSON.parse(localStorage.getItem("strangers-coffee-proposal.cart.v1")));
+    assert.deepEqual(lines, [{id:"bom-jesus", size:"250g", grind:"Filter / Medium", qty:1}]);
+  } finally {
+    await context.close();
+  }
+});
