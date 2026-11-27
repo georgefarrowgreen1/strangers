@@ -1,3 +1,3 @@
-Adds on-page section and widget controls, independent mobile layouts, and native search and social metadata editing for consumer pages and products. The admin editor supports previewing, resetting and publishing these changes. The preview storefront retains its noindex policy.
+Staff and Admin now use one structured label destination and a shared wholesale dispatch queue. Uncertain bookings are reconciled by looking up the original Royal Mail reference. Admin can check the configured service for the reviewed parcel without buying postage.
 
-The reviewed build passed 94 automated checks, TypeScript and a Wrangler deployment dry run. This change merges cleanly with the Royal Mail packed-weight update on main.
+Includes additive migration 54 and preserves the existing Click & Drop instructions for parcels over the packed weight limit. The reviewed release passed 29 focused API checks, 21 desktop and mobile browser checks, TypeScript and a Wrangler production dry run. Carrier requests in local tests used fixtures.

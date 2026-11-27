@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/consumer-layout-seo"
-EXPECTED = "de39437223c641f6894356cc0d376c16a31a7d6d"
-PRIOR = "22764bebc66cf6df9654df31f5cbd618d3008977"
+BRANCH = "codex/royal-mail-dispatch-queue"
+EXPECTED = "d12ed49f6ee616729903fec2a2554daff56979ba"
+PRIOR = "82429433c2c8e723214a6887d447177880a12978"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Add responsive layout and SEO editing to the consumer storefront"
+TITLE = "Unify wholesale dispatch and recover Royal Mail bookings"
 DRAFT_ONLY = False
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
