@@ -18,7 +18,7 @@ EXPECTED = "04fe73df273db027282ff20d127164fd644cd9cd"
 PRIOR = "92d5f660515f36e669c1b03de434e05c8f91595b"
 TIMED_OUT_TEST_RUN = None
 TITLE = "Add the consumer storefront editor and product management"
-DRAFT_ONLY = True
+DRAFT_ONLY = False
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -236,13 +236,17 @@ def publish(env, progress, work):
              "--title", TITLE, *(["--draft"] if DRAFT_ONLY else []),
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
+    review = json.loads(command(["gh", "pr", "view", url, "--repo", TARGET, "--json", "isDraft,headRefOid"], env=env))
+    if review["headRefOid"] != EXPECTED:
+        raise RuntimeError("The pull request head has changed since this release was reviewed.")
     if DRAFT_ONLY:
-        review = json.loads(command(["gh", "pr", "view", url, "--repo", TARGET, "--json", "isDraft,headRefOid"], env=env))
-        if not review["isDraft"] or review["headRefOid"] != EXPECTED:
+        if not review["isDraft"]:
             raise RuntimeError("The reviewed release is not on its expected draft pull request.")
         progress.update("Draft pull request ready", f"[{url}]({url})", conclusion="success", url=url)
         print(f"Draft pull request: {url}", flush=True)
         return
+    if review["isDraft"]:
+        command(["gh", "pr", "ready", url, "--repo", TARGET], env=env)
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
     print(f"Pull request: {url}", flush=True)
     # Allow the required Tests job its 35-minute budget and time for GitHub to report the result.
