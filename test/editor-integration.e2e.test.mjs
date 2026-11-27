@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
 import { chromium } from "playwright";
-import { startEditorFixture, admin, retail, wholesale, editorPath } from "./editor-integration-fixture.mjs";
+import { startEditorFixture, openLocalBrowser, admin, retail, wholesale, editorPath } from "./editor-integration-fixture.mjs";
 
 let fixture, browser;
 before(async () => {
@@ -11,28 +11,7 @@ before(async () => {
 });
 after(async () => { await browser?.close(); await fixture?.stop(); });
 
-async function localBrowser(viewport, signedIn = false) {
-  const context = await browser.newContext({viewport, serviceWorkers: "block"});
-  if (signedIn) {
-    const [name, value] = fixture.cookie.split("=");
-    await context.addCookies([{name, value, url: admin, httpOnly: true, secure: true, sameSite: "Lax"}]);
-  }
-  await context.routeWebSocket("**/*", route => route.close());
-  await context.route("**/*", async route => {
-    const req = route.request();
-    const url = new URL(req.url());
-    if (url.origin !== retail && !(signedIn && url.origin === admin)) return route.abort("blockedbyclient");
-    const response = await fixture.runtime.dispatchFetch(url.href, {
-      method: req.method(), headers: await req.allHeaders(),
-      ...(req.postDataBuffer() ? {body: req.postDataBuffer()} : {}), redirect: "manual",
-    });
-    const headers = Object.fromEntries(response.headers);
-    delete headers["content-length"];
-    delete headers["content-encoding"];
-    await route.fulfill({status: response.status, headers, body: Buffer.from(await response.arrayBuffer())});
-  });
-  return context;
-}
+const localBrowser = (viewport, signedIn) => openLocalBrowser(fixture, browser, viewport, signedIn);
 
 async function change(action, body, method = "POST") {
   const response = await fixture.request(admin, editorPath + action, method, body, fixture.cookie);
@@ -319,7 +298,7 @@ test("published buyer-flow wording preserves finder choices, checkout identity, 
     assert.equal(body.method,"delivery");
     assert.equal(body.deliveryService,"royal-mail-tracked-48");
     assert.equal(body.contact.name,"Sample Customer");
-    assert.deepEqual(body.lines,[{id:"bom-jesus",size:"250g",grind:"Filter / Medium",qty:1}]);
+    assert.deepEqual(body.lines,[{id:"bom-jesus",size:"250g",grind:"Filter / Medium",qty:1,expectedUnitPrice:1050}]);
     await page.getByRole("heading",{name:"Preparing the order summary"}).waitFor();
     await respond(); respond=null;
     await page.getByRole("heading",{name:"Your preview order is ready to view"}).waitFor();

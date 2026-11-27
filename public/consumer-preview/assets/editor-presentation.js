@@ -192,7 +192,7 @@ export function presentation(doc, scope, initial, description, onPick, commerce)
     const configured = new Map((settings.widgets || []).map(item => [item.id,item]));
     for (const [id, value] of widgets) if (!configured.has(id)) {value.node.remove(); widgets.delete(id);}
     for (const [id, item] of configured) {
-      const signature = JSON.stringify(item) + Boolean(commerce) + (item.type === 'coffee-shelf'
+      const signature = JSON.stringify(item) + Boolean(commerce) + (item.type === 'coffee-shelf' ? commerce?.availability.revision ?? 0 : '') + (item.type === 'coffee-shelf'
         ? JSON.stringify(design.productFields || Object.fromEntries(Object.entries(design.pages).filter(([id]) => id.startsWith('product:')))) : '');
       let entry = widgets.get(id);
       if (!entry || entry.signature !== signature) {
@@ -274,7 +274,11 @@ export function presentation(doc, scope, initial, description, onPick, commerce)
         settings.widgets?.some(widget => ['coffee-shelf','locations-list'].includes(widget.type));
       if (hasMerchandising && !commerce && !loadingCommerce) {
         loadingCommerce = true;
-        import('./editor-shop-widgets.js').then(module => { commerce = module; schedule(); }).catch(() => {
+        import('./editor-shop-widgets.js').then(async module => {
+          commerce = module;
+          if (!preview && settings.widgets?.some(widget => widget.type === 'coffee-shelf')) await module.availability.refresh();
+          schedule();
+        }).catch(() => {
           // Native catalogue and checkout continue to work if an optional display module fails to load.
           loadingCommerce = false;
         });
@@ -328,6 +332,7 @@ export function presentation(doc, scope, initial, description, onPick, commerce)
     doc.addEventListener('submit', prevent, true);
     doc.addEventListener('dragstart', prevent, true);
   }
+  doc.addEventListener('retail-catalogue-updated', schedule);
   const Observer = doc.defaultView?.MutationObserver;
   if (Observer) observer = new Observer(schedule);
   paint();
@@ -336,6 +341,7 @@ export function presentation(doc, scope, initial, description, onPick, commerce)
     select(selection) {picked = selection; paintSelection(true);},
     destroy() {
       dead = true;
+      doc.removeEventListener('retail-catalogue-updated',schedule);
       observer?.disconnect(); activeNodes.clear(); widgets.clear(); anchors.clear();
       doc.removeEventListener('mousedown',prevent,true); doc.removeEventListener('click',pick,true); doc.removeEventListener('auxclick',prevent,true);
       doc.removeEventListener('submit',prevent,true); doc.removeEventListener('dragstart',prevent,true);

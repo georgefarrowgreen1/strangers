@@ -119,10 +119,11 @@ export class ConsumerEditorStore extends DurableObject<Env> {
   private async request(req: Request) {
     const path = new URL(req.url).pathname;
     const read = req.method === "GET" || req.method === "HEAD";
-    if (path === "/public" && req.method === "GET") {
+    if ((path === "/public" || path === "/admin/published") && req.method === "GET") {
       const row = this.sql.exec<ReleaseRow>(`SELECT r.version,r.document FROM editor_state s
-        JOIN releases r ON r.version=s.published_revision WHERE s.id=1 AND r.version>0`).toArray()[0];
-      return row ? json({revision: row.version, document: JSON.parse(row.document)}) : new Response(null, {status: 204});
+        JOIN releases r ON r.version=s.published_revision WHERE s.id=1`).one();
+      if (path === "/public" && !row.version) return new Response(null, {status: 204});
+      return json({revision: row.version, document: JSON.parse(row.document)});
     }
     if (path.startsWith("/public/") && read) {
       const id = editorMediaPath.exec(path.slice("/public".length))?.[1];

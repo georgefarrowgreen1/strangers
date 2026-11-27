@@ -3,7 +3,7 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, o
   const endpoint = "/api/admin/consumer";
   const previewUrl = "https://preview.staffstrangerscoffee.com/";
   const tabs = [
-    ["overview", "Overview"], ["orders", "Orders"], ["customers", "Customers"], ["catalogue", "Catalogue"], ["support", "Support"], ["editor", "Site editor"],
+    ["overview", "Overview"], ["orders", "Orders"], ["customers", "Customers"], ["products", "Products"], ["support", "Support"], ["editor", "Site editor"],
   ];
   const statuses = [
     ["placed", "Placed", "acc"],
@@ -56,7 +56,7 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, o
   const heading = (title, note) => html`<header class="consumer-panel-title"><h2>${title}</h2>${note ? html`<p>${note}</p>` : ""}</header>`;
 
   function navigation(active = section) {
-    const panelId = active === "editor" ? "consumerEditor" : "consumerPanel";
+    const panelId = active === "editor" ? "consumerEditor" : active === "products" ? "consumerProducts" : "consumerPanel";
     return html`<div class="seg consumer-tabs" id="consumerTabs" role="group" aria-label="Consumer sections">
       ${tabs.map(([id, label]) => html`<button type="button" data-act="consumer-tab" data-id="${id}" aria-controls="${panelId}" aria-pressed="${String(active === id)}">${label}</button>`)}
     </div><label class="field consumer-section-picker"><span class="fl">Consumer section</span>
@@ -72,7 +72,7 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, o
     const summaries = [
       ["orders", "bag", "Preview orders", orderCount ?? orders.length],
       ["customers", "people", "Recent profiles", customers.length],
-      ["catalogue", "coffee", "Available coffees", products.filter(product => product.available).length],
+      ["products", "coffee", "Available products", products.filter(product => product.available).length],
     ];
     return html`
       <div class="consumer-summary" aria-label="Preview summary">
@@ -172,24 +172,9 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, o
     </ul>`;
   }
 
-  function catalogue() {
-    const rows = data.products.filter(product => matches(product.name));
-    if (!rows.length) return empty("coffee", data.products.length ? "No coffees match your search." : "No coffees in the preview catalogue yet.");
-    return html`<ul class="consumer-list" role="list">
-      ${rows.map(product => html`<li class="item consumer-product">
-        <span class="tx"><b>${product.name}</b><span>${product.available ? "Available in preview" : "Unavailable in preview"}</span></span>
-        <label class="consumer-toggle">
-          <input type="checkbox" role="switch" class="switch" id="consumer-product-${product.id}" data-consumer-product="${product.id}"
-            aria-label="Availability for ${product.name}" ${product.available ? raw("checked") : ""} ${writes.has(endpointFor("products", product.id)) || updating ? raw("disabled") : ""}>
-        </label>
-      </li>`)}
-    </ul>`;
-  }
-
-  const lists = { customers, catalogue, support };
+  const lists = { customers, support };
   const listOptions = {
     customers: ["Customers", "Profiles saved by preview customers", "Search consumer customers", "Search name or phone"],
-    catalogue: ["Catalogue", "Control availability in the preview shop", "Search consumer coffees", "Search coffees"],
     support: ["Support", "Messages and order enquiries from the preview", "Search consumer support", "Search messages or order references"],
   };
   function panel() {
@@ -216,7 +201,7 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, o
           ${svg("refresh")}<span>Refresh</span>
         </button>` : ""}
       </div>`)}
-      ${data.connected ? html`<div class="consumer-toolbar">${navigation()}</div>` : html`<div class="consumer-toolbar"><button class="btn soft" type="button" data-act="consumer-tab" data-id="editor">Site editor</button></div>`}
+      ${data.connected ? html`<div class="consumer-toolbar">${navigation()}</div>` : html`<div class="consumer-toolbar"><button class="btn soft" type="button" data-act="consumer-tab" data-id="products">Products</button><button class="btn soft" type="button" data-act="consumer-tab" data-id="editor">Site editor</button></div>`}
       <p class="consumer-message" id="consumerMessage" role="status" ${message ? "" : raw("hidden")}>${message}</p>
       <div id="consumerPanel" aria-busy="${String(updating)}">${panel()}</div>`;
   }
@@ -366,10 +351,10 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, o
 
   async function selectSection(id, opener) {
     if (!tabs.some(([key]) => key === id)) return;
-    if (id === "editor" || find("consumerEditor")) {
+    if (["editor", "products"].includes(id) || find("consumerToolWorkspace")) {
       if (!await openSection(id)) {
         const picker = find("consumerSection");
-        if (picker) picker.value = find("consumerEditor") ? "editor" : section;
+        if (picker) picker.value = find("consumerToolWorkspace")?.dataset.tool || section;
       }
       return;
     }
@@ -673,43 +658,27 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, o
     finally { if (opener.isConnected) opener.disabled = false; }
   }
 
-  async function setAvailability(toggle) {
-    const product = data?.products.find(entry => entry.id === toggle.dataset.consumerProduct);
-    if (!product) return;
-    const available = toggle.checked;
-    toggle.checked = product.available;
-    const path = endpointFor("products", product.id);
-    if (available === product.available || writes.has(path) || updating) return;
-    toggle.disabled = true;
-    try {
-      const saved = await save(path, () => api("PATCH", path, { available }), () => { product.available = available; });
-      if (!saved) return;
-      const current = find(toggle.id);
-      if (current) {
-        current.checked = available;
-        current.closest("li").querySelector(".tx span").textContent = available ? "Available in preview" : "Unavailable in preview";
-      }
-      toast(available ? "Coffee made available." : "Coffee marked unavailable.");
-    } catch (err) { report(err.message); }
-    finally {
-      const current = find(toggle.id);
-      if (current) current.disabled = false;
-    }
-  }
-
   return {
     view,
+    currentSection: () => section,
     setSection(id) {
-      if (tabs.some(([key]) => key === id && key !== "editor")) section = id;
+      if (tabs.some(([key]) => key === id && !["editor", "products"].includes(key))) section = id;
     },
-    editorView() {
-      return html`<div class="consumer-workspace" id="consumerEditorWorkspace">
-        ${head("Site editor", "", html`<a class="btn soft consumer-open-storefront" href="${previewUrl}" target="_blank" rel="noopener" aria-label="Open storefront">${svg("external")}<span>Open storefront</span></a>`)}
-        <div class="consumer-toolbar">${navigation("editor")}</div>
-        <div id="consumerEditor"><p role="status">Opening site editor…</p></div>
+    toolView(tool) {
+      const editor = tool === "editor";
+      return html`<div class="consumer-workspace" id="consumerToolWorkspace" data-tool="${tool}">
+        ${head(editor ? "Site editor" : "Products", "", html`<a class="btn soft consumer-open-storefront" href="${previewUrl}" target="_blank" rel="noopener" aria-label="Open storefront">${svg("external")}<span>Open storefront</span></a>`)}
+        <div class="consumer-toolbar">${navigation(tool)}</div>
+        <div id="${editor ? "consumerEditor" : "consumerProducts"}"><p role="status">Loading ${editor ? "site editor" : "products"}…</p></div>
       </div>`;
     },
-    async mountEditor(host) {
+    async mountTool(tool) {
+      const host = find(tool === "editor" ? "consumerEditor" : "consumerProducts");
+      if (tool === "products") {
+        const {mountConsumerProducts} = await import("./consumer-products.js");
+        if (host.isConnected) return mountConsumerProducts(host, {api, confirmSheet, toast});
+        return;
+      }
       const {mountConsumerEditor} = await import("./consumer-editor.js");
       if (host.isConnected) return mountConsumerEditor(host, {api, confirmSheet, toast});
     },
@@ -750,7 +719,6 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, o
       orderFilter = value;
       void loadOrders();
     },
-    setAvailability,
     async act(name, id, opener) {
       if (name === "consumer-tab") await selectSection(id, opener);
       if (name === "consumer-refresh") await refresh(opener);

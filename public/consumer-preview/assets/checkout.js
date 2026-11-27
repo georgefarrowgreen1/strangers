@@ -3,7 +3,7 @@ import { escapeHtml as html } from './html.js';
 import { money } from './store.js';
 import { tampingMarkup } from './checkout-motion.js';
 
-export const sizeNames = { '250g': '250 g', '500g': '500 g', '1kg': '1 kg', '300g': '3 × 100 g', one: 'One size' };
+export const sizeNames = { '250g': '250 g', '500g': '500 g', '1kg': '1 kg', '300g': '300 g', one: 'One size' };
 export const grindLabel = grind => grind === 'Whole bean' ? 'Beans' : grind === 'N/A' ? '' : grind;
 export const orderStatusLabels = {
   placed: 'Order placed', preparing: 'Preparing', ready: 'Ready', dispatched: 'Dispatched',

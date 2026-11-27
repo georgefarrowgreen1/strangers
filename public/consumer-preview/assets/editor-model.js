@@ -13,6 +13,8 @@ export const WIDGET_TYPES = Object.freeze({
 });
 export const ASSETS = Object.freeze(assetFiles);
 export const COFFEE_CHOICES = products.filter(p => !p.category).map(({id, name}) => ({id,name}));
+const externalGiftCards = new Set(['online-gift-card', 'in-store-gift-card']);
+const productIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const TEMPLATES = {
   collection: { label: 'Coffee collection', widgets: [
     { type: 'text', heading: 'Explore our coffee', body: 'Choose your next coffee from our Norwich roastery.' },
@@ -327,6 +329,8 @@ function safeLink(value, pages) {
   try { url = new URL(value,base); } catch { invalid('Choose a valid link.'); }
   if (url.protocol !== 'https:' || url.username || url.password || value.startsWith('//')) invalid('Choose an HTTPS or storefront link.');
   if (value.startsWith('/') || url.origin === base) {
+    const productSlug = /^\/coffee\/p\/([a-z0-9-]{1,100})\/?$/.exec(url.pathname)?.[1];
+    if (productSlug && productIdPattern.test(productSlug)) return url.pathname+url.search+url.hash;
     const key = pageForPath(url.pathname);
     if (!key || (key.startsWith('custom:') && !Object.hasOwn(pages,key))) invalid('Choose an existing storefront page.');
     return url.pathname+url.search+url.hash;
@@ -353,7 +357,11 @@ function normalizeWidget(raw, pages) {
   }
   if (Object.hasOwn(w,'items')) {
     if (w.type !== 'coffee-shelf' || !Array.isArray(w.items) || !w.items.length || w.items.length > 6) invalid('Choose up to six coffees for a coffee shelf.');
-    out.items=uniqueList(w.items,new Set(COFFEE_CHOICES.map(product=>product.id)),'coffee selection');
+    // A saved shelf remains editable after a coffee is archived. The renderer
+    // resolves each stable ID against the current catalogue and skips missing items.
+    if (w.items.some(id => typeof id !== 'string' || id.length > 100 || !productIdPattern.test(id) || externalGiftCards.has(id))
+        || new Set(w.items).size !== w.items.length) invalid('Check the coffee selection.');
+    out.items = [...w.items];
   }
   if (Object.hasOwn(w,'layout')) out.layout=choice(w.layout,{stack:true,split:true,reverse:true},'widget layout');
   if (Object.hasOwn(w,'image')) out.image=imageValue(w.image);

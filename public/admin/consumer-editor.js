@@ -1,9 +1,11 @@
 import {
   COFFEE_CHOICES, THEMES, LAYOUTS, WIDGET_TYPES, ASSETS, TEMPLATES, emptyDocument, imageUrl, referencedMedia, validateDocument,
 } from '/api/admin/consumer/editor/assets/editor-model.js';
+import { availability } from '/api/admin/consumer/editor/assets/products.js';
 import { mountEditorCanvas } from '/api/admin/consumer/editor/assets/editor-render.js';
 
 import { editorPages, mountEditorPages } from './consumer-editor-pages.js';
+import { buildPublishReview, renderPublishReview } from './consumer-editor-review.js';
 
 const previewStates = {
   finder: [['brew','Brew method'], ['taste','Taste'], ['match','Coffee match']],
@@ -122,6 +124,7 @@ export function mountConsumerEditor(host, { api, confirmSheet }) {
   let state, draft, saved = '', scope = 'home', pick = { scope: 'home' }, tab = 'content';
   let busy = false, conflict = false, notice = '', problem = false, device = matchMedia('(max-width: 740px)').matches ? 'mobile' : 'desktop';
   let viewState = '', outlineOpen = false, expanded = false, expandButton, previewGeneration = 0, lastField = '', previewReady = false;
+  let coffees = COFFEE_CHOICES, catalogueUnavailable = false;
   const undo = [], redo = [], usable = new AbortController();
   const isDirty = () => Boolean(draft && snapshot(draft) !== saved);
   const shelf = () => draft.pages[pick.scope] || {};
@@ -230,10 +233,26 @@ export function mountConsumerEditor(host, { api, confirmSheet }) {
     });
   }
   async function publish() {
-    if (!await confirmSheet({ title: 'Publish storefront changes?', text: 'All saved changes across the consumer preview will go live together. You can restore an earlier version from Versions.', confirm: 'Publish storefront' }) || !active) return;
-    return operation(async () => {
+    await operation(async () => {
+      const reviewed = validateDocument(draft);
+      const live = await api('GET', endpoint + '/published');
+      if (!active) return;
+      if (live.revision !== state.publishedRevision) {
+        throw Object.assign(new Error('The storefront has changed since this draft was loaded.'), {code: 'editor_conflict'});
+      }
+      const changes = buildPublishReview(live.document, reviewed, {
+        pages: {...editorPages(live.document), ...editorPages(reviewed)},
+        themes: THEMES, layouts: LAYOUTS, widgetTypes: WIDGET_TYPES, coffees, media: state.media,
+      });
+      const approved = await confirmSheet({
+        title: 'Publish storefront changes?',
+        text: 'Review what customers will see. Publishing includes any unsaved edits in this draft.',
+        content: renderPublishReview(changes, ref => imageUrl(ref, true).replace('/consumer-preview/assets/', endpoint + '/assets/')),
+        confirm: 'Publish storefront',
+      });
+      if (!approved || !active) return;
       if (isDirty()) {
-        const next = await api('PUT', endpoint, { revision: state.revision, document: validateDocument(draft) });
+        const next = await api('PUT', endpoint, { revision: state.revision, document: reviewed });
         if (!active) return;
         applyState(next, true);
       }
@@ -242,6 +261,7 @@ export function mountConsumerEditor(host, { api, confirmSheet }) {
       applyState(published, true);
       setNotice('Published to the consumer storefront.');
     });
+    if (active && !publishButton.disabled && document.activeElement === document.body) publishButton.focus();
   }
   async function recoverEdits() {
     return operation(async () => {
@@ -515,10 +535,10 @@ export function mountConsumerEditor(host, { api, confirmSheet }) {
   function coffeeChoices(widget) {
     const chosen = widget.items || ['bom-jesus', 'rocko', 'anserma'];
     const box = element('fieldset', {class:'ce-coffees'}, element('legend', {}, 'Coffees in display order'));
-    const names = new Map(COFFEE_CHOICES.map(item => [item.id,item.name]));
+    const names = new Map(coffees.map(item => [item.id, item.archived ? item.name + ' (removed)' : item.name]));
     const save = items => change(() => { selectedWidget().items = items; });
     chosen.forEach((id,index) => {
-      const name = names.get(id);
+      const name = names.get(id) || id;
       const move = by => { const next = [...chosen]; next.splice(index,1); next.splice(index+by,0,id); save(next); };
       box.append(element('div', {class:'ce-coffee-row'}, element('b', {}, name),
         element('div', {class:'ce-inline'},
@@ -526,8 +546,9 @@ export function mountConsumerEditor(host, { api, confirmSheet }) {
           button('Down',()=>move(1),'soft sm',{disabled:index===chosen.length-1, 'aria-label':'Move '+name+' down'}),
           button('Remove',()=>save(chosen.filter(key=>key!==id)),'soft sm',{disabled:chosen.length===1, 'aria-label':'Remove '+name}))));
     });
-    if (chosen.length < 6) {
-      const remaining = COFFEE_CHOICES.filter(item=>!chosen.includes(item.id)).map(item=>[item.id,item.name]);
+    if (catalogueUnavailable) box.append(help('The current product list could not be loaded. Reopen the editor to choose another coffee.'));
+    if (chosen.length < 6 && !catalogueUnavailable) {
+      const remaining = coffees.filter(item=>!item.archived && !chosen.includes(item.id)).map(item=>[item.id,item.name]);
       if (remaining.length) box.append(field('Add a coffee', select([['','Choose coffee'],...remaining], '', id=>{if(id)save([...chosen,id]);})));
     }
     return box;
@@ -825,6 +846,18 @@ export function mountConsumerEditor(host, { api, confirmSheet }) {
       if (!active || token !== serial) return;
       applyState(result);
       build();
+      // Design editing is available even while the separate retail service is offline.
+      void api('GET', '/api/admin/consumer/products').then(result => {
+        if (!active || token !== serial || !Array.isArray(result.products)) return;
+        coffees = result.products.filter(item => item.category === 'coffee' || !item.category);
+        availability.setProducts(result.products.filter(item => !item.archived));
+        canvas?.update(draft);
+        if (selectedWidget()?.type === 'coffee-shelf') renderInspector();
+      }).catch(() => {
+        if (!active || token !== serial) return;
+        catalogueUnavailable = true;
+        if (selectedWidget()?.type === 'coffee-shelf') renderInspector();
+      });
     } catch (error) {
       if (!active || token !== serial) return;
       host.replaceChildren(element('div', { class: 'group glass ce-start-error', role: 'alert' }, element('h3', {}, 'Storefront editor unavailable'),

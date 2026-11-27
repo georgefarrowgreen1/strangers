@@ -176,7 +176,7 @@
 .consumer-page-form .consumer-page-check{display:flex;align-items:center;gap:8px;min-height:32px}
 
 @media(max-width:680px){
-  #consumerEditorWorkspace .pagehead{grid-template-columns:minmax(0,1fr) auto;align-items:center}
-  #consumerEditorWorkspace .consumer-open-storefront{grid-row:1;grid-column:2;min-height:44px;min-width:44px;justify-content:center;padding:8px}
-  #consumerEditorWorkspace .consumer-open-storefront span{display:none}
+  #consumerToolWorkspace .pagehead{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  #consumerToolWorkspace .consumer-open-storefront{grid-row:1;grid-column:2;min-height:44px;min-width:44px;justify-content:center;padding:8px}
+  #consumerToolWorkspace .consumer-open-storefront span{display:none}
 }

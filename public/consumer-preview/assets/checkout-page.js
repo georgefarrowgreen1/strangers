@@ -22,12 +22,12 @@ function saveReturnDraft(draft) {
 }
 
 function lineSelections(lines) {
-  return lines.map(({ id, size, grind, qty }) => ({ id, size, grind, qty }));
+  return lines.map(({ id, size, grind, qty, unitPrice }) => ({ id, size, grind, qty, expectedUnitPrice: unitPrice }));
 }
 
 function sameSelection(first, second) {
   return first.length === second.length && first.every(line =>
-    second.some(other => line.id === other.id && line.size === other.size && line.grind === other.grind && line.qty === other.qty));
+    second.some(other => line.id === other.id && line.size === other.size && line.grind === other.grind && line.qty === other.qty && line.expectedUnitPrice === other.unitPrice));
 }
 
 function focusHeading(root) {
@@ -37,7 +37,11 @@ function focusHeading(root) {
   if (heading.getBoundingClientRect().top < 0) heading.scrollIntoView({ block: 'nearest' });
 }
 
-export function setupRetailCheckout(root, { cafes, store, cartChanged, getServerAccount, availability }) {
+export function setupRetailCheckout(root, { cafes, store, cartChanged, getServerAccount, availability, refreshCatalogue }) {
+  root.addEventListener('error', event => {
+    const image = event.target;
+    if (image.matches('img') && image.getAttribute('src') !== '/consumer-preview/assets/mark.svg') image.src = '/consumer-preview/assets/mark.svg';
+  }, true);
   const header = document.getElementById('retail-checkout-heading');
   const cafeById = new Map(cafes.map(cafe => [cafe.id, cafe]));
   const defaultCafe = cafeById.has('dove-street') ? 'dove-street' : cafes[0]?.id;
@@ -151,10 +155,11 @@ export function setupRetailCheckout(root, { cafes, store, cartChanged, getServer
     const lines = store.cart();
     if (!lines.length) {
       root.innerHTML = emptyCheckoutMarkup;
+      if (failure || store.notice) root.querySelector('.retail-checkout-message p').textContent = failure || store.notice;
       if (focus) focusHeading(root);
       return;
     }
-    root.innerHTML = detailsStage({ cafes, method, cafe, contact, signedIn: auth !== 'guest' }, failure);
+    root.innerHTML = detailsStage({ cafes, method, cafe, contact, signedIn: auth !== 'guest' }, failure || store.notice);
     updateProfileHint();
     updateDetails();
     if (focus) focusHeading(root);
@@ -297,7 +302,9 @@ export function setupRetailCheckout(root, { cafes, store, cartChanged, getServer
       }
       if ([400, 409, 422].includes(error.status) && error.code !== 'idempotency_conflict') {
         clearOrderAttempt();
+        await refreshCatalogue();
         store.refresh();
+        cartChanged();
         renderDetails(true, error.message);
         return;
       }

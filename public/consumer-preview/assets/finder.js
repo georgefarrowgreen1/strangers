@@ -1,6 +1,7 @@
-import { grindLabel } from './checkout.js';
+import { grindLabel, sizeNames } from './checkout.js';
 import { escapeHtml as html } from './html.js';
 import { productPath } from './product-paths.js';
+import { originalProduct } from './products.js';
 import { money } from './store.js';
 
 const brews = [
@@ -55,7 +56,8 @@ function caffeine(product) {
 
 export function finderVariant(product, brew) {
   if (!product || product.available === false || !product.grinds?.length) return null;
-  const size = product.id === tastingFlightId ? '300g' : '250g';
+  const preferred = product.id === tastingFlightId ? '300g' : '250g';
+  const size = Object.hasOwn(product.prices, preferred) ? preferred : Object.keys(product.prices)[0];
   if (!Object.hasOwn(product.prices, size)) return null;
   const grind = product.grinds.includes(brew) ? brew : product.grinds[0];
   return { size, grind, price: product.prices[size] };
@@ -76,7 +78,7 @@ function matchingCoffees(products, answers) {
       (index === -1 ? 0 : weights.length - index) +
       (product.grinds.includes(answers.brew) ? 1 : 0);
   };
-  return products.filter(product => product.id !== tastingFlightId && caffeine(product) === answers.caffeine &&
+  return products.filter(product => !product.category && caffeine(product) === answers.caffeine &&
       finderVariant(product, answers.brew))
     .sort((a, b) => score(b) - score(a))
     .slice(0, 3);
@@ -140,7 +142,8 @@ function finderProductPath(product, grind) {
 function match(product, brew, originLabel) {
   const { size, grind, price } = finderVariant(product, brew.value);
   const origin = [product.country, product.process].filter(Boolean).map(html).join(' · ');
-  const reason = reasons[product.id]?.[1] ?? product.shortCopy;
+  const sameNotes = product.shortCopy === originalProduct(product.id)?.shortCopy;
+  const reason = sameNotes ? reasons[product.id]?.[1] ?? product.shortCopy : product.shortCopy;
   return `<article class="finder-best">
     <div class="finder-best-photo"><img src="${html(product.image)}" width="580" height="410" alt="${html(product.name)} coffee artwork"><span class="finder-best-tag">${originLabel}</span></div>
     <div class="finder-best-copy">
@@ -148,7 +151,7 @@ function match(product, brew, originLabel) {
       <p class="finder-best-notes">${html(product.notes.join(', '))}</p>
       <p class="finder-best-reason">${html(reason)}</p>
       <div class="finder-best-grind"><strong>${html(grindLabel(grind))}</strong>${brew.guide ? `<a data-finder-guide href="/brewguides/#${brew.guide[0]}">${brew.guide[1]}</a>` : '<a href="/brewguides/">Brew guides</a>'}</div>
-      <div class="finder-best-actions"><button class="button" type="button" data-finder-add="${html(product.id)}"><span data-finder-add-label>Add</span> ${size.replace('g', ' g')} · ${money(price)}</button><a href="${html(finderProductPath(product, grind))}">Coffee details</a></div>
+      <div class="finder-best-actions"><button class="button" type="button" data-finder-add="${html(product.id)}"><span data-finder-add-label>Add</span> ${html(sizeNames[size] ?? size)} · ${money(price)}</button><a href="${html(finderProductPath(product, grind))}">Coffee details</a></div>
       <p class="finder-add-error" role="alert" hidden></p>
     </div>
   </article>`;
@@ -161,15 +164,15 @@ function alternative(product, brew) {
     <img src="${html(product.image)}" width="300" height="240" alt="" loading="lazy">
     <div><p class="eyebrow">${html(difference)}</p><h5><a href="${html(finderProductPath(product, variant.grind))}">${html(product.name)}</a></h5>
     <p>${html(product.notes.join(', '))}</p>
-    <button type="button" class="text-button" data-finder-add="${html(product.id)}"><span data-finder-add-label>Add</span> ${variant.size.replace('g', ' g')} · ${money(variant.price)}</button><p class="finder-add-error" role="alert" hidden></p></div>
+    <button type="button" class="text-button" data-finder-add="${html(product.id)}"><span data-finder-add-label>Add</span> ${html(sizeNames[variant.size] ?? variant.size)} · ${money(variant.price)}</button><p class="finder-add-error" role="alert" hidden></p></div>
   </article>`;
 }
 
 function tastingFlight(product) {
-  const { price, grind } = finderVariant(product, '');
+  const { price, grind, size } = finderVariant(product, '');
   return `<article class="finder-alternative finder-flight">
-    <div><p class="eyebrow">Three 100 g bags · ${html(grindLabel(grind))}</p><h5><a href="${html(productPath(product))}">Roaster’s Tasting Flight</a></h5>
-      <p>Try Bom Jesus, Rocko Mountain and Anserma side by side.</p>
+    <div><p class="eyebrow">${html(sizeNames[size] ?? size)} · ${html(grindLabel(grind))}</p><h5><a href="${html(productPath(product))}">${html(product.name)}</a></h5>
+      <p>${html(product.shortCopy)}</p>
       <button type="button" class="text-button" data-finder-add="${html(product.id)}"><span data-finder-flight-label>Add flight</span> · ${money(price)}</button><p class="finder-add-error" role="alert" hidden></p></div>
   </article>`;
 }

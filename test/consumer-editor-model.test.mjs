@@ -59,6 +59,9 @@ test('reject unrecognized document controls, unsafe files/links, protected secti
   invalidPage({home:{widgets:[{id:'w-a',type:'text'},{id:'w-a',type:'text'}]}});
   invalidPage({home:{widgets:[{id:'w-a',type:'image',image:'asset:../../admin.js'}]}});
   invalidPage({home:{widgets:[{id:'w-a',type:'coffee-shelf',items:['online-gift-card']}]}});
+  invalidPage({home:{widgets:[{id:'w-a',type:'coffee-shelf',items:['../../shop']}]}});
+  const newCoffee = doc({home:{widgets:[{id:'w-a',type:'coffee-shelf',items:['new-single-origin']}]}});
+  assert.deepEqual(validateDocument(newCoffee).pages.home.widgets[0].items, ['new-single-origin']);
   invalidPage({home:{widgets:[{id:'w-a',type:'text',items:['rocko']}]}});
   invalidPage({'custom:../admin':{title:'Admin'}});
   invalidPage({'custom:sale':{title:' '}});

@@ -3,12 +3,13 @@ import { cleanEmail } from "./email/address";
 import { sendRetailAccountMail } from "./retailAccountMail";
 import { retailInstagram } from "./retailInstagram";
 import { retailServicePublicKey, retailServiceRequest } from "./retailService";
+import { readConsumerCatalogue, retailCatalogueResponse, retailProductPhoto } from "./consumerCatalogue";
 import { noStore, staticFile, withFingerprints } from "./siteAssets";
 import { applyStaticConsumerFields, customConsumerContent, applyConsumerFooterLinks } from "./consumerEditorStatic";
 import { applyConsumerPageMetadata } from "./consumerEditorMetadata";
 import { readPublishedConsumerEditor, readPublishedConsumerMedia } from "./consumerEditorClient";
 import { PAGES as EDITOR_PAGES, customPageForKey, pageForPath, type ConsumerEditorPage } from "../public/consumer-preview/assets/editor-model.js";
-import { productFromPath } from "../public/consumer-preview/assets/product-paths.js";
+import { productFromPath, productPath, type ProductRoute } from "../public/consumer-preview/assets/product-paths.js";
 
 export const BRANDED_RETAIL_ORIGIN = "https://preview.staffstrangerscoffee.com";
 const ACCOUNT_ORIGIN = "https://strangers-coffee-retail-demo.magicloom512.chatgpt.site";
@@ -231,7 +232,7 @@ async function retailWriteApi(req: Request, env: Env, path: string, maxBytes: nu
     "Checkout is temporarily unavailable. Try again to confirm this order." }, 503);
 }
 
-async function retailPage(req: Request, env: Env, url: URL, page = url.pathname, product?: string): Promise<Response> {
+async function retailPage(req: Request, env: Env, url: URL, page = url.pathname, product?: ProductRoute, catalogue?: ProductRoute[]): Promise<Response> {
   const path = "/consumer-preview" + page;
   const custom = /^\/pages\/([a-z0-9-]+)\/$/.exec(url.pathname)?.[1];
   // The released design is display data only. An unavailable editor must leave the shop usable.
@@ -247,7 +248,7 @@ async function retailPage(req: Request, env: Env, url: URL, page = url.pathname,
   if (page === "/account/" || page === "/checkout/") response.headers.set("referrer-policy", "no-referrer");
   // The marker makes checkout check the saved profile before taking an order. The account API
   // verifies the actual session before returning customer data or accepting any write.
-  const scope = custom ? "custom:" + custom : pageForPath(url.pathname) ?? "home";
+  const scope = custom ? "custom:" + custom : product ? "product:" + product.id : pageForPath(url.pathname) ?? "home";
   const pages = release?.document.pages ?? {};
   if (custom && !Object.hasOwn(pages, scope)) {
     await response.body?.cancel();
@@ -265,22 +266,28 @@ async function retailPage(req: Request, env: Env, url: URL, page = url.pathname,
       ["product-title","product-image","product-image-alt","product-description","note-1","note-2","note-3"].includes(key)))}] as const)
     .filter(([, config]) => Object.keys(config.fields).length));
   function definition(key: string, config: ConsumerEditorPage, generic?: ConsumerEditorPage) {
-    const meta = EDITOR_PAGES[key] ?? customPageForKey(key,config.title);
+    const builtIn = EDITOR_PAGES[key] ?? (key.startsWith("product:") ? EDITOR_PAGES.product : undefined);
+    const meta = builtIn ?? customPageForKey(key,config.title);
     if (!meta) return null;
-    const fields = EDITOR_PAGES[key]?.fields.filter(f => Object.hasOwn(config.fields ?? {}, f.id)
+    const fields = builtIn?.fields.filter(f => Object.hasOwn(config.fields ?? {}, f.id)
       || Object.hasOwn(generic?.fields ?? {}, f.id)).map(({id,kind,selector}) => ({id,kind,selector})) ?? [];
     const needsSections = (item?: ConsumerEditorPage) => item && (item.sections?.length || item.widgets?.length ||
       item.hidden?.length || Object.keys(item.sectionLayouts ?? {}).length);
     const sections = needsSections(config) || needsSections(generic)
-      ? (EDITOR_PAGES[key]?.sections ?? []).map(({id,selector,locked}) => ({id,selector,locked})) : [];
+      ? (builtIn?.sections ?? []).map(({id,selector,locked}) => ({id,selector,locked})) : [];
     return {root:meta.root, fields, sections};
   }
   const definitions = Object.fromEntries([...new Set(relevant)].map(key =>
     [key, definition(key, pages[key] ?? {}, key === scope && product ? pages.product : undefined)]));
   const design = release && (release.document.theme !== "heritage" || Object.keys(selectedPages).length || navigation.length || Object.keys(productFields).length)
     ? {schema:1, theme:release.document.theme, pages:selectedPages, navigation, productFields, scope, definitions} : null;
-  if (response.body && (product || design || proof(cookie(req, SESSION_COOKIE)))) {
+  if (response.body && (url.pathname === "/" || page === "/coffee/" || product || design || proof(cookie(req, SESSION_COOKIE)))) {
     const html = new HTMLRewriter();
+    if (page === "/coffee/") html.on("[data-catalogue-gifts] [data-catalogue-id]", {element(element) { element.remove(); }});
+    if (url.pathname === "/") html.on("#home-roasting-grid", {element(element) {
+      // Editorial samples belong to the admin canvas. Shopper highlights use the current range.
+      element.setInnerContent("");
+    }});
     if (custom) {
       const title = pages[scope].title ?? custom;
       html.on("title", { element(e) { e.setInnerContent(title + " | Strangers Coffee"); } })
@@ -306,7 +313,11 @@ async function retailPage(req: Request, env: Env, url: URL, page = url.pathname,
     if (proof(cookie(req, SESSION_COOKIE))) html.on("body", {
       element(element) { element.setAttribute("data-retail-signed-in", ""); },
     });
-    if (product) html.on("title", { element(element) { element.setInnerContent(product + " | Strangers Coffee"); } });
+    if (product) html.on("title", { element(element) { element.setInnerContent(product.name + " | Strangers Coffee"); } });
+    if (catalogue) html.on("head", { element(element) {
+      const data = JSON.stringify({products: catalogue}).replace(/</g, "\\u003c");
+      element.append('<script type="application/json" id="retail-catalogue">' + data + '</script>', {html:true});
+    } });
     applyConsumerPageMetadata(html, {...(product ? selectedPages.product?.meta : {}), ...selectedPages[scope]?.meta});
     response = html.transform(response);
   }
@@ -325,6 +336,9 @@ export async function handleBrandedRetail(req: Request, env: Env, url: URL, ctx?
   if (order) return retailWriteApi(req, env,
     "/consumer-orders-service/orders" + (order[1] ? "/" + order[1] : ""), order[1] ? 2048 : 24 * 1024);
   if (path === "/api/retail/support") return retailWriteApi(req, env, "/consumer-support-service/message", 12 * 1024);
+  if (path === "/api/retail/products") return req.method === "GET" ? retailCatalogueResponse(env) : methodNotAllowed("GET");
+  const productPhoto = /^\/consumer-product-media\/([a-f0-9]{64})$/.exec(path)?.[1];
+  if (productPhoto) return reading ? retailProductPhoto(env, productPhoto, false, req.method) : methodNotAllowed("GET, HEAD");
   if (path === "/signin") return reading ? redirect("/account/") : methodNotAllowed("GET, HEAD");
   if (path === "/consumer-auth/service-key") {
     return req.method === "GET" ? retailServicePublicKey(env).catch(unavailable) : methodNotAllowed("GET");
@@ -357,10 +371,18 @@ export async function handleBrandedRetail(req: Request, env: Env, url: URL, ctx?
   }
   if (PAGES.has(path)) return retailPage(req, env, url);
   if (PAGES.has(path + "/")) return redirect(path + "/" + url.search, 308);
-  const product = productFromPath(path);
-  if (product) {
+  if (/^\/coffee\/p\/[a-z0-9]+(?:-[a-z0-9]+)*\/?$/.test(path)) {
     if (!path.endsWith("/")) return redirect(path + "/" + url.search, 308);
-    return retailPage(req, env, url, "/product/", product.name);
+    const voucher = productFromPath(path);
+    if (voucher?.id === "online-gift-card" || voucher?.id === "in-store-gift-card") {
+      return retailPage(req, env, url, "/product/", voucher);
+    }
+    const catalogue = await readConsumerCatalogue(env);
+    if (!catalogue) return new Response("The product catalogue is temporarily unavailable. Please try again.", {
+      status: 503, headers: {"cache-control":"no-store","retry-after":"30"},
+    });
+    const product = catalogue.find(item => productPath(item) === path);
+    if (product) return retailPage(req, env, url, "/product/", product, catalogue);
   }
   return undefined;
 }

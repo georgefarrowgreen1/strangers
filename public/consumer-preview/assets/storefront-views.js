@@ -8,7 +8,7 @@ export function shelfProducts(shown, known) {
       <div class="product-image"><img src="${html(product.image)}" width="580" height="410" alt="" loading="lazy">
       ${!known || product.available === false ? '' : `<button class="product-quick-view" type="button" data-product="${html(product.id)}" aria-label="Quick view ${html(product.name)}">Quick view</button>`}</div>
       <div class="product-info"><p class="origin">${html(product.country)} · ${html(product.profile)}</p><h3>${html(product.name)}</h3><p class="notes">${html(product.shortCopy)}</p>
-      <div class="product-actions"><span>${product.available === false ? 'Unavailable' : `From ${money(product.prices['250g'])}`}</span><a class="button outline product-open" href="${productPath(product)}" aria-label="View ${html(product.name)}"><span class="product-open-full">View coffee</span><span class="product-open-short">View</span></a></div></div>
+      <div class="product-actions"><span>${product.available === false ? 'Unavailable' : `From ${money(Math.min(...Object.values(product.prices)))}`}</span><a class="button outline product-open" href="${productPath(product)}" aria-label="View ${html(product.name)}"><span class="product-open-full">View coffee</span><span class="product-open-short">View</span></a></div></div>
     </article>`).join('');
 }
 
@@ -21,8 +21,9 @@ export function quantityMarkup(qty, label, key) {
 
 export function cartView(store, retailCheckout, message) {
   const cart = store.cart();
+  const notice = [message, store.notice].filter(Boolean).map(text => `<p role="status" class="checkout-note">${html(text)}</p>`).join('');
   if (!cart.length) {
-    return `<div class="empty-bag"><h3>Your cart is empty.</h3><p>Start with one of the coffees on the shelf.</p>
+    return `<div class="empty-bag"><h3>Your cart is empty.</h3>${notice}<p>Start with one of the coffees on the shelf.</p>
       <div class="drawer-actions"><button type="button" class="button" data-keep-shopping>Browse coffee</button></div></div>`;
   }
   const totals = store.totals('delivery');
@@ -32,7 +33,7 @@ export function cartView(store, retailCheckout, message) {
     ? remaining ? `Spend over ${money(remaining)} more for free UK delivery.` : 'Add another coffee for free UK delivery.'
     : 'You’ve unlocked free UK delivery.';
   return `<div class="drawer-content">
-    ${message ? `<p role="status" class="checkout-note">${html(message)}</p>` : ''}
+    ${notice}
     <div class="shipping-progress" aria-live="polite"><span>${progress}</span><progress aria-label="Progress towards free UK delivery" max="${FREE_SHIPPING + 1}" value="${Math.min(subtotal, FREE_SHIPPING + 1)}"></progress></div>
     <ul>${cart.map(line => `<li class="cart-line" data-catalogue-id="${html(line.id)}"><img src="${html(line.product.image)}" alt="" width="64" height="64">
       <div><h3>${html(line.product.name)}</h3><p>${html(lineOptions(line))}</p>
@@ -41,4 +42,14 @@ export function cartView(store, retailCheckout, message) {
     <div class="drawer-actions">${retailCheckout ? '<button class="button" type="button" data-checkout data-return-checkout>Resume checkout</button>' : '<a class="button" href="/checkout/" data-checkout>Checkout</a>'}
       <button class="button outline" type="button" data-keep-shopping>Keep shopping</button></div>
   </div>`;
+}
+
+export function giftProducts(gifts) {
+  return gifts.map(product => `<article class="shop-gift" data-catalogue-id="${html(product.id)}">
+    <img src="${html(product.image)}" alt="${html(product.name)}" width="640" height="480" loading="lazy">
+    <div class="shop-gift-copy"><h3>${html(product.name)}</h3>
+      <p class="gift-price">${product.available === false ? 'Unavailable' : money(Math.min(...Object.values(product.prices)))}</p>
+      <div class="shop-gift-description"><p>${html(product.shortCopy || product.story)}</p></div>
+      <a class="button outline" href="${html(productPath(product))}" aria-label="View ${html(product.name)}">View details</a>
+    </div></article>`).join('');
 }

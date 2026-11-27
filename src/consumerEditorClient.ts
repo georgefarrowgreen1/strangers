@@ -13,7 +13,7 @@ function binding(env: Env) {
 }
 
 export function handleConsumerEditorAdmin(req: Request, env: Env, path: string): Promise<Response> {
-  if (path !== "/" && path !== "/publish" && path !== "/restore" && path !== "/media" && !editorMediaPath.test(path)) throw notFound();
+  if (path !== "/" && path !== "/publish" && path !== "/published" && path !== "/restore" && path !== "/media" && !editorMediaPath.test(path)) throw notFound();
   const body = ["PUT", "POST"].includes(req.method);
   if (body && !/^application\/json(?:\s*;|$)/i.test(req.headers.get("content-type") || "")) {
     throw new ApiError(415, "unsupported_media_type", "Send this change as JSON.");

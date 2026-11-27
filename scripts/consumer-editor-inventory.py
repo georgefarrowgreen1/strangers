@@ -85,7 +85,9 @@ def simple(n, parent):
     index = next(i for i,v in enumerate(group,1) if v is n)
     return n.tag + (f':nth-of-type({index})' if len(group) > 1 else ''), False
 
-def walk(n, selector, section, fields, page):
+def walk(n, selector, section, fields, page, product_anchor=None):
+    if product_id := n.attrs.get('data-catalogue-id'):
+        product_anchor = (selector, '[data-catalogue-id="' + product_id + '"]')
     if n.tag in SKIP or n.attrs.get('id') in IGNORE_ID or any(c in IGNORE_CLASS for c in n.attrs.get('class','').split()):
         return
     if n.attrs.get('role') in ('status','alert') or n.attrs.get('aria-live') or 'data-cart-message' in n.attrs:
@@ -94,7 +96,10 @@ def walk(n, selector, section, fields, page):
     def add(kind, default, name):
         explicit = n.attrs.get('id') if kind == 'text' else None
         id = explicit or kind + '-' + sha256(selector.encode()).hexdigest()[:12]
-        fields.append(dict(id=id, label=name, selector=selector, kind=kind, default=default, section=section))
+        # Historical IDs come from the original markup. Target the product itself
+        # on live shelves, whose position changes whenever the catalogue changes.
+        target = selector.replace(*product_anchor, 1) if product_anchor else selector
+        fields.append(dict(id=id, label=name, selector=target, kind=kind, default=default, section=section))
     if n.tag == 'img' and n.attrs.get('src','').startswith('/consumer-preview/assets/'):
         filename = n.attrs['src'].split('/')[-1]
         label = n.attrs.get('alt') or filename.split('.')[0].replace('-',' ').capitalize()
@@ -110,7 +115,7 @@ def walk(n, selector, section, fields, page):
     for child in n.elements():
         part, absolute = simple(child, n)
         child_selector = part if absolute else selector + ' > ' + part
-        walk(child, child_selector, section, fields, page)
+        walk(child, child_selector, section, fields, page, product_anchor)
 
 def inventory():
     result = {}

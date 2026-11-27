@@ -1,9 +1,9 @@
 import {photo} from './editor-photo-url.js';
 import {productFromPath, productPath} from './product-paths.js';
-import {cafes, products} from './products.js';
+import {availability, cafes, products} from './products.js';
 import {money} from './store.js';
 
-const coffees = new Map(products.filter(product => !product.category).map(product => [product.id, product]));
+export { availability };
 const usualShelf = ['bom-jesus', 'rocko', 'anserma'];
 
 function productFields(design, id) {
@@ -25,15 +25,19 @@ export function createRetailWidget(doc, widget, design, {preview = false} = {}) 
   if (!shelf && widget.type !== 'locations-list') return null;
   const grid = doc.createElement('ul');
   grid.className = 'consumer-retail-grid';
-  const selected = shelf ? (widget.items || usualShelf).map(id => coffees.get(id)).filter(Boolean) : cafes;
+  const selected = shelf ? (widget.items || usualShelf).map(id => products.find(item => item.id === id && !item.category)).filter(Boolean) : cafes;
+  if (shelf && !preview && !availability.known) return grid;
   for (const item of selected) {
     const fields = shelf ? productFields(design, item.id) : {};
     const li = doc.createElement('li');
     const card = doc.createElement('a');
     card.className = 'consumer-retail-card';
     card.href = shelf ? productPath(item) : '/location/#' + item.id;
-    const source = fields['product-image'] ?? 'asset:' + item.image.split('/').pop();
-    const src = photo(source, preview);
+    let src = item.image;
+    if (preview && src) src = src.startsWith('/consumer-product-media/')
+      ? src.replace('/consumer-product-media/', '/api/admin/consumer/product-photos/')
+      : photo('asset:' + src.split('/').pop(), true);
+    if (Object.hasOwn(fields, 'product-image')) src = photo(fields['product-image'], preview);
     if (src) {
       const image = doc.createElement('img');
       image.src = src;
@@ -84,7 +88,7 @@ export function applyLinkedProductFields(doc, design, {preview = false, desired}
   for (const [selector, title, imageSelector] of cards) {
     for (const card of doc.querySelectorAll(selector)) {
       const link = card.matches('a') ? card : card.querySelector('a[href^="/coffee/p/"]');
-      const route = productFromPath(link?.getAttribute('href')?.split(/[?#]/, 1)[0] || '');
+      const route = productFromPath(link?.getAttribute('href')?.split(/[?#]/, 1)[0] || '', products);
       const id = route?.id || card.dataset.catalogueId;
       if (!id) continue;
       const fields = productFields(design, id);

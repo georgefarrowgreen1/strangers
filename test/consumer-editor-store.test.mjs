@@ -40,6 +40,7 @@ test("draft photos, retained releases and optimistic editor revisions stay consi
   assert.equal(initial.revision, 0);
   assert.equal(initial.publishedRevision, 0);
   assert.equal(initial.hasUnpublishedChanges, false);
+  assert.deepEqual(await expect(api("/published")), {revision: 0, document: initial.draft});
   const { media } = await expect(api("/media", "POST", {name: "Photo.png", type: "image/png", data: png}), 201);
   const mediaPath = "/media/" + media.id;
   const publicRead = (method = "GET") => fixture.request(retail, "/consumer-media/" + media.id, method);
@@ -65,6 +66,7 @@ test("draft photos, retained releases and optimistic editor revisions stay consi
   const live = await expect(api("/publish", "POST", {revision: changed.revision}));
   assert.equal(live.hasUnpublishedChanges, false);
   assert.ok(live.publishedRevision > 0);
+  assert.deepEqual(await expect(api("/published")), {revision: live.publishedRevision, document: live.draft});
   const visible = await publicRead("HEAD");
   assert.equal(visible.status, 200);
   assert.equal(visible.headers.get("content-length"), String(media.bytes));

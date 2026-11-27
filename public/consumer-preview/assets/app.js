@@ -1,4 +1,4 @@
-import { cartView, quantityMarkup, shelfProducts } from './storefront-views.js';
+import { cartView, quantityMarkup, shelfProducts, giftProducts } from './storefront-views.js';
 import { products, cafes, availability } from './products.js';
 import { productPath } from './product-paths.js';
 import { getServerAccount, setupAccount } from './account.js';
@@ -10,10 +10,8 @@ import { grindLabel, sizeNames } from './checkout.js';
 const store = createStore(products);
 const retailCheckout = document.querySelector('#retail-checkout');
 const shelf = document.querySelector('#products');
-const coffees = document.querySelector('[data-full-catalogue]')
-  ? products.filter(product => !product.category)
-  : products.filter(product => Number.isInteger(product.shelfOrder)).sort((a, b) => a.shelfOrder - b.shelfOrder);
-const productById = new Map(products.map(product => [product.id, product]));
+const currentProduct = id => products.find(product => product.id === id);
+const home = document.querySelector('.retail-home');
 const cafeById = new Map(cafes.map(cafe => [cafe.id, cafe]));
 const dialog = document.querySelector('#dialog');
 const title = document.querySelector('#dialog-title');
@@ -46,6 +44,8 @@ function bagCount() {
 function renderShelf() {
   tasteFilter.value = filter;
   const query = search.value.trim().toLocaleLowerCase('en-GB');
+  const coffees = document.querySelector('[data-full-catalogue]') ? products.filter(product => !product.category)
+    : products.filter(product => Number.isInteger(product.shelfOrder)).sort((a, b) => a.shelfOrder - b.shelfOrder);
   const shown = coffees.filter(product =>
     (filter === 'All' || product.profile === filter) &&
     [product.name, product.country, product.region, ...product.notes].join(' ').toLocaleLowerCase('en-GB').includes(query),
@@ -154,29 +154,30 @@ function showProduct(id, opener, { grind: suggestedGrind = 'Whole bean', fromFin
     void checkDrawerStock(opener, () => showProduct(id, undefined, { grind: suggestedGrind, fromFinder }));
     return;
   }
-  const product = productById.get(id);
+  const product = currentProduct(id);
   if (!product) return;
   productQty = 1;
-  const details = [product.region, product.process].filter(Boolean);
+  const details = [product.region, product.process].filter(Boolean).map(html);
+  const firstSize = Object.keys(product.prices)[0];
   showPanel('product', product.name, `<div class="product-detail">
-    <div class="detail-media"><img src="${product.image}" width="580" height="580" alt="${product.name} packaging artwork"></div>
-    <div class="detail-copy">${fromFinder ? '<button class="text-button finder-product-back" type="button" data-finder-back="match">Back to my match</button>' : ''}<p class="eyebrow">${product.country} · ${product.profile}</p>
-    <p class="detail-notes">${product.shortCopy}</p>
-    <p class="detail-story">${product.story ? `${product.story} ` : ''}<a href="${productPath(product)}${fromFinder ? `?grind=${encodeURIComponent(suggestedGrind)}` : ''}">View the coffee</a></p>
+    <div class="detail-media"><img src="${html(product.image)}" width="580" height="580" alt="${html(product.name)} packaging artwork"></div>
+    <div class="detail-copy">${fromFinder ? '<button class="text-button finder-product-back" type="button" data-finder-back="match">Back to my match</button>' : ''}<p class="eyebrow">${[product.country, product.profile].filter(Boolean).map(html).join(' · ')}</p>
+    <p class="detail-notes">${html(product.shortCopy)}</p>
+    <p class="detail-story">${product.story ? `${html(product.story)} ` : ''}<a href="${productPath(product)}${fromFinder ? `?grind=${encodeURIComponent(suggestedGrind)}` : ''}">View the coffee</a></p>
     ${details.length ? `<p class="detail-origin">${details.join(' · ')}</p>` : ''}
     ${product.available === false ? '<p class="detail-origin">This coffee is currently unavailable.</p>' : ''}
-    <form class="detail-form" id="product-form" data-id="${id}"${product.available === false ? ' hidden' : ''}>
+    <form class="detail-form" id="product-form" data-id="${html(id)}"${product.available === false ? ' hidden' : ''}>
       <fieldset><legend>Weight</legend><div class="choices">${Object.entries(product.prices).map(([size]) =>
-        `<label class="choice"><input type="radio" name="size" value="${size}" ${size === '250g' ? 'checked' : ''}>${sizeNames[size]}</label>`).join('')}</div></fieldset>
+        `<label class="choice"><input type="radio" name="size" value="${html(size)}" ${size === firstSize ? 'checked' : ''}>${html(sizeNames[size] ?? size)}</label>`).join('')}</div></fieldset>
       <div class="field"><label for="grind">Grind</label><select id="grind" name="grind">${product.grinds.map(grind =>
-        `<option value="${grind}" ${grind === suggestedGrind ? 'selected' : ''}>${grindLabel(grind)}</option>`).join('')}</select></div>
-      <div class="form-submit">${quantityMarkup(productQty, product.name)}<button class="button" id="add-to-bag" type="submit">Add to cart · ${money(product.prices['250g'])}</button></div>
+        `<option value="${html(grind)}" ${grind === suggestedGrind ? 'selected' : ''}>${html(grindLabel(grind))}</option>`).join('')}</select></div>
+      <div class="form-submit">${quantityMarkup(productQty, product.name)}<button class="button" id="add-to-bag" type="submit">Add to cart · ${money(product.prices[firstSize])}</button></div>
       <p class="form-error" id="product-error" role="alert" hidden>You can add up to 99 bags of each size and grind.</p>
     </form></div></div>`, opener);
 }
 
 function updateProductPrice(form) {
-  const product = productById.get(form.dataset.id);
+  const product = currentProduct(form.dataset.id);
   document.querySelector('#add-to-bag').textContent = `Add to cart · ${money(product.prices[form.elements.size.value] * productQty)}`;
   document.querySelector('#product-error').hidden = true;
 }
@@ -197,9 +198,18 @@ async function checkDrawerStock(opener, onSuccess) {
 
 function refreshStockView() {
   stockNotice?.remove();
-  if (shelf) renderShelf();
+  store.refresh(true);
+  if (shelf) {
+    renderShelf();
+    const gifts = document.querySelector('[data-catalogue-gifts]');
+    if (gifts) {
+      gifts.querySelectorAll('[data-catalogue-id]').forEach(card => card.remove());
+      gifts.insertAdjacentHTML('beforeend', giftProducts(products.filter(item => item.category)));
+    }
+  }
+  if (home) void import('./home.js').then(({ showHighlights }) => showHighlights(products));
   renderProductPage?.();
-  refreshCheckoutCart?.();
+  syncCart();
 }
 
 function showFinder(opener) {
@@ -215,7 +225,7 @@ function moveFinder(step) {
 }
 
 function addFinderCoffee(id, control) {
-  const product = productById.get(id);
+  const product = currentProduct(id);
   const variant = finderVariant(product, finder.brew);
   const available = id !== tastingFlightId || availableTastingFlight(products);
   if (variant && available && store.add(id, variant.size, variant.grind)) {
@@ -231,6 +241,10 @@ function addFinderCoffee(id, control) {
 }
 
 function showBag(opener, message) {
+  if (!availability.known) {
+    void checkDrawerStock(opener, () => showBag(undefined, message));
+    return;
+  }
   store.refresh();
   bagCount();
   showPanel('bag', 'Your cart', cartView(store, Boolean(retailCheckout), message), opener);
@@ -359,8 +373,8 @@ body.addEventListener('submit', event => {
     moveFinder(form.dataset.step === 'brew' ? 'taste' : 'match');
   }
   if (form.id === 'product-form') {
-    const product = productById.get(form.dataset.id);
-    if (store.add(product.id, form.elements.size.value, form.elements.grind.value, productQty)) {
+    const product = currentProduct(form.dataset.id);
+    if (product && availability.known && store.add(product.id, form.elements.size.value, form.elements.grind.value, productQty)) {
       bagCount();
       showBag(undefined, `${product.name} added to your cart.`);
     } else {
@@ -370,7 +384,6 @@ body.addEventListener('submit', event => {
 });
 
 bagCount();
-if (shelf) renderShelf();
 const productPage = document.querySelector('[data-retail-product]');
 if (productPage) {
   void import('./product-page.js').then(({ setupProductPage }) => {
@@ -385,35 +398,46 @@ if (productPage) {
     renderProductPage();
   });
 }
-if (shelf || productPage || retailCheckout) {
-  stockNotice = document.createElement('p');
-  stockNotice.className = 'container checkout-note';
-  stockNotice.setAttribute('role', 'status');
-  (shelf || productPage || retailCheckout).before(stockNotice);
-  async function checkStock() {
+const stockSurface = shelf || productPage || retailCheckout || home && document.querySelector('#home-roasting-grid');
+async function checkStock(force = false) {
+  if (stockSurface) {
+    stockNotice?.remove();
+    stockNotice = document.createElement('p');
+    stockNotice.className = 'container checkout-note';
+    stockNotice.setAttribute('role', 'status');
+    stockSurface.before(stockNotice);
     stockNotice.replaceChildren('Checking coffee availability…');
-    if (await availability.refresh()) {
-      refreshStockView();
-    } else {
+  }
+  if (await availability.refresh(force)) {
+    refreshStockView();
+    return true;
+  } else {
+    renderProductPage?.();
+    shelf?.replaceChildren();
+    document.querySelectorAll('[data-catalogue-gifts] [data-catalogue-id]').forEach(card => card.remove());
+    if (home) document.querySelector('#home-roasting-grid')?.replaceChildren();
+    refreshCheckoutCart?.();
+    if (stockNotice) {
       const retry = document.createElement('button');
       retry.type = 'button';
       retry.className = 'text-button';
       retry.textContent = 'Try again';
-      retry.addEventListener('click', checkStock);
+      retry.addEventListener('click', () => void checkStock());
       stockNotice.replaceChildren('We couldn’t check coffee availability. ', retry);
     }
   }
-  void checkStock();
+  return false;
 }
-if (document.querySelector('.retail-home')) {
-  void import('./home.js').then(({ populateHome }) => populateHome(products));
+if (stockSurface) void checkStock();
+if (home) {
+  void import('./home.js').then(({ populateHome }) => populateHome());
 }
 if (document.querySelector('#cafe-detail')) renderCafes();
 const accountPage = document.querySelector('#account-page');
 const refreshAccount = accountPage ? setupAccount(accountPage, reorderAccountOrder) : null;
 if (retailCheckout) {
   void import('./checkout-page.js').then(({ setupRetailCheckout }) => {
-    refreshCheckoutCart = setupRetailCheckout(retailCheckout, { cafes, store, cartChanged: bagCount, getServerAccount, availability });
+    refreshCheckoutCart = setupRetailCheckout(retailCheckout, { cafes, store, cartChanged: bagCount, getServerAccount, availability, refreshCatalogue: () => checkStock(true) });
   }).catch(() => {
     retailCheckout.innerHTML = '<p role="alert">Checkout couldn’t load. <a href="/checkout/">Try again</a>.</p>';
   });
@@ -435,7 +459,8 @@ window.addEventListener('storage', event => {
 window.addEventListener('pageshow', event => {
   if (event.persisted) {
     refreshAccount?.();
-    syncCart();
+    if (availability.known && (stockSurface || dialog.open)) void checkStock(true);
+    else syncCart();
   }
 });
 
