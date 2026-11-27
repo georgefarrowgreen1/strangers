@@ -1,9 +1,7 @@
-## Staff and Admin passkeys
+## Consumer storefront and dashboard
 
-Staff, managers and admins can enrol from the account menu in Kitchen Diary, Rota or Admin using their current password. Staff Login offers passkey sign-in and returns the person to the workspace they opened with their existing permissions. Password sign-in and the existing quick PIN rules remain available.
+Add the visual storefront editor and a Products page to Admin → Consumer (Preview). Admins can preview draft changes on phones and desktops, publish or restore a page version, and manage product images, retail pricing, sizes, grind options and stock.
 
-WebAuthn registration and sign-in run on the canonical staff origin. Migration 53 adds the credential and single-use challenge tables. Disabling an account or resetting its password from Admin revokes its credentials. The consumer and trade logins keep their existing independent authentication flows.
+The consumer shop, coffee finder and checkout use the managed catalogue. Checkout verifies prices and availability with the separate consumer order service. Removing a product archives it and preserves previous order totals and packing details.
 
-## Verification
-
-TypeScript and a production Worker dry run passed. All 575 backend cases and 472 browser cases passed across the initial local run and targeted reruns. Four invoicing tests required fresh local connections and the staff journey was rerun after its expected menus were updated. Chromium exercised enrolment, sign-in, cancellation, revocation, recovery, changes of role and return to Admin with a virtual authenticator. Separate local HTTPS checks exercised the production hostnames and confirmed the trade and consumer login boundaries.
+The consumer service migrations and compatible service code must be active before this dashboard and storefront release.

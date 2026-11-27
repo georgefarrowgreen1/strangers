@@ -1,5 +1,5 @@
 # Strangers release publisher
 
-Publishes staff and Admin passkey sign-in to `strangerscoffee/StrangersRepo`. The bundle contains the two reviewed commits through `534e48e446ec1b2ff691a8f6865606723e50b8d0` on production base `19ceb614672a28968a7d509b4297a46068ab2ac9`.
+This release opens a draft pull request for the consumer storefront editor and product management. The bundle contains eight reviewed changes through `04fe73df273db027282ff20d127164fd644cd9cd` on `92d5f660515f36e669c1b03de434e05c8f91595b`.
 
-The existing GitHub workflow opens a pull request from `codex/staff-admin-passkeys` into `main`, waits for the Tests workflow, and squash merges for Cloudflare deployment.
+The customer order service must be verified before the StrangersRepo pull request is marked ready and merged.

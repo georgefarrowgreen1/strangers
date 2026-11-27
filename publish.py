@@ -13,11 +13,12 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/staff-admin-passkeys"
-EXPECTED = "534e48e446ec1b2ff691a8f6865606723e50b8d0"
-PRIOR = "19ceb614672a28968a7d509b4297a46068ab2ac9"
+BRANCH = "codex/consumer-site-editor"
+EXPECTED = "04fe73df273db027282ff20d127164fd644cd9cd"
+PRIOR = "92d5f660515f36e669c1b03de434e05c8f91595b"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Add passkey sign-in for staff and admin accounts"
+TITLE = "Add the consumer storefront editor and product management"
+DRAFT_ONLY = True
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
@@ -189,6 +190,13 @@ def publish(env, progress, work):
                      "-f", "state=closed"], env=env)
         progress.update("Verified release already squash-merged", f"[{already['url']}]({already['url']})\n\nMerged as `{already['mergeCommit']['oid']}`. No duplicate PR or branch was created.", conclusion="success", url=already["url"])
         return
+    if DRAFT_ONLY:
+        open_prs = json.loads(command(
+            ["gh", "pr", "list", "--repo", TARGET, "--head", BRANCH, "--base", "main",
+             "--state", "open", "--json", "isDraft,headRefOid"], env=env,
+        ))
+        if any(not pr["isDraft"] or pr["headRefOid"] != EXPECTED for pr in open_prs):
+            raise RuntimeError("The open pull request is outside this draft release.")
     source = work / "StrangersRepo"
     command(["git", "clone", "--no-checkout", f"https://github.com/{TARGET}.git", str(source)], env=env)
     bundle = str(ROOT / "wholesale-staff-integration.bundle")
@@ -225,9 +233,16 @@ def publish(env, progress, work):
     else:
         url = command(
             ["gh", "pr", "create", "--repo", TARGET, "--head", BRANCH, "--base", "main",
-             "--title", TITLE,
+             "--title", TITLE, *(["--draft"] if DRAFT_ONLY else []),
              "--body-file", str(ROOT / "pull-request.txt")], env=env,
         ).splitlines()[-1]
+    if DRAFT_ONLY:
+        review = json.loads(command(["gh", "pr", "view", url, "--repo", TARGET, "--json", "isDraft,headRefOid"], env=env))
+        if not review["isDraft"] or review["headRefOid"] != EXPECTED:
+            raise RuntimeError("The reviewed release is not on its expected draft pull request.")
+        progress.update("Draft pull request ready", f"[{url}]({url})", conclusion="success", url=url)
+        print(f"Draft pull request: {url}", flush=True)
+        return
     progress.update("PR published; waiting for Tests", f"[{url}]({url})\n\nWaiting for the existing Tests workflow before squash merge.", url=url)
     print(f"Pull request: {url}", flush=True)
     # Allow the required Tests job its 35-minute budget and time for GitHub to report the result.
