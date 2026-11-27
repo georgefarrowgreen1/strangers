@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "codex/royal-mail-dispatch-queue"
-EXPECTED = "fc8c5cdf2b93e40204b568ec9c654dee37d2328b"
-PRIOR = "159abe32ba6c89c13328884c673e96d82e214959"
+EXPECTED = "439c2c3ccaeba724265758dd1784031c195a74fd"
+PRIOR = "fc8c5cdf2b93e40204b568ec9c654dee37d2328b"
 TIMED_OUT_TEST_RUN = None
 TITLE = "Unify wholesale dispatch, recover bookings and verify Royal Mail setup"
 DRAFT_ONLY = False
