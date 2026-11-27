@@ -1,13 +1,9 @@
-## Sitewide repairs
+## Staff wholesale Royal Mail labels
 
-Protects staff account changes against concurrent resets, keeps rota contract history consistent, and fixes stale actions in the diary and rota. Wholesale checkout and recurring deliveries recheck customer, location and stock details. QuickBooks matching revalidates customer, currency and competing orders before confirmation, and blocked invoices can be retried independently.
+Employees with Wholesale orders access can request and download a Royal Mail label for a ready delivery from the desktop packing desk or phone order details. Staff review the saved destination, the service configured by Admin and the sealed parcel weight before confirming. Reprinting uses the existing shipment. The order stays ready until staff confirm handover.
 
-The bundled consumer preview revalidates sessions when restoring private views, preserves basket edits across tabs and handles unavailable stock checks. Admin packing reconciles concurrent edits, support search can use the companion retail service’s full inbox, and the dashboard recovers from optional module failures.
+The Worker checks payment eligibility before booking, downloading the label and confirming Royal Mail handover. An account hold or overdue balance blocks shipment even if the current order is paid. Standard credit terms allow shipment within terms. Before-dispatch orders require confirmed settlement covering that order. When that decision depends on a QuickBooks balance, the balance must have been checked within the past 24 hours. Staff see the reason for a hold and can recheck after Admin reviews it.
 
-## Verification
+## Test coverage
 
-On the original repair commit, the local staff Worker suite passed 570 tests and the full Chromium suite passed 461. The layout review covered 45 routes at four widths. TypeScript, production assets and the standalone preview built successfully, and the branded storefront inventory verified 104 files. The repair commit is `67d063b`. Commit `fe1f8ad` adds the verification results to the audit report.
-
-The first GitHub run exposed a timing issue in the standing-order browser test. Commit `69908d2` waits for the catalogue result before opening order history. It checks delayed sign-in on phone and desktop, with both an empty catalogue and sold-out coffee. The full Tests workflow runs again on this commit.
-
-The separate retail service release is `018e21b`. The release sequence puts that service first, followed by the staff Worker and bundled storefront. See [the sitewide audit](docs/sitewide-audit-2026-11-27.md) for the findings, coverage and limitations.
+The release includes Worker tests for payment terms, settlement evidence, account-wide holds, permissions and changes during booking. Browser tests exercise the staff flow on desktop and phone, including reprinting, recovering an uncertain request and handling a payment hold before handover.

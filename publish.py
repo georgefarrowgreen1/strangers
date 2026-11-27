@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/sitewide-audit"
-EXPECTED = "69908d2d8d71d4f9236ba2f358f3b59bebf22c04"
-PRIOR = "fe1f8adb3032f0a4022519c0aa8d9246e9e15b63"
+BRANCH = "codex/staff-royal-mail-labels"
+EXPECTED = "ee9595d9a95b3288434632b60d7492b88473ec41"
+PRIOR = ""
 TIMED_OUT_TEST_RUN = None
-TITLE = "Repair sitewide account, fulfilment, invoicing and interface failures"
+TITLE = "Enable payment-checked Royal Mail labels for staff wholesale orders"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

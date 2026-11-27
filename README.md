@@ -1,3 +1,5 @@
 # Strangers release publisher
 
-Publishes the reviewed StrangersRepo commits from production base `105b0bdd8d89d6e5b56c450eb067593b17245bc9` through `69908d2d8d71d4f9236ba2f358f3b59bebf22c04`. The companion retail service uses a separate release. The GitHub workflow updates PR #244 and waits for Tests on the new head before squash merging.
+Publishes the staff wholesale Royal Mail label release to `strangerscoffee/StrangersRepo`. The bundle contains commit `ee9595d9a95b3288434632b60d7492b88473ec41` on production base `ca441ccdd522b23ef84c824b2edb1b15a9df79e2`.
+
+The GitHub workflow opens or updates the pull request from `codex/staff-royal-mail-labels` to `main`, waits for the Tests workflow to pass on the bundled commit, and squash merges the pull request.
