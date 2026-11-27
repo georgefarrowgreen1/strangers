@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/consumer-site-editor"
-EXPECTED = "04fe73df273db027282ff20d127164fd644cd9cd"
-PRIOR = "92d5f660515f36e669c1b03de434e05c8f91595b"
+BRANCH = "codex/direct-consumer-editing"
+EXPECTED = "47bc83f1e5ae7700c313223633bd6cc13396b380"
+PRIOR = "63009d1b55c8114d1ebdf3dc6029fec837e160a3"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Add the consumer storefront editor and product management"
+TITLE = "Edit consumer storefront elements directly on the page"
 DRAFT_ONLY = False
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent

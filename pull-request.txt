@@ -1,7 +1,3 @@
-## Consumer storefront and dashboard
+Adds direct editing to the admin consumer Site editor. Administrators can click text, buttons, photos and page titles in the storefront preview and edit them in context. Section widths and widget arrangements use the existing draft, undo and publish controls. Keyboard users can reach the same fields from the element chooser.
 
-Add the visual storefront editor and a Products page to Admin → Consumer (Preview). Admins can preview draft changes on phones and desktops, publish or restore a page version, and manage product images, retail pricing, sizes, grind options and stock.
-
-The consumer shop, coffee finder and checkout use the managed catalogue. Checkout verifies prices and availability with the separate consumer order service. Removing a product archives it and preserves previous order totals and packing details.
-
-The consumer service migrations and compatible service code must be active before this dashboard and storefront release.
+The reviewed asset release is `3f52a062c743ed89a79f`. Local verification included 74 targeted checks, desktop and touch Chromium workflows, TypeScript and a Wrangler deployment dry run.
