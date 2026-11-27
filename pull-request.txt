@@ -1,3 +1,5 @@
 Staff and Admin now use one structured label destination and a shared wholesale dispatch queue. Uncertain bookings are reconciled by looking up the original Royal Mail reference. Admin can check the configured service for the reviewed parcel without buying postage.
 
 Includes additive migration 54 and preserves the existing Click & Drop instructions for parcels over the packed weight limit. The reviewed release passed 29 focused API checks, 21 desktop and mobile browser checks, TypeScript and a Wrangler production dry run. Carrier requests in local tests used fixtures.
+
+The Admin host regression test now verifies that the dispatch queue assets are available and its module loads before the wholesale dashboard. The complete Admin API test file passed locally.
