@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/staff-royal-mail-labels"
-EXPECTED = "fae3921748d4b6a9b332aca45532af73cc2d79f3"
-PRIOR = "ee9595d9a95b3288434632b60d7492b88473ec41"
+BRANCH = "codex/staff-admin-passkeys"
+EXPECTED = "534e48e446ec1b2ff691a8f6865606723e50b8d0"
+PRIOR = "19ceb614672a28968a7d509b4297a46068ab2ac9"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Enable payment-checked Royal Mail labels for staff wholesale orders"
+TITLE = "Add passkey sign-in for staff and admin accounts"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 

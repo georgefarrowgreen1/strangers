@@ -1,11 +1,9 @@
-## Staff wholesale Royal Mail labels
+## Staff and Admin passkeys
 
-Employees with Wholesale orders access can request and download a Royal Mail label for a ready delivery from the desktop packing desk or phone order details. Staff review the saved destination, the service configured by Admin and the sealed parcel weight before confirming. Reprinting uses the existing shipment. The order stays ready until staff confirm handover.
+Staff, managers and admins can enrol from the account menu in Kitchen Diary, Rota or Admin using their current password. Staff Login offers passkey sign-in and returns the person to the workspace they opened with their existing permissions. Password sign-in and the existing quick PIN rules remain available.
 
-The Worker checks payment eligibility before booking, downloading the label and confirming Royal Mail handover. An account hold or overdue balance blocks shipment even if the current order is paid. Standard credit terms allow shipment within terms. Before-dispatch orders require confirmed settlement covering that order. When that decision depends on a QuickBooks balance, the balance must have been checked within the past 24 hours. Staff see the reason for a hold and can recheck after Admin reviews it.
+WebAuthn registration and sign-in run on the canonical staff origin. Migration 53 adds the credential and single-use challenge tables. Disabling an account or resetting its password from Admin revokes its credentials. The consumer and trade logins keep their existing independent authentication flows.
 
-## Test coverage
+## Verification
 
-The release includes Worker tests for payment terms, settlement evidence, account-wide holds, permissions and changes during booking. Browser tests exercise the staff flow on desktop and phone, including reprinting, recovering an uncertain request and handling a payment hold before handover.
-
-The first Tests run caught a legacy dispatch-email fixture that attempted Royal Mail handover with unconfirmed payment terms. Commit `fae3921` updates the fixture to check that this handover is held and sends no dispatch email. It then checks that both legacy delivery spellings send the shipped email on approved 30-day terms. The focused regression passed locally.
+TypeScript and a production Worker dry run passed. All 575 backend cases and 472 browser cases passed across the initial local run and targeted reruns. Four invoicing tests required fresh local connections and the staff journey was rerun after its expected menus were updated. Chromium exercised enrolment, sign-in, cancellation, revocation, recovery, changes of role and return to Admin with a virtual authenticator. Separate local HTTPS checks exercised the production hostnames and confirmed the trade and consumer login boundaries.
