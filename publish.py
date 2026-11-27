@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "codex/sitewide-audit"
-EXPECTED = "fe1f8adb3032f0a4022519c0aa8d9246e9e15b63"
-PRIOR = ""
+EXPECTED = "69908d2d8d71d4f9236ba2f358f3b59bebf22c04"
+PRIOR = "fe1f8adb3032f0a4022519c0aa8d9246e9e15b63"
 TIMED_OUT_TEST_RUN = None
 TITLE = "Repair sitewide account, fulfilment, invoicing and interface failures"
 EXPECTED_USER_ID = 292799750

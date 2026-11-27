@@ -6,6 +6,8 @@ The bundled consumer preview revalidates sessions when restoring private views, 
 
 ## Verification
 
-The local staff Worker suite passed 570 tests and the full Chromium suite passed 461. The layout review covered 45 routes at four widths. TypeScript, production assets and the standalone preview built successfully, and the branded storefront inventory verified 104 files. The repair commit is `67d063b`. The final commit `fe1f8ad` adds the verification results to the audit report.
+On the original repair commit, the local staff Worker suite passed 570 tests and the full Chromium suite passed 461. The layout review covered 45 routes at four widths. TypeScript, production assets and the standalone preview built successfully, and the branded storefront inventory verified 104 files. The repair commit is `67d063b`. Commit `fe1f8ad` adds the verification results to the audit report.
+
+The first GitHub run exposed a timing issue in the standing-order browser test. Commit `69908d2` waits for the catalogue result before opening order history. It checks delayed sign-in on phone and desktop, with both an empty catalogue and sold-out coffee. The full Tests workflow runs again on this commit.
 
 The separate retail service release is `018e21b`. The release sequence puts that service first, followed by the staff Worker and bundled storefront. See [the sitewide audit](docs/sitewide-audit-2026-11-27.md) for the findings, coverage and limitations.
