@@ -1,4 +1,4 @@
-Staff and Admin share the wholesale dispatch queue and a structured parcel address. Uncertain bookings are recovered by the original reference. The production business-email and carrier-rejection changes in #253 are included.
+Staff and Admin share the wholesale dispatch queue and a structured parcel address. Uncertain bookings are recovered by the original reference. The release includes the production changes in #253, #254 and #255 for delivery email, carrier refusal details and creating a label from the dispatch step.
 
 Admin → Wholesale → Royal Mail now offers five read-only carrier checks plus confirmations for the contracted service register and parcel limits, a printed return address, printer/barcode, collection arrangements and the current day’s manifest or receipt. A local packed-box calculator covers express24 surcharge thresholds and agreed service limits.
 
