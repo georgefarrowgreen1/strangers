@@ -185,3 +185,39 @@ export function receiptMarkup(order, { confirmed, trackingLink, guest }) {
       </div>
     </section>`;
 }
+
+export const emptyCheckoutMarkup = `<div class="retail-checkout-message"><h2 tabindex="-1">Your cart is empty</h2>
+        <p>Choose a coffee to begin.</p><a class="button" href="/coffee/">Shop coffee</a></div>`;
+
+export function priceAction(kind, price, unready = false) {
+  const button = kind === 'details'
+    ? 'type="submit" form="retail-checkout-form"'
+    : 'type="button" data-place-retail-order';
+  return `<div class="retail-checkout-action">
+    <span class="retail-checkout-action-total"><small>Total</small><strong>${money(price.total)}</strong></span>
+    <button class="button" ${button}${unready ? ' disabled' : ''}>${kind === 'details' ? 'Review order' : 'Place test order'}</button>
+  </div>`;
+}
+
+export function detailsStage(options, failure = '', summaryMarkup = '') {
+  return `${progress(0)}<section class="retail-checkout-stage" aria-labelledby="retail-checkout-stage-title">
+      <div class="retail-checkout-stage-head">
+        <div><h2 id="retail-checkout-stage-title" data-checkout-focus tabindex="-1">Delivery and contact</h2><p>Test checkout. Use sample details.</p></div>
+        <button type="button" class="text-button" data-checkout-sample>Fill sample details</button>
+      </div>
+      <p class="retail-checkout-error" role="alert"${failure ? '' : ' hidden'}>${html(failure)}</p>
+      <p class="retail-checkout-error" data-cart-message hidden>A coffee in your cart is unavailable. Remove it before continuing.</p>
+      <div class="retail-checkout-layout">
+        <div>${detailsForm(options)}</div>
+        <div data-checkout-summary>${summaryMarkup}</div>
+      </div>
+      <button type="button" class="text-button retail-checkout-cart" data-bag>Back to cart</button>
+    </section>`;
+}
+
+export function reviewStage(options, summaryMarkup = '') {
+  return `${progress(1)}<section class="retail-checkout-stage" aria-labelledby="retail-review-title">
+      <div class="retail-checkout-stage-head"><div><h2 id="retail-review-title" tabindex="-1" data-checkout-focus>Review your order</h2><p>Check your details before placing the test order.</p></div></div>
+      <div class="retail-checkout-layout">${reviewDetails(options)}<div data-checkout-summary>${summaryMarkup}</div></div>
+    </section>`;
+}

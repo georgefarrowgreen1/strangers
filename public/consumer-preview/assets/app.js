@@ -1,10 +1,11 @@
+import { cartView, quantityMarkup, shelfProducts } from './storefront-views.js';
 import { products, cafes, availability } from './products.js';
 import { productPath } from './product-paths.js';
 import { getServerAccount, setupAccount } from './account.js';
 import { escapeHtml as html } from './html.js';
 import { availableTastingFlight, finderMarkup, finderVariant, tastingFlightId, updateFinderAnswers } from './finder.js';
-import { createStore, money, FREE_SHIPPING, CART_KEY } from './store.js';
-import { grindLabel, lineOptions, orderTotals, sizeNames } from './checkout.js';
+import { createStore, money, CART_KEY } from './store.js';
+import { grindLabel, sizeNames } from './checkout.js';
 
 const store = createStore(products);
 const retailCheckout = document.querySelector('#retail-checkout');
@@ -56,12 +57,7 @@ function renderShelf() {
   if (!shown.length) {
     grid.replaceChildren(document.querySelector('#empty-shelf').content.cloneNode(true));
   } else {
-    grid.innerHTML = shown.map(product => `<article class="product">
-      <div class="product-image"><img src="${product.image}" width="580" height="410" alt="" loading="lazy">
-      ${!availability.known || product.available === false ? '' : `<button class="product-quick-view" type="button" data-product="${product.id}" aria-label="Quick view ${html(product.name)}">Quick view</button>`}</div>
-      <div class="product-info"><p class="origin">${product.country} · ${product.profile}</p><h3>${product.name}</h3><p class="notes">${product.shortCopy}</p>
-      <div class="product-actions"><span>${product.available === false ? 'Unavailable' : `From ${money(product.prices['250g'])}`}</span><a class="button outline product-open" href="${productPath(product)}" aria-label="View ${html(product.name)}"><span class="product-open-full">View coffee</span><span class="product-open-short">View</span></a></div></div>
-    </article>`).join('');
+    grid.innerHTML = shelfProducts(shown, availability.known);
   }
   document.querySelector('#shelf-status').textContent = `${shown.length} ${shown.length === 1 ? 'coffee' : 'coffees'}`;
 }
@@ -140,13 +136,6 @@ function closePanel() {
     dialog.classList.add('is-closing');
     setTimeout(finish, 190);
   }
-}
-
-function quantityMarkup(qty, label, key) {
-  const line = key === undefined ? '' : ` data-line="${html(key)}"`;
-  return `<div class="qty" role="group" aria-label="Quantity for ${label}">
-    <button type="button" data-qty="-1"${line} aria-label="Decrease quantity for ${label}" ${qty === 1 ? 'disabled' : ''}>−</button>
-    <output aria-live="polite">${qty}</output><button type="button" data-qty="1"${line} aria-label="Increase quantity for ${label}" ${qty === 99 ? 'disabled' : ''}>+</button></div>`;
 }
 
 function resizeQty(group, qty) {
@@ -241,38 +230,15 @@ function addFinderCoffee(id, control) {
   }
 }
 
-function bagMarkup(message) {
-  const cart = store.cart();
-  if (!cart.length) {
-    return `<div class="empty-bag"><h3>Your cart is empty.</h3><p>Start with one of the coffees on the shelf.</p>
-      <div class="drawer-actions"><button type="button" class="button" data-keep-shopping>Browse coffee</button></div></div>`;
-  }
-  const { subtotal, shipping } = store.totals('delivery');
-  const remaining = Math.max(0, FREE_SHIPPING - subtotal);
-  const progress = shipping
-    ? remaining ? `Spend over ${money(remaining)} more for free UK delivery.` : 'Add another coffee for free UK delivery.'
-    : 'You’ve unlocked free UK delivery.';
-  return `<div class="drawer-content">
-    ${message ? `<p role="status" class="checkout-note">${html(message)}</p>` : ''}
-    <div class="shipping-progress" aria-live="polite"><span>${progress}</span><progress aria-label="Progress towards free UK delivery" max="${FREE_SHIPPING + 1}" value="${Math.min(subtotal, FREE_SHIPPING + 1)}"></progress></div>
-    <ul>${cart.map(line => `<li class="cart-line"><img src="${line.product.image}" alt="" width="64" height="64">
-      <div><h3>${line.product.name}</h3><p>${html(lineOptions(line))}</p>
-      <div class="cart-controls">${quantityMarkup(line.qty, [line.product.name, lineOptions(line)].join(', '), line.key)}<button type="button" class="remove" data-remove="${html(line.key)}" aria-label="Remove ${line.product.name}, ${lineOptions(line)}">Remove</button><span class="line-price">${money(line.unitPrice * line.qty)}</span></div></div></li>`).join('')}</ul>
-    <div aria-live="polite">${orderTotals(store.totals('delivery'), 'delivery')}</div>
-    <div class="drawer-actions">${retailCheckout ? '<button class="button" type="button" data-checkout data-return-checkout>Resume checkout</button>' : '<a class="button" href="/checkout/" data-checkout>Checkout</a>'}
-      <button class="button outline" type="button" data-keep-shopping>Keep shopping</button></div>
-  </div>`;
-}
-
 function showBag(opener, message) {
   store.refresh();
   bagCount();
-  showPanel('bag', 'Your cart', bagMarkup(message), opener);
+  showPanel('bag', 'Your cart', cartView(store, Boolean(retailCheckout), message), opener);
 }
 
 function updateBag(focusSelector) {
   const offset = body.scrollTop;
-  body.innerHTML = bagMarkup();
+  body.innerHTML = cartView(store, Boolean(retailCheckout));
   body.scrollTop = offset;
   if (focusSelector === undefined) return;
   const nextFocus = (focusSelector && body.querySelector(focusSelector + ':not(:disabled)')) ?? body.querySelector('[data-checkout],[data-keep-shopping]') ?? closeButton;

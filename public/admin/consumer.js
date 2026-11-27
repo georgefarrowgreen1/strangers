@@ -1,9 +1,9 @@
 // The staff admin workspace for the separate consumer storefront.
-window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet }) => {
+window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, openSection }) => {
   const endpoint = "/api/admin/consumer";
   const previewUrl = "https://preview.staffstrangerscoffee.com/";
   const tabs = [
-    ["overview", "Overview"], ["orders", "Orders"], ["customers", "Customers"], ["catalogue", "Catalogue"], ["support", "Support"],
+    ["overview", "Overview"], ["orders", "Orders"], ["customers", "Customers"], ["catalogue", "Catalogue"], ["support", "Support"], ["editor", "Site editor"],
   ];
   const statuses = [
     ["placed", "Placed", "acc"],
@@ -55,12 +55,13 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet })
   const empty = (icon, label) => html`<div class="consumer-empty"><span class="ic acc">${svg(icon)}</span><p>${label}</p></div>`;
   const heading = (title, note) => html`<header class="consumer-panel-title"><h2>${title}</h2>${note ? html`<p>${note}</p>` : ""}</header>`;
 
-  function navigation() {
+  function navigation(active = section) {
+    const panelId = active === "editor" ? "consumerEditor" : "consumerPanel";
     return html`<div class="seg consumer-tabs" id="consumerTabs" role="group" aria-label="Consumer sections">
-      ${tabs.map(([id, label]) => html`<button type="button" data-act="consumer-tab" data-id="${id}" aria-controls="consumerPanel" aria-pressed="${String(section === id)}">${label}</button>`)}
+      ${tabs.map(([id, label]) => html`<button type="button" data-act="consumer-tab" data-id="${id}" aria-controls="${panelId}" aria-pressed="${String(active === id)}">${label}</button>`)}
     </div><label class="field consumer-section-picker"><span class="fl">Consumer section</span>
-      <select id="consumerSection" aria-controls="consumerPanel">
-        ${tabs.map(([id, label]) => html`<option value="${id}" ${section === id ? raw("selected") : ""}>${label}</option>`)}
+      <select id="consumerSection" aria-controls="${panelId}">
+        ${tabs.map(([id, label]) => html`<option value="${id}" ${active === id ? raw("selected") : ""}>${label}</option>`)}
       </select>
     </label>`;
   }
@@ -209,13 +210,13 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet })
 
   function workspace() {
     return html`
-      ${head("Consumer (Preview)", "Retail orders, shop availability and customer support.", html`<div class="consumer-actions">
+      ${head("Consumer (Preview)", "Retail orders, shop availability and storefront editing.", html`<div class="consumer-actions">
         <a class="btn soft" href="${storefront()}" target="_blank" rel="noopener">${svg("external")}Open storefront</a>
         ${data.connected ? html`<button class="btn soft consumer-refresh" id="consumerRefresh" type="button" data-act="consumer-refresh" ${updating || writes.size ? raw("disabled") : ""} aria-label="Refresh consumer preview data">
           ${svg("refresh")}<span>Refresh</span>
         </button>` : ""}
       </div>`)}
-      ${data.connected ? html`<div class="consumer-toolbar">${navigation()}</div>` : ""}
+      ${data.connected ? html`<div class="consumer-toolbar">${navigation()}</div>` : html`<div class="consumer-toolbar"><button class="btn soft" type="button" data-act="consumer-tab" data-id="editor">Site editor</button></div>`}
       <p class="consumer-message" id="consumerMessage" role="status" ${message ? "" : raw("hidden")}>${message}</p>
       <div id="consumerPanel" aria-busy="${String(updating)}">${panel()}</div>`;
   }
@@ -364,7 +365,15 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet })
   }
 
   async function selectSection(id, opener) {
-    if (!tabs.some(([key]) => key === id) || id === section || !data?.connected) return;
+    if (!tabs.some(([key]) => key === id)) return;
+    if (id === "editor" || find("consumerEditor")) {
+      if (!await openSection(id)) {
+        const picker = find("consumerSection");
+        if (picker) picker.value = find("consumerEditor") ? "editor" : section;
+      }
+      return;
+    }
+    if (id === section || !data?.connected) return;
     section = id;
     supportVersion++;
     supportPending = false;
@@ -690,6 +699,20 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet })
 
   return {
     view,
+    setSection(id) {
+      if (tabs.some(([key]) => key === id && key !== "editor")) section = id;
+    },
+    editorView() {
+      return html`<div class="consumer-workspace" id="consumerEditorWorkspace">
+        ${head("Site editor", "", html`<a class="btn soft consumer-open-storefront" href="${previewUrl}" target="_blank" rel="noopener" aria-label="Open storefront">${svg("external")}<span>Open storefront</span></a>`)}
+        <div class="consumer-toolbar">${navigation("editor")}</div>
+        <div id="consumerEditor"><p role="status">Opening site editor…</p></div>
+      </div>`;
+    },
+    async mountEditor(host) {
+      const {mountConsumerEditor} = await import("./consumer-editor.js");
+      if (host.isConnected) return mountConsumerEditor(host, {api, confirmSheet, toast});
+    },
     clear() {
       generation++;
       data = null;

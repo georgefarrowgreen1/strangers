@@ -2,6 +2,9 @@ import { ApiError, Env, json, readJson, readBytes } from "./http";
 import { BRANDED_RETAIL_ORIGIN } from "./brandedRetail";
 import { retailServiceRequest } from "./retailService";
 
+import { handleConsumerEditorAdmin } from "./consumerEditorClient";
+import { handleConsumerEditorCanvas } from "./consumerEditorCanvas";
+
 const CONTROL_PATH = "/api/control/consumer";
 const MAX_OVERVIEW_BYTES = 2 * 1024 * 1024;
 const ORDER_STATES = new Set(["placed", "preparing", "ready", "dispatched", "completed", "cancelled"]);
@@ -71,6 +74,17 @@ function orderUpdate(input: Record<string, unknown>): string {
 
 /** Signs requests that manage the separate test storefront. */
 export async function handleConsumerAdmin(req: Request, env: Env, route: string): Promise<Response> {
+  if (route === "editor" || route.startsWith("editor/")) {
+    const url = new URL(req.url);
+    if (env.ADMIN_HOST && url.hostname !== env.ADMIN_HOST) throw new ApiError(404, "not_found", "Editor not found.");
+    if (req.method !== "GET" && req.method !== "HEAD" && req.headers.get("origin") !== url.origin) {
+      throw new ApiError(403, "bad_origin", "Open the editor on the admin site to make changes.");
+    }
+    if ((req.method === "GET" || req.method === "HEAD") && (route === "editor/canvas" || route.startsWith("editor/assets/"))) {
+      return handleConsumerEditorCanvas(req, env, route);
+    }
+    return handleConsumerEditorAdmin(req, env, route.slice("editor".length) || "/");
+  }
   const queue = route === "orders";
   const reading = (route === "" || queue || route === "support") && req.method === "GET";
   const order = /^orders\/(SC-[A-F0-9]{8})$/.exec(route);

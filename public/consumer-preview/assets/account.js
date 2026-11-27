@@ -87,7 +87,7 @@ function reorderOptions(lines) {
   };
 }
 
-function orderMarkup(order, { latest, open }) {
+export function orderMarkup(order, { latest, open }) {
   const { reference, createdAt, method, cafe, pricing, lines } = order;
   const label = method === 'collection' ? 'Collection' : 'UK delivery';
   const status = orderStatus(order);
@@ -182,7 +182,7 @@ export function getServerAccount() {
 
 
 const passwordMin = 12;
-const authModes = {
+export const authModes = {
   login: {
     heading: 'Sign in to My account',
     copy: 'Use your email and password to view orders and saved details.',
@@ -219,9 +219,9 @@ const authModes = {
     links: ['forgot', 'login'],
   },
 };
-const modeLabels = { login: 'Back to sign in', register: 'Create an account', forgot: 'Forgot password?' };
+export const modeLabels = { login: 'Back to sign in', register: 'Create an account', forgot: 'Forgot password?' };
 
-function authField(name, mode) {
+export function authField(name, mode) {
   if (name === 'email') {
     return '<div class="field"><label for="account-auth-email">Email address</label><input id="account-auth-email" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" maxlength="254" required></div>';
   }
@@ -364,6 +364,7 @@ export function setupAccount(root, reorder) {
     authStatus.textContent = '';
     authStatus.classList.remove('account-save-error');
     authForm.hidden = missingToken;
+    authForm.dataset.authMode = mode;
     authForm.action = '/consumer-auth/' + mode;
     authFields.innerHTML = missingToken ? '' : config.fields.map(name => authField(name, mode)).join('');
     authFields.disabled = false;

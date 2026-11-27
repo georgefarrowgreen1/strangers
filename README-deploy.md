@@ -10,6 +10,11 @@ The branded consumer storefront is maintained in `public/consumer-preview/`. The
 
 Consumer checkout records test payments and fulfilment. A real payment gateway, order email sender and carrier integration require dedicated retail configuration. Staff can review test orders, pack them, record tracking and reply to preview support messages in **Admin → Consumer (Preview)**.
 
+**Consumer site editor.** Open **Admin → Consumer (Preview) → Site editor** or use `#consumer/editor` on the admin dashboard. Select a page or a shopper flow, click an element in the phone or desktop preview, then save the draft. **Publish** applies that saved version to `preview.staffstrangerscoffee.com`. **Versions** restores a previous publication to the draft for review and republication.
+
+Storefront drafts, published designs and uploaded photos live in the Worker’s dedicated SQLite-backed `CONSUMER_EDITOR` Durable Object. The normal Wrangler release applies the additional object migration. The Worker serves a photo publicly only while the published design references it. A restored version also restores its photo references. Canvas previews of accounts and orders use sample records. The retail service continues to own product availability, order totals, authentication and fulfilment.
+
+
 The site is one Cloudflare Worker serving the diary's pages and the API they talk to. It runs at **https://staffstrangerscoffee.com**, and the staff rota, from the same Worker, at **https://rota.staffstrangerscoffee.com**. **Every push to `main` redeploys it automatically** (Cloudflare Workers Builds).
 
 | Path | What it is |
