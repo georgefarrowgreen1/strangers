@@ -192,7 +192,7 @@ export function mountConsumerProducts(host, { api, confirmSheet }) {
     const process = textInput('process', item.process || '', 160);
     const profile = select('profile', { '': 'Choose a profile', Chocolatey: 'Chocolatey', Fruity: 'Fruity', Decaf: 'Decaf' }, item.profile || '');
     const notes = textInput('notes', (item.notes || []).join(', '), 744, { placeholder: 'Chocolate, hazelnut, praline' });
-    const weight = textInput('shippingWeightGrams', item.shippingWeightGrams || '', 5, { type: 'number', step: 1, min: 1, max: 30000, placeholder: 'Use bag size' });
+    const weight = textInput('shippingWeightGrams', item.shippingWeightGrams || '', 5, { type: 'number', step: 1, min: 1, max: 30000, placeholder: 'Use pack size' });
     const available = node('input', { type: 'checkbox', role: 'switch', class: 'switch', name: 'available', checked: item.available });
     const grindNames = [...new Set([...grinds, 'N/A', ...(item.grinds || [])])];
     const grindBox = node('fieldset', { class: 'cp-choices' }, node('legend', {}, 'Grind options'), grindNames.map(option =>
@@ -227,7 +227,6 @@ export function mountConsumerProducts(host, { api, confirmSheet }) {
     function updateKind(userChange) {
       const coffee = type.value === 'coffee', flight = type.value === 'flight';
       coffeeFields.hidden = type.value === 'accessory'; contents.hidden = !flight; contents.disabled = !flight;
-      weight.placeholder = coffee ? 'Use bag size' : flight ? '300' : '150';
       if (userChange && creating) {
         const untouchedPrice = priceRows.children.length === 1 && !priceRows.querySelector('input').value;
         if (untouchedPrice) { priceRows.replaceChildren(); addPrice(coffee ? '250g' : flight ? '300g' : 'one', null); }
@@ -301,7 +300,7 @@ export function mountConsumerProducts(host, { api, confirmSheet }) {
           help('These storefront fields use the published design. Orders use the catalogue values.')));
       });
     }
-    const pricing = panel('Sizes and prices', priceRows, addRow, field('Shipping weight (g)', weight), grindBox);
+    const pricing = panel('Sizes and prices', priceRows, addRow, field('Shipping weight override (g)', weight), help('Optional. A weight here applies to every size of this product.'), grindBox);
     const controls = node('fieldset', { class: 'cp-controls' },
       node('div', { class: 'cp-form-grid' },
         node('div', { class: 'cp-column' }, details, pricing, coffeeFields),

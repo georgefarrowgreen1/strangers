@@ -127,7 +127,8 @@ export function createStore(products, storage = browserStorage()) {
       subtotal += qty * unitPrice;
       count += qty;
       const customWeight = product.shippingWeightGrams;
-      const weight = Number.isSafeInteger(customWeight) && customWeight > 0 ? customWeight : BAG_GRAMS[size] ?? 500;
+      const defaultWeight = BAG_GRAMS[size] ?? (product.category === 'accessory' ? 150 : 500);
+      const weight = Number.isSafeInteger(customWeight) && customWeight > 0 ? customWeight : defaultWeight;
       grams += qty * weight;
     }
 
