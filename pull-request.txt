@@ -7,3 +7,5 @@ The Worker checks payment eligibility before booking, downloading the label and 
 ## Test coverage
 
 The release includes Worker tests for payment terms, settlement evidence, account-wide holds, permissions and changes during booking. Browser tests exercise the staff flow on desktop and phone, including reprinting, recovering an uncertain request and handling a payment hold before handover.
+
+The first Tests run caught a legacy dispatch-email fixture that attempted Royal Mail handover with unconfirmed payment terms. Commit `fae3921` updates the fixture to check that this handover is held and sends no dispatch email. It then checks that both legacy delivery spellings send the shipped email on approved 30-day terms. The focused regression passed locally.

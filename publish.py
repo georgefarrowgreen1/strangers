@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "codex/staff-royal-mail-labels"
-EXPECTED = "ee9595d9a95b3288434632b60d7492b88473ec41"
-PRIOR = ""
+EXPECTED = "fae3921748d4b6a9b332aca45532af73cc2d79f3"
+PRIOR = "ee9595d9a95b3288434632b60d7492b88473ec41"
 TIMED_OUT_TEST_RUN = None
 TITLE = "Enable payment-checked Royal Mail labels for staff wholesale orders"
 EXPECTED_USER_ID = 292799750
