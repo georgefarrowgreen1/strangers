@@ -1,9 +1,11 @@
-## Admin workspace redesign
+## Sitewide repairs
 
-Rebuilds the Admin shell and Today dashboard using the Strangers theme. It refines Wholesale, Royal Mail, Invoicing, QuickBooks, People, Sites, Sickness, Activity, Security, Backups & exports, and Consumer Preview. Desktop workspaces use list and detail layouts where suitable, with focused detail views on phones.
+Protects staff account changes against concurrent resets, keeps rota contract history consistent, and fixes stale actions in the diary and rota. Wholesale checkout and recurring deliveries recheck customer, location and stock details. QuickBooks matching revalidates customer, currency and competing orders before confirmation, and blocked invoices can be retried independently.
 
-The change is in the Admin browser interface. The current order, billing, and customer APIs, database schema, and access controls continue to apply. Consumer Preview uses its existing separate gateway.
+The bundled consumer preview revalidates sessions when restoring private views, preserves basket edits across tabs and handles unavailable stock checks. Admin packing reconciles concurrent edits, support search can use the companion retail service’s full inbox, and the dashboard recovers from optional module failures.
 
-The approved review includes desktop and mobile browser screenshots. Local verification includes layout checks on all 17 routes at five widths, targeted Admin and QuickBooks browser tests, automatic-invoicing checks, and asset builds. GitHub's full Tests workflow gates the production merge.
+## Verification
 
-The rota email browser test verifies the same email and active-account counts using the revised Overview wording.
+The local staff Worker suite passed 570 tests and the full Chromium suite passed 461. The layout review covered 45 routes at four widths. TypeScript, production assets and the standalone preview built successfully, and the branded storefront inventory verified 104 files. The repair commit is `67d063b`. The final commit `fe1f8ad` adds the verification results to the audit report.
+
+The separate retail service release is `018e21b`. The release sequence puts that service first, followed by the staff Worker and bundled storefront. See [the sitewide audit](docs/sitewide-audit-2026-11-27.md) for the findings, coverage and limitations.

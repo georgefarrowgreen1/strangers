@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/admin-workspace-redesign"
-EXPECTED = "13b829ff2913698b316d0ab1c011817447c56b97"
-PRIOR = "ca475c1ed5642797454af64655b9c2c8f9cd84c7"
+BRANCH = "codex/sitewide-audit"
+EXPECTED = "fe1f8adb3032f0a4022519c0aa8d9246e9e15b63"
+PRIOR = ""
 TIMED_OUT_TEST_RUN = None
-TITLE = "Refine the Strangers Admin workspace"
+TITLE = "Repair sitewide account, fulfilment, invoicing and interface failures"
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
 
