@@ -14,10 +14,10 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "codex/royal-mail-dispatch-queue"
-EXPECTED = "159abe32ba6c89c13328884c673e96d82e214959"
-PRIOR = "d12ed49f6ee616729903fec2a2554daff56979ba"
+EXPECTED = "fc8c5cdf2b93e40204b568ec9c654dee37d2328b"
+PRIOR = "159abe32ba6c89c13328884c673e96d82e214959"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Unify wholesale dispatch and recover Royal Mail bookings"
+TITLE = "Unify wholesale dispatch, recover bookings and verify Royal Mail setup"
 DRAFT_ONLY = False
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent

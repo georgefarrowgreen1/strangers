@@ -1,5 +1,7 @@
-Staff and Admin now use one structured label destination and a shared wholesale dispatch queue. Uncertain bookings are reconciled by looking up the original Royal Mail reference. Admin can check the configured service for the reviewed parcel without buying postage.
+Staff and Admin share the wholesale dispatch queue and a structured parcel address. Uncertain bookings are recovered by the original reference. The production business-email and carrier-rejection changes in #253 are included.
 
-Includes additive migration 54 and preserves the existing Click & Drop instructions for parcels over the packed weight limit. The reviewed release passed 29 focused API checks, 21 desktop and mobile browser checks, TypeScript and a Wrangler production dry run. Carrier requests in local tests used fixtures.
+Admin → Wholesale → Royal Mail now offers five read-only carrier checks plus confirmations for the contracted service register and parcel limits, a printed return address, printer/barcode, collection arrangements and the current day’s manifest or receipt. A local packed-box calculator covers express24 surcharge thresholds and agreed service limits.
 
-The Admin host regression test now verifies that the dispatch queue assets are available and its module loads before the wholesale dashboard. The complete Admin API test file passed locally.
+Results are scoped to the current credentials. The PDF and tracking checks use an existing verified wholesale shipment. Account changes and concurrent edits invalidate stale writes. Public Parcelforce references support verified handover while Tracking V2 scans are limited to eligible formats.
+
+Includes additive migrations 54 and 55, migration and API coverage, simulated read-only carrier checks and mobile and desktop browser coverage. Install through the established production Workers Builds workflow.
