@@ -36,7 +36,7 @@ export function cartView(store, retailCheckout, message) {
     <div class="shipping-progress" aria-live="polite"><span>${progress}</span><progress aria-label="Progress towards free UK delivery" max="${FREE_SHIPPING + 1}" value="${Math.min(subtotal, FREE_SHIPPING + 1)}"></progress></div>
     <ul>${cart.map(line => `<li class="cart-line" data-catalogue-id="${html(line.id)}"><img src="${html(line.product.image)}" alt="" width="64" height="64">
       <div><h3>${html(line.product.name)}</h3><p>${html(lineOptions(line))}</p>
-      <div class="cart-controls">${quantityMarkup(line.qty, [line.product.name, lineOptions(line)].join(', '), line.key)}<button type="button" class="remove" data-remove="${html(line.key)}" aria-label="Remove ${html(line.product.name)}, ${html(lineOptions(line))}">Remove</button><span class="line-price">${money(line.unitPrice * line.qty)}</span></div></div></li>`).join('')}</ul>
+      <div class="cart-controls">${quantityMarkup(line.qty, [line.product.name, lineOptions(line)].join(', '), line.key)}<button type="button" class="remove" data-remove="${html(line.key)}"><span data-cart-remove-label>Remove</span><span class="sr-only"> ${html(line.product.name)}, ${html(lineOptions(line))}</span></button><span class="line-price">${money(line.unitPrice * line.qty)}</span></div></div></li>`).join('')}</ul>
     <div aria-live="polite">${orderTotals(totals, 'delivery')}</div>
     <div class="drawer-actions">${retailCheckout ? '<button class="button" type="button" data-checkout data-return-checkout>Resume checkout</button>' : '<a class="button" href="/checkout/" data-checkout>Checkout</a>'}
       <button class="button outline" type="button" data-keep-shopping>Keep shopping</button></div>

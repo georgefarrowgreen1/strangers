@@ -230,7 +230,10 @@ test("published product merchandising follows a coffee from its shoppable shelf 
   const initial = await change("", undefined, "GET");
   const draft = structuredClone(initial.draft);
   const title = "Bom Jesus from Alta Mogiana";
-  draft.pages["product:bom-jesus"] = {fields:{"product-title":title, "product-image-alt":"Our Bom Jesus coffee", "note-1":"Cocoa"}};
+  const productTitle = "Bom Jesus | The Norwich roastery";
+  const description = "Discover how we roast and brew our coffees in Norwich.";
+  draft.pages.product = {meta:{description}};
+  draft.pages["product:bom-jesus"] = {meta:{title: productTitle}, fields:{"product-title":title, "product-image-alt":"Our Bom Jesus coffee", "note-1":"Cocoa"}};
   draft.pages.home = {sections:["w-coffees", "hero"], widgets:[
     {id:"w-coffees", type:"coffee-shelf", heading:"Roastery favourites", items:["rocko", "bom-jesus"]},
   ]};
@@ -247,12 +250,84 @@ test("published product merchandising follows a coffee from its shoppable shelf 
     assert.equal(await cards.nth(1).getByRole("heading").textContent(), title);
     await cards.nth(1).click();
     await page.getByRole("heading", {name:title, level:1}).waitFor();
+    assert.equal(await page.title(), productTitle);
+    assert.equal(await page.locator('meta[name="description"]').getAttribute("content"), description);
     await page.locator('#retail-product-grind').selectOption("Filter / Medium");
     await page.getByRole("button", {name:"Add to cart", exact:true}).click();
     await page.locator(".cart-line").getByText(title, {exact:true}).waitFor();
     const lines = await page.evaluate(() => JSON.parse(localStorage.getItem("strangers-coffee-proposal.cart.v1")));
     assert.deepEqual(lines, [{id:"bom-jesus", size:"250g", grind:"Filter / Medium", qty:1}]);
   } finally {
+    await context.close();
+  }
+});
+
+test("published buyer-flow wording preserves finder choices, checkout identity, pricing and order payload", {timeout:60000}, async () => {
+  const initial = await change("", undefined, "GET");
+  const draft = {schema:1, theme:"heritage", pages:{
+    finder:{fields:{"brew-filter-medium-label":"My pour-over","taste-chocolatey-label":"Cocoa and nuts","add-label":"Choose bag"}},
+    cart:{fields:{checkout:"Go to delivery", subtotal:"Coffee subtotal", total:"Cart total"}},
+    checkout:{fields:{"name-label":"Name for delivery","delivery-option":"Post to my door","collection-option":"Pick up in Norwich",
+      "review-action":"Check my order","edit-action":"Change delivery details","place-action":"Confirm this test order",
+      "processing-heading":"Preparing the order summary","confirmed-heading":"Your preview order is ready to view"}},
+  }};
+  const saved = await change("", {revision:initial.revision,document:draft},"PUT");
+  await change("/publish", {revision:saved.revision});
+  const context = await localBrowser({width:393,height:852});
+  let respond;
+  try {
+    const arrived = new Promise(resolve => {
+      context.route("**/api/retail/orders", route => {
+        const request = route.request();
+        resolve({body:request.postDataJSON(),session:request.headers()["x-retail-profile-session"]});
+        return new Promise(finish => {
+          respond = async () => {
+            await route.fulfill({json:{order:{reference:"SC-ABCDEF12",method:"delivery",createdAt:"2026-11-25T10:00:00Z",
+              status:"placed",lines:[{id:"bom-jesus",size:"250g",grind:"Filter / Medium",qty:1,unitPrice:1050}],
+              pricing:{subtotal:1050,shipping:300,total:1350}}}});
+            finish();
+          };
+        });
+      });
+    });
+    const page=await context.newPage();
+    await page.goto(retail);
+    await page.locator("[data-find]:visible").first().click();
+    await page.getByRole("radio",{name:/My pour-over/}).check();
+    assert.equal(await page.locator('input[name="brew"]:checked').inputValue(),"Filter / Medium");
+    await page.getByRole("button",{name:"Continue to taste"}).click();
+    await page.getByRole("radio",{name:/Cocoa and nuts/}).check();
+    await page.getByRole("button",{name:"Find my match"}).click();
+    await page.locator(".finder-result-head").getByText("My pour-over",{exact:true}).waitFor();
+    const bag=page.locator(".finder-best").getByRole("button",{name:/Choose bag.*250 g.*£10\.50/});
+    await bag.click();
+    assert.equal(await page.getByText("Coffee subtotal",{exact:true}).locator("..").locator("dd").textContent(),"£10.50");
+    assert.equal(await page.getByText("Cart total",{exact:true}).locator("..").locator("dd").textContent(),"£13.50");
+    await page.getByRole("link",{name:"Go to delivery"}).click();
+    await page.getByRole("radio",{name:/Pick up in Norwich/}).check();
+    assert.equal(await page.locator('input[name="method"]:checked').inputValue(),"collection");
+    await page.getByRole("radio",{name:/Post to my door/}).check();
+    await page.getByRole("button",{name:"Fill sample details"}).click();
+    await page.getByLabel("Name for delivery",{exact:true}).fill("Sample Customer");
+    await page.getByRole("button",{name:"Check my order"}).click();
+    await page.getByRole("button",{name:"Change delivery details"}).click();
+    assert.equal(await page.getByLabel("Name for delivery",{exact:true}).inputValue(),"Sample Customer");
+    await page.getByRole("button",{name:"Check my order"}).click();
+    await page.getByRole("button",{name:"Confirm this test order"}).click();
+    const {body,session}=await arrived;
+    assert.equal(session,"guest");
+    assert.equal(body.method,"delivery");
+    assert.equal(body.deliveryService,"royal-mail-tracked-48");
+    assert.equal(body.contact.name,"Sample Customer");
+    assert.deepEqual(body.lines,[{id:"bom-jesus",size:"250g",grind:"Filter / Medium",qty:1}]);
+    await page.getByRole("heading",{name:"Preparing the order summary"}).waitFor();
+    await respond(); respond=null;
+    await page.getByRole("heading",{name:"Your preview order is ready to view"}).waitFor();
+    assert.equal(await page.locator(".retail-checkout-reference").textContent(),"SC-ABCDEF12");
+    assert.equal(await page.locator(".grand-total dd").textContent(),"£13.50");
+    await page.getByText("No payment was taken and no coffee will be sent.").waitFor();
+  } finally {
+    if (respond) await respond();
     await context.close();
   }
 });

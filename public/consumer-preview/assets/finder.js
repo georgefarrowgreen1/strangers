@@ -82,13 +82,13 @@ function matchingCoffees(products, answers) {
     .slice(0, 3);
 }
 
-const optionGroups = { brew: brews, taste: tastes, caffeine: caffeineOptions };
+export const finderOptions = { brew: brews, taste: tastes, caffeine: caffeineOptions };
 export function updateFinderAnswers(form, answers) {
   const groups = form.dataset.step === 'brew' ? ['brew'] : ['taste', 'caffeine'];
   const values = {};
   for (const group of groups) {
     const value = form.elements[group].value;
-    const allowed = optionGroups[group].some(option => option.value === value);
+    const allowed = finderOptions[group].some(option => option.value === value);
     if (!allowed) return false;
     values[group] = value;
   }
@@ -98,7 +98,7 @@ export function updateFinderAnswers(form, answers) {
 }
 
 function choices(name, answers) {
-  return optionGroups[name].map(({ value, label, detail, tone = 'brew' }) => `<label class="finder-option" data-tone="${tone}">
+  return finderOptions[name].map(({ value, label, detail, tone = 'brew' }) => `<label class="finder-option" data-tone="${tone}">
     <input type="radio" name="${name}" value="${html(value)}" required ${value === answers[name] ? 'checked' : ''}>
     <span class="finder-option-copy"><strong>${html(label)}</strong>${detail ? `<small>${html(detail)}</small>` : ''}</span>
     <span class="finder-tick" aria-hidden="true"></span>
@@ -148,7 +148,7 @@ function match(product, brew, originLabel) {
       <p class="finder-best-notes">${html(product.notes.join(', '))}</p>
       <p class="finder-best-reason">${html(reason)}</p>
       <div class="finder-best-grind"><strong>${html(grindLabel(grind))}</strong>${brew.guide ? `<a data-finder-guide href="/brewguides/#${brew.guide[0]}">${brew.guide[1]}</a>` : '<a href="/brewguides/">Brew guides</a>'}</div>
-      <div class="finder-best-actions"><button class="button" type="button" data-finder-add="${html(product.id)}">Add ${size.replace('g', ' g')} · ${money(price)}</button><a href="${html(finderProductPath(product, grind))}">Coffee details</a></div>
+      <div class="finder-best-actions"><button class="button" type="button" data-finder-add="${html(product.id)}"><span data-finder-add-label>Add</span> ${size.replace('g', ' g')} · ${money(price)}</button><a href="${html(finderProductPath(product, grind))}">Coffee details</a></div>
       <p class="finder-add-error" role="alert" hidden></p>
     </div>
   </article>`;
@@ -161,7 +161,7 @@ function alternative(product, brew) {
     <img src="${html(product.image)}" width="300" height="240" alt="" loading="lazy">
     <div><p class="eyebrow">${html(difference)}</p><h5><a href="${html(finderProductPath(product, variant.grind))}">${html(product.name)}</a></h5>
     <p>${html(product.notes.join(', '))}</p>
-    <button type="button" class="text-button" data-finder-add="${html(product.id)}">Add ${variant.size.replace('g', ' g')} · ${money(variant.price)}</button><p class="finder-add-error" role="alert" hidden></p></div>
+    <button type="button" class="text-button" data-finder-add="${html(product.id)}"><span data-finder-add-label>Add</span> ${variant.size.replace('g', ' g')} · ${money(variant.price)}</button><p class="finder-add-error" role="alert" hidden></p></div>
   </article>`;
 }
 
@@ -170,7 +170,7 @@ function tastingFlight(product) {
   return `<article class="finder-alternative finder-flight">
     <div><p class="eyebrow">Three 100 g bags · ${html(grindLabel(grind))}</p><h5><a href="${html(productPath(product))}">Roaster’s Tasting Flight</a></h5>
       <p>Try Bom Jesus, Rocko Mountain and Anserma side by side.</p>
-      <button type="button" class="text-button" data-finder-add="${html(product.id)}">Add flight · ${money(price)}</button><p class="finder-add-error" role="alert" hidden></p></div>
+      <button type="button" class="text-button" data-finder-add="${html(product.id)}"><span data-finder-flight-label>Add flight</span> · ${money(price)}</button><p class="finder-add-error" role="alert" hidden></p></div>
   </article>`;
 }
 
@@ -184,7 +184,8 @@ export function finderMarkup(step, products, answers) {
   const fitsTaste = product?.profile === answers.taste || answers.taste === 'Any';
   return `<div class="finder finder-result" id="finder-result">
     <div class="finder-result-head"><div>
-      <h3 class="finder-heading" tabindex="-1">Your coffee match</h3><p>${html(brew.label)} · ${html(taste.label)} · ${html(caff.label)}</p>
+      <h3 class="finder-heading" tabindex="-1">Your coffee match</h3><p>${[['brew',brew],['taste',taste],['caffeine',caff]].map(([group,option])=>
+        `<span data-finder-answer="${group}" data-value="${html(option.value)}">${html(option.label)}</span>`).join(' · ')}</p>
     </div><button class="button outline finder-change" type="button" data-finder-back="brew">Change answers</button></div>
     ${product ? match(product, brew, fitsTaste ? 'Best match' : 'Closest available match')
       : '<p class="finder-no-match">There isn’t an available coffee for these choices at the moment. Change your answers to explore the current range.</p>'}

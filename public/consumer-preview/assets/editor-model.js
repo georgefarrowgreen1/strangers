@@ -3,6 +3,7 @@ import { productRoutes } from './product-paths.js';
 import { productContent } from './product-content.js';
 import { products } from './products.js';
 import { authModes } from './account.js';
+import { finderOptions } from './finder.js';
 
 export const THEMES = Object.freeze({ heritage: 'Strangers green', espresso: 'Espresso', oat: 'Oat', sage: 'Sage' });
 export const LAYOUTS = Object.freeze({ standard: 'Standard', wide: 'Wide', compact: 'Compact' });
@@ -99,6 +100,87 @@ const checkoutFields = [
   field('empty-heading', 'Empty checkout heading', '#retail-checkout .retail-checkout-message:has(a[href="/coffee/"]) h2', 'Your cart is empty'),
   field('empty-intro', 'Empty checkout description', '#retail-checkout .retail-checkout-message:has(a[href="/coffee/"]) p', 'Choose a coffee to begin.'),
 ];
+// The editable labels live alongside native controls, leaving personal values, rates, prices and order status intact.
+function captions(prefix, definitions) {
+  return definitions.map(([id,label,selector,copy]) => field(id,label,prefix+selector,copy));
+}
+
+for (const [group, options] of Object.entries(finderOptions)) {
+  for (const {value, label, detail} of options) {
+    const id = group+'-'+value.toLowerCase().replace(/[^a-z0-9]+/g,'-');
+    const option = finder+'input[name="'+group+'"][value="'+value+'"] + .finder-option-copy';
+    const answer = finder+'[data-finder-answer="'+group+'"][data-value="'+value+'"]';
+    finderFields.push(field(id+'-label',group+' choice · '+label,option+' > strong, '+answer,label));
+    if (detail) finderFields.push(field(id+'-detail',group+' description · '+label,option+' > small',detail));
+  }
+}
+finderFields.push(...captions(finder,[
+  ['caffeine-legend','Caffeine question','.finder-caffeine legend','Caffeine preference'],
+  ['taste-back','Taste step · back button','[data-step="taste"] .finder-back','Back'],
+  ['details-link','Coffee details link','.finder-best-actions a','Coffee details'],
+  ['add-label','Add button · label before the bag size and price','[data-finder-add-label]','Add'],
+  ['add-flight','Tasting flight · label before the price','[data-finder-flight-label]','Add flight'],
+  ['flight-copy','Tasting flight · description','.finder-flight h5 + p','Try Bom Jesus, Rocko Mountain and Anserma side by side.'],
+  ...['Brew','Taste','Match'].map((name,i)=>['progress-'+name.toLowerCase(),'Progress · '+name,'.finder-progress > span:nth-child('+(i+1)+')',name]),
+]));
+
+cartFields.push(...captions(bag,[
+  ['checkout','Checkout link','.drawer-actions a[data-checkout]','Checkout'],
+  ['resume-checkout','Resume checkout button','.drawer-actions [data-return-checkout]','Resume checkout'],
+  ['remove','Remove item button','[data-cart-remove-label]','Remove'],
+  ['subtotal','Subtotal label','.totals > div:first-child dt','Subtotal'],
+  ['shipping','Delivery charge label','.totals > div:nth-child(2) dt','Royal Mail Tracked 48'],
+  ['total','Grand total label','.grand-total dt','Total'],
+]));
+
+checkoutFields.push(...captions('#retail-checkout ',[
+  ['fulfilment-legend','Fulfilment question','#retail-checkout-form > fieldset:first-child legend','How would you like your coffee?'],
+  ['details-legend','Contact section heading','#retail-checkout-form > fieldset:nth-child(2) legend','Contact details'],
+  ['address-legend','Delivery address section heading','#retail-checkout-delivery legend','Delivery address'],
+  ['collection-legend','Collection section heading','#retail-checkout-collection legend','Collection location'],
+  ['guest-intro','Guest checkout introduction','.retail-checkout-guest p','Continue as a guest.'],
+  ['guest-signin','Guest sign-in link','.retail-checkout-guest [data-checkout-signin]','Sign in'],
+  ['name-label','Contact name label','label[for="retail-checkout-name"]','Full name'],
+  ['email-label','Contact email label','label[for="retail-checkout-email"]','Email address'],
+  ['phone-label','Telephone number label','label[for="retail-checkout-phone"] > span','Phone'],
+  ['phone-optional','Telephone optional label','label[for="retail-checkout-phone"] > small','Optional'],
+  ['street-label','Street address label','label[for="retail-checkout-address"]','Street address'],
+  ['town-label','Town or city label','label[for="retail-checkout-town"]','Town or city'],
+  ['postcode-label','Postcode label','label[for="retail-checkout-postcode"]','UK postcode'],
+  ['cafe-label','Café selection label','label[for="retail-checkout-cafe"]','Choose a café'],
+  ['sample-action','Sample details button','[data-checkout-sample]','Fill sample details'],
+  ['back-to-cart','Back to cart button','.retail-checkout-cart[data-bag]','Back to cart'],
+  ['review-action','Review order button','button[form="retail-checkout-form"]','Review order'],
+  ['edit-action','Edit details button','[data-checkout-edit]','Edit details'],
+  ['place-action','Place test order button','[data-place-retail-order]','Place test order'],
+  ['review-instruction','Review stage instruction','#retail-review-title + p','Check your details before placing the test order.'],
+  ['review-delivery','Review · UK delivery heading','[data-review-method="delivery"]','UK delivery'],
+  ['review-collection','Review · collection heading','[data-review-method="collection"]','Norwich collection'],
+  ['contact-summary','Review and receipt · contact details heading','[data-contact-heading]','Contact details'],
+  ['processing-heading','Processing screen heading','.retail-checkout-processing h2','Preparing your receipt'],
+  ['confirmed-heading','Confirmation screen heading','[data-order-confirmed]','Your test order is confirmed.'],
+  ['updates-heading','Receipt · timeline heading','[data-updates-heading]','Order updates'],
+  ['receipt-delivery','Receipt · delivery heading','[data-receipt-method="delivery"]','Delivery service'],
+  ['receipt-collection','Receipt · collection heading','[data-receipt-method="collection"]','Collection location'],
+  ['refresh-action','Receipt · refresh button','[data-checkout-refresh]','Refresh order status'],
+  ['tracking-copy','Receipt · copy link button','[data-copy-tracking]','Copy tracking link'],
+  ['account-action','Receipt · view account link','.retail-checkout-receipt-actions a[href="/account/#orders"]','View My account'],
+  ['continue-shopping','Receipt · continue shopping link','.retail-checkout-receipt-actions a[href="/coffee/"]','Continue shopping'],
+  ['empty-action','Empty checkout · shop link','.retail-checkout-message > a[href="/coffee/"]','Shop coffee'],
+  ['subtotal','Order summary subtotal label','.totals > div:first-child dt','Subtotal'],
+  ...['Details','Review','Confirmation'].map((name,i)=>['step-'+name.toLowerCase(),'Checkout progress · '+name,'.retail-checkout-progress li:nth-child('+(i+1)+') [data-step-caption]',name]),
+]));
+checkoutFields.push(field('total','Order total label','#retail-checkout .grand-total dt, #retail-checkout .retail-checkout-action-total > small','Total'));
+for (const [method, label, help, estimate] of [
+  ['delivery','UK delivery','Royal Mail Tracked 48','Estimated delivery 2–3 working days from dispatch'],
+  ['collection','Collect in Norwich','Free café collection','Collect from your chosen location once it’s ready'],
+]) {
+  const option = '#retail-checkout-form input[name="method"][value="'+method+'"] + span';
+  checkoutFields.push(field(method+'-option',method+' · fulfilment option',option+' > strong',label),
+    field(method+'-help',method+' · fulfilment help',option+' > small',help),
+    field(method+'-estimate',method+' · order summary help','#retail-checkout .retail-checkout-delivery-note[data-method="'+method+'"]',estimate));
+}
+
 const productSections = [
   { id: 'crumb', label: 'Breadcrumbs', selector: '.retail-product-crumb' },
   { id: 'intro', label: 'Photographs and purchase options', selector: '.retail-product-intro', locked: true },
