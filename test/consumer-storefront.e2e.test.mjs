@@ -334,3 +334,29 @@ test('a renewed session for the same checkout account retries the same order key
     await context.close();
   }
 });
+
+test('edited copy, accessory sizes and coffees without a 250 g bag use the current catalogue', async () => {
+  const { productPageView } = await import('../public/consumer-preview/assets/product-page.js');
+  const { finderVariant } = await import('../public/consumer-preview/assets/finder.js');
+  const { shelfProducts } = await import('../public/consumer-preview/assets/storefront-views.js');
+  const old = [...products];
+  try {
+    const original = old.find(item => item.id === 'bom-jesus');
+    const edited = { ...original, shortCopy: 'Fresh crop <new>', story: 'An amended producer story.',
+      prices: { '500g': 1795 }, region: 'New Region', available: true };
+    const accessory = { id: 'coffee-caddy', category: 'accessory', name: 'Coffee caddy', notes: [],
+      image: original.image, shortCopy: 'For beans', grinds: ['N/A'], prices: { '250g': 900, '500g': 1100 } };
+    products.splice(0, products.length, edited, accessory);
+    const {markup} = productPageView('bom-jesus', '', true);
+    assert.match(markup, /Fresh crop &lt;new&gt;/);
+    assert.match(markup, /An amended producer story/);
+    assert.match(markup, /New Region/);
+    assert.deepEqual(finderVariant(edited, 'Whole bean'), {size:'500g', grind:'Whole bean', price:1795});
+    assert.match(shelfProducts([edited], true), /From £17\.95/);
+    const choices = productPageView(accessory.id, '', true).markup;
+    assert.match(choices, /type="radio" name="size" value="250g"/);
+    assert.match(choices, /type="radio" name="size" value="500g"/);
+  } finally {
+    products.splice(0, products.length, ...old);
+  }
+});

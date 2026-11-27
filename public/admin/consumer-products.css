@@ -85,3 +85,5 @@
 
 .cp-storefront { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
 .cp-storefront .link { display: inline-flex; min-height: 44px; align-items: center; }
+
+.cp-overrides { display: grid; gap: 4px; padding: 10px 12px; background: var(--sunk); border-inline-start: 3px solid var(--accent); border-radius: 6px 12px 12px 6px; line-height: 1.4; font-size: 14px; }

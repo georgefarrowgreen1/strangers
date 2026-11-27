@@ -47,6 +47,64 @@ describe("consumer product management through both local Workers", {
     assert.equal((await fixture.request(wholesale, endpoint, "POST", {name:"Example"}, fixture.cookie)).status, 404);
     assert.equal((await fixture.request(admin, endpoint, "POST", {name:"Example"}, fixture.cookie, {origin:retail})).status, 403);
   });
+  test("the site editor can merchandise a new coffee with live price, photo and product template", {timeout:60000}, async () => {
+    const modify = async (path, method, body) => {
+      const response = await fixture.request(admin, path, method, body, fixture.cookie);
+      const result = await response.json();
+      assert.ok(response.ok, JSON.stringify(result));
+      return result;
+    };
+    const id = "ber-street-natural", name = "Ber Street Natural";
+    const products = (await modify(endpoint, "GET")).products;
+    const image = products.find(product => product.id === "bom-jesus").image;
+    const created = await modify(endpoint, "POST", {id, name, image, category:"coffee", available:true,
+      notes:["Cocoa"], prices:{"250g":1850}, grinds:["Whole bean"]});
+    const editor = "/api/admin/consumer/editor", key = "custom:roastery-seasonal";
+    const initial = await modify(editor, "GET");
+    const draft = structuredClone(initial.draft);
+    const description = "Brewed fresh in Norwich.";
+    draft.pages.product = {meta:{description}};
+    draft.pages[key] = {title:"Seasonal favourites", sections:["w-our-coffees"],
+      widgets:[{id:"w-our-coffees",type:"coffee-shelf",heading:"Seasonal coffees",items:["rocko"]}]};
+    await modify(editor, "PUT", {revision:initial.revision,document:draft});
+    const context = await openLocalBrowser(fixture, browser, {width:1440,height:1000}, true);
+    try {
+      const page = await context.newPage();
+      page.setDefaultTimeout(10000);
+      await page.goto(admin + "/#consumer/editor");
+      await page.getByRole("combobox", {name:"Storefront page or surface"}).selectOption(key);
+      const preview = page.frameLocator('iframe[title^="Editable storefront preview"]');
+      await preview.getByRole("heading", {name:"Seasonal coffees",exact:true}).click();
+      await page.getByLabel("Add a coffee", {exact:true}).selectOption({label:name});
+      await preview.getByRole("heading", {name,exact:true}).waitFor();
+      await page.getByRole("button", {name:"Save draft", exact:true}).click();
+      await page.getByText("Draft saved. You can return to it before publishing.", {exact:true}).waitFor();
+      const saved = await modify(editor, "GET");
+      assert.deepEqual(saved.draft.pages[key].widgets[0].items, ["rocko",id]);
+      await modify(editor + "/publish", "POST", {revision:saved.revision});
+      const path = retail + "/pages/roastery-seasonal/";
+      await page.goto(path);
+      const card = page.locator(".consumer-retail-card").filter({has:page.getByRole("heading", {name,exact:true})});
+      await card.getByText("From £18.50", {exact:true}).waitFor();
+      const photo = new URL(await card.locator("img").getAttribute("src"), retail);
+      assert.equal(photo.pathname.split("/").at(-1), image.split("/").at(-1));
+      assert.equal((await fixture.request(retail, photo.pathname)).status, 200);
+      await card.click();
+      await page.getByRole("heading", {name, level:1}).waitFor();
+      assert.equal(await page.locator('meta[name="description"]').getAttribute("content"), description);
+
+      const amended = await modify(endpoint + "/" + id, "PATCH", {ifVersion:created.product.version, prices:{"250g":1995}});
+      await page.goto(path);
+      await card.getByText("From £19.95", {exact:true}).waitFor();
+      await modify(endpoint + "/" + id, "DELETE", {ifVersion:amended.product.version});
+      await page.reload();
+      await page.locator(".consumer-retail-card").filter({hasText:"Rocko"}).waitFor();
+      assert.equal(await card.count(), 0);
+    } finally {
+      await context.close();
+    }
+  });
+
   async function capture(page, filename) {
     const width = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     assert.ok(width <= 1, filename + " overflows by " + width + "px");

@@ -87,7 +87,7 @@ export function mountConsumerProducts(host, { api, confirmSheet }) {
   host.classList.add('consumer-products');
   let products = [], artwork = [], search = '', status = 'active', listScroll = 0, active = true, busy = false;
   let form, original = '', fileUrl = '', photoSequence = 0, photoBusy = false, pendingPhoto, uploadedPhoto;
-  let call = 0, alertBox;
+  let call = 0, alertBox, publishedPages;
   const events = new AbortController();
   const missingCoffees = ids => (ids || []).filter(id => !products.some(p => p.id === id && p.available && !p.archived));
   const orderable = p => p.available && !missingCoffees(p.contents).length;
@@ -286,6 +286,21 @@ export function mountConsumerProducts(host, { api, confirmSheet }) {
         node('span', { class: 'cp-location' }, productPath(item)),
         node('a', { class: 'link', href: 'https://preview.staffstrangerscoffee.com' + productPath(item), target: '_blank', rel: 'noopener noreferrer' }, 'View in shop')),
       field('Product type', type), field('Short description', shortCopy), field('Product story', story));
+    if (product && !archived) {
+      publishedPages ||= api('GET', '/api/admin/consumer/editor/published').then(data => data.document?.pages).catch(() => null);
+      publishedPages.then(pages => {
+        const overrides = pages?.['product:' + item.id]?.fields;
+        if (!active || !details.isConnected || !overrides) return;
+        const labels = [
+          ['Product name', ['product-title']], ['Product photo', ['product-image']], ['Photo description', ['product-image-alt']],
+          ['Short description', ['product-description']], ['Tasting notes', ['note-1', 'note-2', 'note-3']],
+        ].filter(([, keys]) => keys.some(key => Object.hasOwn(overrides, key))).map(([label]) => label);
+        if (!labels.length) return;
+        details.querySelector('h3').after(node('aside', { class: 'cp-overrides', 'aria-label': 'Published storefront overrides' },
+          node('strong', {}, 'Set in the site editor'), node('p', {}, labels.join(' · ')),
+          help('These storefront fields use the published design. Orders use the catalogue values.')));
+      });
+    }
     const pricing = panel('Sizes and prices', priceRows, addRow, field('Shipping weight (g)', weight), grindBox);
     const controls = node('fieldset', { class: 'cp-controls' },
       node('div', { class: 'cp-form-grid' },

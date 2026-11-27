@@ -1,5 +1,6 @@
 import { escapeHtml as html } from './html.js';
 import { productPath } from './product-paths.js';
+import { originalProduct } from './products.js';
 import { money } from './store.js';
 
 const highlights = new Map([
@@ -22,7 +23,7 @@ export function showHighlights(products) {
   shelf.innerHTML = chosen.map(product => `<article class="home-coffee">
     <figure><a tabindex="-1" aria-hidden="true" href="${html(productPath(product))}"><img src="${html(product.image)}" width="580" height="410" alt="" loading="lazy" decoding="async"></a></figure>
     <div class="home-coffee-copy"><p class="eyebrow">${[product.country, product.process].filter(Boolean).map(html).join(' · ')}</p>
-    <h3>${html(product.name)}</h3><p>${html(product.notes.join(', '))}</p>
+    <h3>${html(product.name === originalProduct(product.id)?.name ? highlights.get(product.id) ?? product.name : product.name)}</h3><p>${html(product.notes.join(', '))}</p>
     <div class="home-coffee-actions"><strong>From ${money(Math.min(...Object.values(product.prices)))}</strong><a class="button outline" href="${html(productPath(product))}" aria-label="View ${html(product.name)}">View coffee</a></div>
     </div></article>`).join('');
 }
