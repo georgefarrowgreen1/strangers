@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/direct-consumer-editing"
-EXPECTED = "47bc83f1e5ae7700c313223633bd6cc13396b380"
-PRIOR = "63009d1b55c8114d1ebdf3dc6029fec837e160a3"
+BRANCH = "codex/consumer-layout-seo"
+EXPECTED = "de39437223c641f6894356cc0d376c16a31a7d6d"
+PRIOR = "22764bebc66cf6df9654df31f5cbd618d3008977"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Edit consumer storefront elements directly on the page"
+TITLE = "Add responsive layout and SEO editing to the consumer storefront"
 DRAFT_ONLY = False
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
