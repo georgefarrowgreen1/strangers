@@ -466,6 +466,13 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, o
     }
   }
 
+  function packedComponents(line) {
+    if (!Array.isArray(line.product?.contents)) return "";
+    const components = line.product.contents.filter(part => part?.name && Number.isSafeInteger(part.qty) && part.qty > 0)
+      .map(part => `${part.qty} × ${part.name}${part.weight ? ` (${part.weight})` : ""}`);
+    return components.length ? html`<small>Each pack contains ${components.join(" · ")}</small>` : "";
+  }
+
   function fulfilmentDetail(order) {
     const state = packing.get(order.reference), checked = packedWithChanges(order, state?.changes);
     const busy = updating || writes.has(order.reference) || blockedOrders.has(order.reference), saving = !!state?.running, canPack = ["placed", "preparing"].includes(order.status);
@@ -480,7 +487,7 @@ window.AdminConsumer = ({ api, html, raw, svg, put, head, toast, confirmSheet, o
       <div class="consumer-detail-body">${order.contact ? html`<section class="consumer-contact"><h4>Saved customer details</h4><p>${[order.contact.email, order.contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</p>${order.method === "delivery" ? html`<p>${[order.contact.address, order.contact.town, order.contact.postcode].filter(Boolean).join(", ")}</p>` : html`<p>${order.cafe?.address || ""}</p>`}</section>` : html`<p class="hint">Customer details were not recorded on this older preview order.</p>`}
       <section><div class="consumer-packing-heading"><h4>Pack order</h4><span id="consumerPackedCount" role="status">${checked.size} of ${order.lines.length} lines${saving ? " · Saving…" : ""}</span></div>
         ${order.lines.length ? html`<progress class="consumer-pack-progress" max="${order.lines.length}" value="${checked.size}" aria-label="Packing progress"></progress>` : ""}
-        <div class="consumer-packing-lines">${order.lines.map((line, index) => html`<label class="consumer-packing-line"><input id="consumerPack-${index}" type="checkbox" data-consumer-packed-line="${index}" data-reference="${order.reference}" ${checked.has(index) ? raw("checked") : ""} ${!canPack || busy ? raw("disabled") : ""}><span><b>${line.product?.name || line.name || "Coffee"}</b><small>${line.size} · ${line.grind}</small></span><strong>× ${line.qty}</strong></label>`)}</div>
+        <div class="consumer-packing-lines">${order.lines.map((line, index) => html`<label class="consumer-packing-line"><input id="consumerPack-${index}" type="checkbox" data-consumer-packed-line="${index}" data-reference="${order.reference}" ${checked.has(index) ? raw("checked") : ""} ${!canPack || busy ? raw("disabled") : ""}><span><b>${line.product?.name || line.name || "Coffee"}</b><small>${line.size} · ${line.grind}</small>${packedComponents(line)}</span><strong>× ${line.qty}</strong></label>`)}</div>
         ${canPack ? html`<div class="row consumer-detail-actions">${order.status === "placed" ? html`<button class="btn soft" type="button" data-act="consumer-status" data-id="preparing" ${busy || saving ? raw("disabled") : ""}>Start preparing</button>` : ""}<button class="btn" type="button" data-act="consumer-status" data-id="ready" ${!allPacked || busy || saving ? raw("disabled") : ""}>Mark packed</button></div>` : ""}</section>
       ${order.method === "delivery" && ["ready", "dispatched", "completed"].includes(order.status) ? html`<form id="consumerDispatchForm" data-reference="${order.reference}"><h4>${order.status === "ready" ? "Dispatch" : "Tracking details"}</h4><label class="field"><span class="fl">Royal Mail tracking number</span><input id="consumerTrackingNumber" name="tracking" maxlength="30" placeholder="e.g. AB123456789GB" autocomplete="off" spellcheck="false" value="${tracking}" ${busy ? raw("disabled") : ""} required></label><button class="btn" type="submit" ${busy || saving ? raw("disabled") : ""}>${order.status === "ready" ? "Save and dispatch" : "Save tracking"}</button>${order.tracking?.url ? html`<a class="btn soft" href="${order.tracking.url}" target="_blank" rel="noopener noreferrer">Track parcel</a>` : ""}</form>` : ""}
       ${order.status === "ready" && order.method === "collection" ? html`<section class="consumer-collection"><h4>Collection</h4><p>Ready to collect from ${order.cafe?.name || "the selected café"}.</p><button class="btn" type="button" data-act="consumer-status" data-id="completed" ${busy ? raw("disabled") : ""}>Mark collected</button></section>` : ""}

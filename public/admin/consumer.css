@@ -87,7 +87,7 @@
 .consumer-packing-line:has(:disabled){cursor:default}
 .consumer-packing-line input{width:18px;height:18px;accent-color:var(--accent)}
 .consumer-packing-line b{display:block;font-size:14px;overflow-wrap:anywhere}
-.consumer-packing-line small{display:block;font-size:13px;color:var(--muted);margin-top:3px}
+.consumer-packing-line small{display:block;overflow-wrap:anywhere;font-size:13px;color:var(--muted);margin-top:3px}
 .consumer-packing-line strong{font-size:14px;white-space:nowrap}
 .consumer-detail-actions{display:flex;gap:8px;padding-top:12px;flex-wrap:wrap}
 .consumer-detail-footer{border-top:1px solid var(--line)}
