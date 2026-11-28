@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "fix/wholesale-local-postage-reservation"
-EXPECTED = "a7f34b43ea4658af6e1e45c47965a4f01c708781"
-PRIOR = "3cb75fb44c84189722533a5609ff61262b55db84"
+EXPECTED = "fbb8b89a4d3b2c910288dea7913bcbe2b57d16e7"
+PRIOR = "a7f34b43ea4658af6e1e45c47965a4f01c708781"
 TIMED_OUT_TEST_RUN = None
 TITLE = "Reserve wholesale postage locally before contacting Royal Mail"
 DRAFT_ONLY = False
