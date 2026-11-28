@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "fix/royal-mail-lookup-400"
-EXPECTED = "37df728db5e01bd7a8ba0d34823d841bed6a0d40"
-PRIOR = "31bb41958a0c8b8e843da220b547eee7bd7c6165"
+EXPECTED = "795d8f0a23d097473428bdccad4f4f183d9b26a9"
+PRIOR = "37df728db5e01bd7a8ba0d34823d841bed6a0d40"
 TIMED_OUT_TEST_RUN = None
 TITLE = "Fix rejected Royal Mail wholesale order-reference lookups"
 DRAFT_ONLY = False
