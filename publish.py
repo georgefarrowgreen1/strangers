@@ -14,8 +14,8 @@ import urllib.error
 
 TARGET = "strangerscoffee/StrangersRepo"
 BRANCH = "fix/wholesale-rm-first-booking"
-EXPECTED = "57c780ad22c42cddcbcede80f147622c8170eb60"
-PRIOR = "7d70910bee170f5d907999b1c27145cbdd666733"
+EXPECTED = "8a6065bf4be31bf07d6aa6a9bb0b8847ec180299"
+PRIOR = "57c780ad22c42cddcbcede80f147622c8170eb60"
 TIMED_OUT_TEST_RUN = None
 TITLE = "Resolve inconclusive Royal Mail order checks before a first booking"
 DRAFT_ONLY = False
