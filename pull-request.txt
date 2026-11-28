@@ -1,3 +1,3 @@
-Add a Labels tab to the Admin Royal Mail workspace. Locate generated wholesale labels by customer, order or tracking number, review an existing label on desktop or mobile, and download or reprint it. Keep completed orders searchable after dispatch.
+Add an Admin Check order reference action to inspect a single original Click & Drop reference. Reconcile older uncertain bookings for both Staff and Admin. Verify pinned numeric carrier identifiers before recovering an existing shipment or releasing its label. Surface individual label issues without losing the rest of the label library.
 
-Preview reads the existing protected shipment without treating it as downloaded. Existing shipping and label safety checks govern access to the carrier PDF. The library does not create postage or change handover status. Synthetic carrier and browser regressions cover the workflow.
+Migration 57 records the additional booking confirmation state. Carrier credentials are unchanged. This release was exercised with simulated carrier responses; production verification uses read-only signed-out requests and does not purchase postage.

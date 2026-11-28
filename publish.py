@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "feature/wholesale-royal-mail-labels"
-EXPECTED = "6a99c906f11f33f807d407b6258121d4708bc18b"
-PRIOR = "f1b9d81896a8095e6d3df9def264e94064f738a5"
+BRANCH = "fix/wholesale-rm-confirmation"
+EXPECTED = "1ee361e82b346ca47581a940163e246e7377a839"
+PRIOR = "9939a4efb821a43cde913dad2164a384f6c1580e"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Add generated Royal Mail labels to wholesale Admin"
+TITLE = "Recover confirmed wholesale Royal Mail bookings safely"
 DRAFT_ONLY = False
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
