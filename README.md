@@ -1,3 +1,3 @@
 # Strangers release publisher
 
-Publishes the reviewed wholesale Royal Mail reference lookup fix through GitHub and Workers Builds. The bundle contains commit `795d8f0a23d097473428bdccad4f4f183d9b26a9` based on `e8d815803347edf19aac4123968c7ccf31f2d515`.
+Publishes the reviewed Admin Royal Mail labels library through the existing Tests and Workers Builds deployment. The source commit is `6a99c906f11f33f807d407b6258121d4708bc18b` based on `f1b9d81896a8095e6d3df9def264e94064f738a5`.

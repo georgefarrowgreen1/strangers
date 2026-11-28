@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "fix/royal-mail-lookup-400"
-EXPECTED = "795d8f0a23d097473428bdccad4f4f183d9b26a9"
-PRIOR = "37df728db5e01bd7a8ba0d34823d841bed6a0d40"
+BRANCH = "feature/wholesale-royal-mail-labels"
+EXPECTED = "6a99c906f11f33f807d407b6258121d4708bc18b"
+PRIOR = "f1b9d81896a8095e6d3df9def264e94064f738a5"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Fix rejected Royal Mail wholesale order-reference lookups"
+TITLE = "Add generated Royal Mail labels to wholesale Admin"
 DRAFT_ONLY = False
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent

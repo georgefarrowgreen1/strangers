@@ -1,5 +1,3 @@
-Fix the wholesale order-reference check that stopped label booking in Admin and Staff. An explicit order-specific miss can release a first booking. When Click & Drop rejects the reference format or returns an unscoped NotFound, a bounded, read-only search checks the account for an exact existing reference. Incomplete results, conflicting identifiers and account errors hold the purchase. An uncertain previous purchase stays in recovery.
+Add a Labels tab to the Admin Royal Mail workspace. Locate generated wholesale labels by customer, order or tracking number, review an existing label on desktop or mobile, and download or reprint it. Keep completed orders searchable after dispatch.
 
-Both dashboards distinguish a failed lookup from rejected postage and display the full copyable reference. Carrier diagnostics exclude recipient data. Exercised first requests, concurrent clicks, old failures and label recovery with a simulated carrier, plus the mobile and desktop shipping panels.
-
-The release also corrects the Staff Wholesale tabs on narrow phones. The Customers label could extend past a 320px screen under Ubuntu system fonts. The controls size to their content and have a browser regression covering label bounds and touch targets.
+Preview reads the existing protected shipment without treating it as downloaded. Existing shipping and label safety checks govern access to the carrier PDF. The library does not create postage or change handover status. Synthetic carrier and browser regressions cover the workflow.
