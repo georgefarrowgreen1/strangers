@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "codex/royal-mail-dispatch-queue"
-EXPECTED = "62bae1956a5a12d60de9eaefdf721352200bf613"
-PRIOR = "439c2c3ccaeba724265758dd1784031c195a74fd"
+BRANCH = "fix/royal-mail-lookup-400"
+EXPECTED = "173800b953c50767090dfdc571804a347356b422"
+PRIOR = "310f13cde40d54d736aef0a3c0b70faa7ed6f2da"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Unify wholesale dispatch, recover bookings and verify Royal Mail setup"
+TITLE = "Fix rejected Royal Mail wholesale order-reference lookups"
 DRAFT_ONLY = False
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent

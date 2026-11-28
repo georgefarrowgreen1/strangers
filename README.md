@@ -1,3 +1,3 @@
 # Strangers release publisher
 
-Publishes the reviewed Royal Mail setup checks through GitHub and Workers Builds. The bundle contains commit `62bae1956a5a12d60de9eaefdf721352200bf613` based on `cd0580e1cfb1dfe8413c6f3d163a1840bccfb3b6`.
+Publishes the reviewed wholesale Royal Mail reference lookup fix through GitHub and Workers Builds. The bundle contains commit `173800b953c50767090dfdc571804a347356b422` based on `e8d815803347edf19aac4123968c7ccf31f2d515`.

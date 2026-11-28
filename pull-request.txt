@@ -1,7 +1,3 @@
-Staff and Admin share the wholesale dispatch queue and a structured parcel address. Uncertain bookings are recovered by the original reference. The release includes the production changes in #253, #254 and #255 for delivery email, carrier refusal details and creating a label from the dispatch step.
+Fix the reference check before wholesale label purchase. An explicit order-specific absence allows the first request. Existing shipments are adopted and an uncertain prior purchase stays in recovery. Ambiguous or conflicting carrier errors keep purchase on hold and diagnostics exclude recipient details.
 
-Admin → Wholesale → Royal Mail now offers five read-only carrier checks plus confirmations for the contracted service register and parcel limits, a printed return address, printer/barcode, collection arrangements and the current day’s manifest or receipt. A local packed-box calculator covers express24 surcharge thresholds and agreed service limits.
-
-Results are scoped to the current credentials. The PDF and tracking checks use an existing verified wholesale shipment. Account changes and concurrent edits invalidate stale writes. Public Parcelforce references support verified handover while Tracking V2 scans are limited to eligible formats.
-
-Includes additive migrations 54 and 55, migration and API coverage, simulated read-only carrier checks and mobile and desktop browser coverage. Install through the established production Workers Builds workflow.
+Covers previously failed bookings, concurrent clicks and recovery with a simulated carrier. Use the existing GitHub Tests and Workers Builds deployment.
