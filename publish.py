@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "fix/wholesale-local-postage-reservation"
-EXPECTED = "6d8f6159d80a09d03436744835a230dda3ef3ef6"
-PRIOR = "fbb8b89a4d3b2c910288dea7913bcbe2b57d16e7"
+BRANCH = "fix/royal-mail-postage-confirmation"
+EXPECTED = "98403999c39ab8676983bc5ceb372b953378bfd2"
+PRIOR = "bf1b3cabf03803ea081adbe75dccaeee1bbca1bb"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Reserve wholesale postage locally before contacting Royal Mail"
+TITLE = "Explain and recover unconfirmed Royal Mail postage"
 DRAFT_ONLY = False
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent

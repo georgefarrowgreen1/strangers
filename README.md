@@ -1,3 +1,3 @@
 # Strangers release publisher
 
-Publishes the reviewed local wholesale postage reservation through the existing Tests and Workers Builds deployment. The source commit is `6d8f6159d80a09d03436744835a230dda3ef3ef6` based on `3cb75fb44c84189722533a5609ff61262b55db84`.
+Publishes the reviewed wholesale postage confirmation changes through the existing Tests and Workers Builds deployment. The source commit is `98403999c39ab8676983bc5ceb372b953378bfd2` based on `bf1b3cabf03803ea081adbe75dccaeee1bbca1bb`.
