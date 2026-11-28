@@ -13,11 +13,11 @@ import urllib.error
 
 
 TARGET = "strangerscoffee/StrangersRepo"
-BRANCH = "fix/royal-mail-postage-confirmation"
-EXPECTED = "98403999c39ab8676983bc5ceb372b953378bfd2"
-PRIOR = "bf1b3cabf03803ea081adbe75dccaeee1bbca1bb"
+BRANCH = "fix/royal-mail-booking-receipt"
+EXPECTED = "5b7895788ccc7b50a6a8880d2388b3c3653025f7"
+PRIOR = "499a8ae3c1ede05650e413896f896b0f33bb3496"
 TIMED_OUT_TEST_RUN = None
-TITLE = "Explain and recover unconfirmed Royal Mail postage"
+TITLE = "Handle Click & Drop booking receipts and clarify recovery timing"
 DRAFT_ONLY = False
 EXPECTED_USER_ID = 292799750
 ROOT = Path(__file__).resolve().parent
